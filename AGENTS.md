@@ -14,3 +14,4 @@
 3. **STEP 3 - LOGGING AND UPDATING ON EVERY COMMIT:**
    - Every time code or configuration changes are made, append a new log entry to `PROMPT_EXPERIENCE_LOG.md`.
    - If architectural contracts, database schemas, or major modules change, update `PROJECT_CONTEXT.md`.
+

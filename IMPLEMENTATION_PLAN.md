@@ -248,3 +248,4 @@ gantt
    - Outputs must cite specific JSON fields; any assertion not grounded in the verified JSON causes prompt rejection.
 5. **Failover Gateway Resiliency:**
    - If Google Gemini returns HTTP 429/500, the gateway seamlessly fails over to Groq in < 300ms without user interruption.
+

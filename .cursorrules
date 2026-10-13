@@ -12,3 +12,4 @@ Every time you begin a task, respond to a prompt, or modify files in this reposi
    - Strict RAG evaluation without hallucinations.
    - Low-budget MVP mindset (free tiers, testnets, lightweight dependencies).
 4. Update `PROMPT_EXPERIENCE_LOG.md` upon completing user prompts or making commits.
+
