@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Shield,
   Key,
@@ -28,6 +28,15 @@ import {
   Play,
   X,
   FileText,
+  Sliders,
+  Users,
+  Settings,
+  Code2,
+  Terminal,
+  Zap,
+  Check,
+  Plus,
+  Radio,
 } from "lucide-react";
 import { computeSha256 } from "@/core/crypto/hasher";
 import { generateScopedApiKey, verifyScopedApiKey, filterVaultByScope } from "@/core/crypto/scoped_key";
@@ -140,7 +149,7 @@ const INITIAL_VAULT: FullUserVault = {
 };
 
 export default function SabiVaultDemo() {
-  const [activeTab, setActiveTab] = useState<"b2c" | "b2b" | "notary">("b2c");
+  const [activeTab, setActiveTab] = useState<"b2c" | "b2b" | "notary" | "admin" | "api_docs">("b2c");
 
   // B2C Key Generator State
   const [selectedScopes, setSelectedScopes] = useState<VaultCategory[]>([
@@ -183,8 +192,65 @@ export default function SabiVaultDemo() {
   ]);
   const [isNotarizing, setIsNotarizing] = useState<string | null>(null);
 
+  // Super Admin Control Plane State
+  const [adminUsers, setAdminUsers] = useState<any[]>([
+    {
+      id: "usr_chinwe_okafor_7721",
+      name: "Chinwe Okafor",
+      email: "chinwe.okafor@example.com",
+      residenceCountry: "NG",
+      sovereignNode: "ng-west-africa",
+      complianceFramework: "NDPC",
+      status: "ACTIVE",
+      totalSyncedCategories: 6,
+      totalActiveKeys: 1,
+    },
+  ]);
+  const [adminOrgs, setAdminOrgs] = useState<any[]>([
+    {
+      id: "org_uk_visas",
+      name: "UK Visas & Immigration Border Agency",
+      type: "GOVERNMENT",
+      orgApiKey: "sbo_live_89127391ab8240ef198a0029",
+      rateLimitPerMin: 120,
+      totalQueriesProcessed: 840,
+      status: "ACTIVE",
+      jurisdiction: "United Kingdom",
+    },
+    {
+      id: "org_stripe_talent",
+      name: "Stripe / Paystack Global Recruitment",
+      type: "ENTERPRISE",
+      orgApiKey: "sbo_live_381924719284719283748291",
+      rateLimitPerMin: 60,
+      totalQueriesProcessed: 580,
+      status: "ACTIVE",
+      jurisdiction: "United States / Global",
+    },
+  ]);
+  const [adminConfig, setAdminConfig] = useState<any>({
+    geminiApiKey: "AIzaSy••••••••1234",
+    groqApiKey: "gsk_••••••••5678",
+    openAiApiKey: "sk-••••••••9012",
+    baseSepoliaRpc: "https://sepolia.base.org",
+    platformTreasuryWallet: "0x1111111111111111111111111111111111111111",
+    standardQueryFeeUsd: 1.0,
+    platformFeePercent: 60,
+    sovereignHostFeePercent: 40,
+  });
+  const [configSaveNotice, setConfigSaveNotice] = useState(false);
+  const [newOrgName, setNewOrgName] = useState("");
+  const [newOrgType, setNewOrgType] = useState<"GOVERNMENT" | "ENTERPRISE" | "UNIVERSITY">("ENTERPRISE");
+  const [newOrgJurisdiction, setNewOrgJurisdiction] = useState("");
+
+  // M2M API Playground State
+  const [m2mOrgKey, setM2mOrgKey] = useState("sbo_live_89127391ab8240ef198a0029");
+  const [m2mCandidateKey, setM2mCandidateKey] = useState("");
+  const [m2mResult, setM2mResult] = useState<any | null>(null);
+  const [isM2mRunning, setIsM2mRunning] = useState(false);
+  const [selectedLanguage, setSelectedLanguage] = useState<"curl" | "python" | "typescript">("curl");
+
   // Pitch Mode & Defense Cheat-Sheet Modal States
-  const [pitchStep, setPitchStep] = useState<number>(0);
   const [showPitchModal, setShowPitchModal] = useState<boolean>(false);
   const [showDefenseModal, setShowDefenseModal] = useState<boolean>(false);
 
@@ -201,11 +267,12 @@ export default function SabiVaultDemo() {
     };
     const key = generateScopedApiKey(payload);
     setGeneratedApiKey(key);
-    setInputApiKey(key); // Auto-populate into B2B screener for seamless live demo
+    setInputApiKey(key);
+    setM2mCandidateKey(key);
   };
 
-  const handleCopyKey = () => {
-    navigator.clipboard.writeText(generatedApiKey);
+  const handleCopyKey = (textToCopy: string) => {
+    navigator.clipboard.writeText(textToCopy);
     setCopyNotice(true);
     setTimeout(() => setCopyNotice(false), 2000);
   };
@@ -324,6 +391,55 @@ export default function SabiVaultDemo() {
     }
   };
 
+  // Toggle User Status in Super Admin
+  const handleToggleUserStatus = (userId: string) => {
+    setAdminUsers((prev) =>
+      prev.map((u) => (u.id === userId ? { ...u, status: u.status === "ACTIVE" ? "FROZEN" : "ACTIVE" } : u))
+    );
+  };
+
+  // Provision New Organization in Super Admin
+  const handleProvisionOrg = () => {
+    if (!newOrgName || !newOrgJurisdiction) return;
+    const newOrg = {
+      id: `org_${Math.random().toString(36).substring(2, 8)}`,
+      name: newOrgName,
+      type: newOrgType,
+      orgApiKey: `sbo_live_${Math.random().toString(36).substring(2, 10)}${Math.random().toString(36).substring(2, 10)}`,
+      rateLimitPerMin: 60,
+      totalQueriesProcessed: 0,
+      status: "ACTIVE",
+      jurisdiction: newOrgJurisdiction,
+    };
+    setAdminOrgs([...adminOrgs, newOrg]);
+    setNewOrgName("");
+    setNewOrgJurisdiction("");
+  };
+
+  // Run M2M Dual-Key Query
+  const handleRunM2MQuery = async () => {
+    if (!m2mOrgKey || !m2mCandidateKey) return;
+    setIsM2mRunning(true);
+    setM2mResult(null);
+
+    try {
+      const response = await fetch("/api/v1/m2m/query", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Sabi-Org-Key": m2mOrgKey,
+          Authorization: `Bearer ${m2mCandidateKey}`,
+        },
+      });
+      const data = await response.json();
+      setM2mResult(data);
+    } catch (err: any) {
+      setM2mResult({ error: err.message });
+    } finally {
+      setIsM2mRunning(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#070b14] text-slate-100 flex flex-col font-sans">
       {/* Top Navbar */}
@@ -345,40 +461,62 @@ export default function SabiVaultDemo() {
           </div>
         </div>
 
-        {/* View Switcher: B2C, B2B, Notary */}
-        <div className="flex items-center gap-2 bg-slate-900/90 border border-slate-800 p-1 rounded-xl">
+        {/* View Switcher: B2C, B2B, Notary, Super Admin, API Docs */}
+        <div className="hidden lg:flex items-center gap-1.5 bg-slate-900/90 border border-slate-800 p-1 rounded-xl text-xs">
           <button
             onClick={() => setActiveTab("b2c")}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold transition-all ${
               activeTab === "b2c"
                 ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/30"
                 : "text-slate-400 hover:text-slate-200"
             }`}
           >
             <Key className="w-3.5 h-3.5" />
-            Citizen Vault (B2C)
+            Citizen Vault
           </button>
           <button
             onClick={() => setActiveTab("b2b")}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold transition-all ${
               activeTab === "b2b"
                 ? "bg-cyan-600 text-white shadow-md shadow-cyan-600/30"
                 : "text-slate-400 hover:text-slate-200"
             }`}
           >
             <Cpu className="w-3.5 h-3.5" />
-            Enterprise Screening (B2B)
+            Enterprise Screening
           </button>
           <button
             onClick={() => setActiveTab("notary")}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold transition-all ${
               activeTab === "notary"
                 ? "bg-amber-600 text-white shadow-md shadow-amber-600/30"
                 : "text-slate-400 hover:text-slate-200"
             }`}
           >
             <Stamp className="w-3.5 h-3.5" />
-            Notary Portal (Tier 2)
+            Notary Desk
+          </button>
+          <button
+            onClick={() => setActiveTab("admin")}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold transition-all ${
+              activeTab === "admin"
+                ? "bg-purple-600 text-white shadow-md shadow-purple-600/30"
+                : "text-slate-400 hover:text-slate-200"
+            }`}
+          >
+            <Settings className="w-3.5 h-3.5" />
+            Super Admin
+          </button>
+          <button
+            onClick={() => setActiveTab("api_docs")}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold transition-all ${
+              activeTab === "api_docs"
+                ? "bg-teal-600 text-white shadow-md shadow-teal-600/30"
+                : "text-slate-400 hover:text-slate-200"
+            }`}
+          >
+            <Code2 className="w-3.5 h-3.5" />
+            Developer API
           </button>
         </div>
 
@@ -389,14 +527,14 @@ export default function SabiVaultDemo() {
             className="flex items-center gap-1.5 text-xs bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-3 py-1.5 rounded-lg font-bold transition-all"
           >
             <Play className="w-3 h-3 fill-emerald-300" />
-            2-Min Pitch Script
+            2-Min Pitch
           </button>
           <button
             onClick={() => setShowDefenseModal(true)}
             className="flex items-center gap-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 py-1.5 rounded-lg font-bold transition-all"
           >
             <HelpCircle className="w-3.5 h-3.5 text-cyan-400" />
-            Judge Defense Sheet
+            Judge Cheat-Sheet
           </button>
         </div>
       </header>
@@ -408,21 +546,29 @@ export default function SabiVaultDemo() {
           <div className="max-w-3xl space-y-2">
             <div className="inline-flex items-center gap-2 text-xs font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full">
               <Sparkles className="w-3.5 h-3.5" />
-              Zero Raw File Centralization • Regional Sovereign Nodes • 60/40 GovTech Revenue Split
+              Zero Raw File Centralization • Regional Sovereign Nodes • Dual-Key M2M Handshake
             </div>
             <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-white">
               {activeTab === "b2c"
                 ? "Citizen Sovereign Vault & Scoped Key Generator"
                 : activeTab === "b2b"
                 ? "Enterprise Multi-Agent Screening Gateway"
-                : "Tier-2 Notary Attestation & Legalization Portal"}
+                : activeTab === "notary"
+                ? "Tier-2 Notary Attestation & Legalization Portal"
+                : activeTab === "admin"
+                ? "Super Admin Control Plane & Governance Dashboard"
+                : "Machine-to-Machine (M2M) Developer & AI Agent Studio"}
             </h1>
             <p className="text-sm text-slate-300 leading-relaxed">
               {activeTab === "b2c"
-                ? "Your raw documents remain safely inside your private cloud drive (Google Drive). Generate time-decaying, cryptographically signed API keys that grant organizations access only to specific verified categories."
+                ? "Your raw documents remain safely inside your personal Google Drive. Mint time-decaying, cryptographically signed API keys that grant organizations access only to specific verified categories."
                 : activeTab === "b2b"
                 ? "Verify applicant qualifications in seconds with zero manual document review, zero PDF forgery risk, and instant mathematical verification against on-chain hash ledgers."
-                : "Accredited notaries and institutional registrars inspect submitted diplomas, transcripts, and affidavits, affixing their cryptographic seal directly onto the on-chain registry."}
+                : activeTab === "notary"
+                ? "Accredited notaries inspect submitted diplomas, transcripts, and affidavits, affixing their cryptographic seal directly onto the Base Sepolia ledger."
+                : activeTab === "admin"
+                ? "Master control plane: manage all user CRUD, register government agencies & enterprise licenses, monitor global 60/40 micro-transaction financials, and hot-reload runtime secrets."
+                : "Integrate autonomous AI agents, enterprise ATS systems (Workday, Greenhouse), and border control applications directly with Sabi Vault via programmatic Dual-Key REST endpoints."}
             </p>
           </div>
         </div>
@@ -639,7 +785,7 @@ export default function SabiVaultDemo() {
                       <div className="flex items-center justify-between text-slate-300">
                         <span className="font-semibold text-emerald-400">Live API Key Ready:</span>
                         <button
-                          onClick={handleCopyKey}
+                          onClick={() => handleCopyKey(generatedApiKey)}
                           className="flex items-center gap-1 text-[11px] text-slate-400 hover:text-white"
                         >
                           <Copy className="w-3.5 h-3.5" />
@@ -873,7 +1019,7 @@ export default function SabiVaultDemo() {
                       <div className="flex items-center gap-4 text-[11px] font-mono">
                         <span className="text-emerald-400">{screeningResult.revenueSplitReceipt.platformShare}</span>
                         <span className="text-slate-600">•</span>
-                        <span className="text-cyan-400">{screeningResult.revenueSplitReceipt.sovereignHostShare}</span>
+                        <span className="text-cyan-400">{screeningResult.revenueSplitReceipt.soovereignHostShare}</span>
                       </div>
                     </div>
                   </div>
@@ -968,6 +1114,430 @@ export default function SabiVaultDemo() {
                     </div>
                   </div>
                 ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 4: SUPER ADMIN CONTROL PLANE */}
+        {activeTab === "admin" && (
+          <div className="space-y-8">
+            {/* Global Telemetry Bar */}
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+              <div className="p-4 rounded-xl border border-slate-800 bg-slate-900/60">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Total Citizens</span>
+                <p className="text-xl font-black text-white mt-1">{adminUsers.length}</p>
+                <span className="text-[10px] text-emerald-400 font-mono">100% Sovereign Hosted</span>
+              </div>
+              <div className="p-4 rounded-xl border border-slate-800 bg-slate-900/60">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Registered Orgs</span>
+                <p className="text-xl font-black text-white mt-1">{adminOrgs.length}</p>
+                <span className="text-[10px] text-cyan-400 font-mono">Govt + Enterprise</span>
+              </div>
+              <div className="p-4 rounded-xl border border-slate-800 bg-slate-900/60">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Total Queries</span>
+                <p className="text-xl font-black text-white mt-1">1,420</p>
+                <span className="text-[10px] text-emerald-400 font-mono">On-Chain Verified</span>
+              </div>
+              <div className="p-4 rounded-xl border border-slate-800 bg-slate-900/60">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Platform Rev (60%)</span>
+                <p className="text-xl font-black text-emerald-400 mt-1">$852.00</p>
+                <span className="text-[10px] text-slate-400 font-mono">USDC / Base L2</span>
+              </div>
+              <div className="p-4 rounded-xl border border-slate-800 bg-slate-900/60">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Sovereign Payout (40%)</span>
+                <p className="text-xl font-black text-cyan-400 mt-1">$568.00</p>
+                <span className="text-[10px] text-slate-400 font-mono">Disbursed to Nodes</span>
+              </div>
+              <div className="p-4 rounded-xl border border-slate-800 bg-slate-900/60">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Active Nodes</span>
+                <p className="text-xl font-black text-purple-400 mt-1">3</p>
+                <span className="text-[10px] text-emerald-400 font-mono">NDPC / GDPR / US</span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+              {/* Dynamic Secrets & Configuration Engine */}
+              <div className="lg:col-span-6 border border-slate-800 bg-slate-900/50 rounded-2xl p-6 space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                  <div className="flex items-center gap-2">
+                    <Sliders className="w-5 h-5 text-purple-400" />
+                    <h3 className="font-bold text-base text-white">Dynamic Secrets & Runtime Config</h3>
+                  </div>
+                  <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded border border-emerald-500/20">
+                    AES-256 Encrypted
+                  </span>
+                </div>
+
+                <div className="space-y-3 text-xs">
+                  <div>
+                    <label className="block text-slate-400 mb-1 font-semibold">Gemini 1.5 Flash Key (Primary LLM):</label>
+                    <input
+                      type="text"
+                      value={adminConfig.geminiApiKey}
+                      onChange={(e) => setAdminConfig({ ...adminConfig, geminiApiKey: e.target.value })}
+                      className="w-full bg-black/60 border border-slate-700 rounded-lg p-2 font-mono text-slate-200 outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-400 mb-1 font-semibold">Groq LLaMA 3.3 Key (Secondary Fallback):</label>
+                    <input
+                      type="text"
+                      value={adminConfig.groqApiKey}
+                      onChange={(e) => setAdminConfig({ ...adminConfig, groqApiKey: e.target.value })}
+                      className="w-full bg-black/60 border border-slate-700 rounded-lg p-2 font-mono text-slate-200 outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-400 mb-1 font-semibold">Base Sepolia RPC Endpoint:</label>
+                    <input
+                      type="text"
+                      value={adminConfig.baseSepoliaRpc}
+                      onChange={(e) => setAdminConfig({ ...adminConfig, baseSepoliaRpc: e.target.value })}
+                      className="w-full bg-black/60 border border-slate-700 rounded-lg p-2 font-mono text-slate-200 outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-400 mb-1 font-semibold">Platform Treasury Wallet (60% Recipient):</label>
+                    <input
+                      type="text"
+                      value={adminConfig.platformTreasuryWallet}
+                      onChange={(e) => setAdminConfig({ ...adminConfig, platformTreasuryWallet: e.target.value })}
+                      className="w-full bg-black/60 border border-slate-700 rounded-lg p-2 font-mono text-slate-200 outline-none"
+                    />
+                  </div>
+
+                  <div className="pt-2">
+                    <button
+                      onClick={() => {
+                        setConfigSaveNotice(true);
+                        setTimeout(() => setConfigSaveNotice(false), 2500);
+                      }}
+                      className="w-full py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-extrabold text-xs shadow-md shadow-purple-600/20 flex items-center justify-center gap-2 transition-all"
+                    >
+                      <Zap className="w-4 h-4" />
+                      Save & Hot-Reload Secrets (Zero Restart)
+                    </button>
+                    {configSaveNotice && (
+                      <p className="text-[11px] text-emerald-400 text-center mt-2 font-semibold">
+                        ✓ Configuration encrypted & hot-reloaded successfully into memory!
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Citizen User CRUD Manager */}
+              <div className="lg:col-span-6 border border-slate-800 bg-slate-900/50 rounded-2xl p-6 space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                  <div className="flex items-center gap-2">
+                    <Users className="w-5 h-5 text-emerald-400" />
+                    <h3 className="font-bold text-base text-white">Universal Citizen CRUD</h3>
+                  </div>
+                  <span className="text-xs text-slate-400">{adminUsers.length} Active Records</span>
+                </div>
+
+                <div className="space-y-3">
+                  {adminUsers.map((u) => (
+                    <div
+                      key={u.id}
+                      className="p-3 bg-black/40 border border-slate-800 rounded-xl flex items-center justify-between gap-3 text-xs"
+                    >
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-slate-100">{u.name}</span>
+                          <span
+                            className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                              u.status === "ACTIVE"
+                                ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+                                : "bg-red-500/20 text-red-300 border border-red-500/30"
+                            }`}
+                          >
+                            {u.status}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-400 font-mono">{u.email}</p>
+                        <p className="text-[10px] text-slate-500">
+                          Node: <span className="text-emerald-400">{u.sovereignNode}</span> ({u.complianceFramework})
+                        </p>
+                      </div>
+
+                      <button
+                        onClick={() => handleToggleUserStatus(u.id)}
+                        className={`px-3 py-1.5 rounded-lg font-bold text-[11px] transition-all ${
+                          u.status === "ACTIVE"
+                            ? "bg-red-500/20 text-red-300 hover:bg-red-500/30"
+                            : "bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30"
+                        }`}
+                      >
+                        {u.status === "ACTIVE" ? "Freeze Vault" : "Unfreeze Vault"}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Organization & Government Hub Manager */}
+              <div className="lg:col-span-12 border border-slate-800 bg-slate-900/50 rounded-2xl p-6 space-y-5">
+                <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                  <div className="flex items-center gap-2">
+                    <Building className="w-5 h-5 text-cyan-400" />
+                    <h3 className="font-bold text-base text-white">Government & Enterprise Organization Registry</h3>
+                  </div>
+                  <span className="text-xs text-slate-400">Issues Dual-Key X-Sabi-Org-Key Licenses</span>
+                </div>
+
+                {/* Provision New Entity Form */}
+                <div className="p-4 bg-black/40 border border-slate-800 rounded-xl space-y-3">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                    Provision New Organization / Government Hub:
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs">
+                    <input
+                      type="text"
+                      placeholder="Organization Name (e.g. Canada Immigration)"
+                      value={newOrgName}
+                      onChange={(e) => setNewOrgName(e.target.value)}
+                      className="bg-slate-900 border border-slate-700 rounded-lg p-2 text-slate-200 outline-none"
+                    />
+                    <select
+                      value={newOrgType}
+                      onChange={(e: any) => setNewOrgType(e.target.value)}
+                      className="bg-slate-900 border border-slate-700 rounded-lg p-2 text-slate-200 outline-none"
+                    >
+                      <option value="GOVERNMENT">Government Border Agency</option>
+                      <option value="ENTERPRISE">Enterprise Corporation</option>
+                      <option value="UNIVERSITY">University / Academic</option>
+                    </select>
+                    <input
+                      type="text"
+                      placeholder="Jurisdiction (e.g. Canada / Federal)"
+                      value={newOrgJurisdiction}
+                      onChange={(e) => setNewOrgJurisdiction(e.target.value)}
+                      className="bg-slate-900 border border-slate-700 rounded-lg p-2 text-slate-200 outline-none"
+                    />
+                    <button
+                      onClick={handleProvisionOrg}
+                      className="py-2 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Mint Org License Key
+                    </button>
+                  </div>
+                </div>
+
+                {/* Registered Organizations Table */}
+                <div className="space-y-3">
+                  {adminOrgs.map((org) => (
+                    <div
+                      key={org.id}
+                      className="p-4 bg-black/40 border border-slate-800 rounded-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4 text-xs"
+                    >
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-sm text-white">{org.name}</span>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                            {org.type}
+                          </span>
+                        </div>
+                        <p className="text-slate-400">
+                          Jurisdiction: <span className="text-slate-200 font-semibold">{org.jurisdiction}</span> • Rate Limit:{" "}
+                          <span className="text-slate-200">{org.rateLimitPerMin} req/min</span> • Queries Processed:{" "}
+                          <span className="text-emerald-400 font-bold">{org.totalQueriesProcessed}</span>
+                        </p>
+                        <div className="flex items-center gap-2 pt-1">
+                          <span className="text-slate-500 font-mono">Org API Key:</span>
+                          <span className="font-mono text-[11px] text-cyan-300 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">
+                            {org.orgApiKey}
+                          </span>
+                          <button
+                            onClick={() => handleCopyKey(org.orgApiKey)}
+                            className="text-slate-400 hover:text-white"
+                          >
+                            <Copy className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 5: DEVELOPER & M2M AI AGENT STUDIO */}
+        {activeTab === "api_docs" && (
+          <div className="space-y-8">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+              {/* Left Column: Interactive M2M Dual-Key Test Runner */}
+              <div className="lg:col-span-6 border border-slate-800 bg-slate-900/50 rounded-2xl p-6 space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                  <div className="flex items-center gap-2">
+                    <Terminal className="w-5 h-5 text-teal-400" />
+                    <h3 className="font-bold text-base text-white">Interactive M2M Query Runner</h3>
+                  </div>
+                  <span className="text-[10px] font-mono text-teal-300 bg-teal-500/10 px-2 py-0.5 rounded border border-teal-500/20">
+                    Dual-Key Handshake
+                  </span>
+                </div>
+
+                <div className="space-y-4 text-xs">
+                  <div>
+                    <label className="block text-slate-300 font-semibold mb-1">
+                      Header 1: Organization License Key (X-Sabi-Org-Key):
+                    </label>
+                    <select
+                      value={m2mOrgKey}
+                      onChange={(e) => setM2mOrgKey(e.target.value)}
+                      className="w-full bg-black/60 border border-slate-700 rounded-lg p-2 font-mono text-cyan-300 outline-none"
+                    >
+                      {adminOrgs.map((org) => (
+                        <option key={org.id} value={org.orgApiKey}>
+                          {org.name} ({org.orgApiKey.substring(0, 16)}...)
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-300 font-semibold mb-1">
+                      Header 2: Candidate Consent Key (Authorization: Bearer):
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={m2mCandidateKey}
+                        onChange={(e) => setM2mCandidateKey(e.target.value)}
+                        placeholder="Paste candidate key (e.g. sbk_live_v1_...)"
+                        className="w-full bg-black/60 border border-slate-700 rounded-lg p-2 font-mono text-emerald-300 outline-none"
+                      />
+                      {!m2mCandidateKey && (
+                        <button
+                          onClick={handleGenerateKey}
+                          className="absolute right-1 top-1 px-2.5 py-1 rounded bg-emerald-500/20 text-emerald-400 text-[11px] font-semibold"
+                        >
+                          Generate Test Key
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={handleRunM2MQuery}
+                    disabled={isM2mRunning || !m2mCandidateKey}
+                    className="w-full py-2.5 rounded-xl bg-teal-600 hover:bg-teal-500 disabled:opacity-50 text-white font-bold text-xs shadow-md shadow-teal-600/20 flex items-center justify-center gap-2 transition-all"
+                  >
+                    {isM2mRunning ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        Executing Dual-Key Verification...
+                      </>
+                    ) : (
+                      <>
+                        <Play className="w-4 h-4 fill-white" />
+                        Execute POST /api/v1/m2m/query
+                      </>
+                    )}
+                  </button>
+
+                  {m2mResult && (
+                    <div className="space-y-2 pt-2 border-t border-slate-800">
+                      <span className="font-semibold text-slate-300">Live JSON Response:</span>
+                      <pre className="p-3 bg-black/80 border border-slate-800 rounded-xl font-mono text-[10px] text-slate-300 max-h-64 overflow-y-auto">
+                        {JSON.stringify(m2mResult, null, 2)}
+                      </pre>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Right Column: Code Snippets (cURL, Python, TypeScript) */}
+              <div className="lg:col-span-6 border border-slate-800 bg-slate-900/50 rounded-2xl p-6 space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                  <div className="flex items-center gap-2">
+                    <Code2 className="w-5 h-5 text-cyan-400" />
+                    <h3 className="font-bold text-base text-white">Client Integration SDKs</h3>
+                  </div>
+                  <div className="flex items-center gap-1 bg-black/60 p-1 rounded-lg text-[10px]">
+                    <button
+                      onClick={() => setSelectedLanguage("curl")}
+                      className={`px-2.5 py-1 rounded font-semibold ${selectedLanguage === "curl" ? "bg-cyan-600 text-white" : "text-slate-400"}`}
+                    >
+                      cURL
+                    </button>
+                    <button
+                      onClick={() => setSelectedLanguage("python")}
+                      className={`px-2.5 py-1 rounded font-semibold ${selectedLanguage === "python" ? "bg-cyan-600 text-white" : "text-slate-400"}`}
+                    >
+                      Python
+                    </button>
+                    <button
+                      onClick={() => setSelectedLanguage("typescript")}
+                      className={`px-2.5 py-1 rounded font-semibold ${selectedLanguage === "typescript" ? "bg-cyan-600 text-white" : "text-slate-400"}`}
+                    >
+                      TypeScript
+                    </button>
+                  </div>
+                </div>
+
+                <div className="text-xs space-y-3">
+                  <p className="text-slate-300">
+                    Use these code snippets to integrate your autonomous AI agents (CrewAI, LangChain), Workday ATS, or government portal:
+                  </p>
+
+                  <div className="relative">
+                    <pre className="p-4 bg-black/80 border border-slate-800 rounded-xl font-mono text-[11px] text-cyan-300 overflow-x-auto leading-relaxed">
+                      {selectedLanguage === "curl" && `curl -X POST https://api.sabivault.io/api/v1/m2m/query \\
+  -H "Content-Type: application/json" \\
+  -H "X-Sabi-Org-Key: ${m2mOrgKey}" \\
+  -H "Authorization: Bearer ${m2mCandidateKey || "sbk_live_v1_..."}"`}
+
+                      {selectedLanguage === "python" && `import requests
+
+url = "https://api.sabivault.io/api/v1/m2m/query"
+headers = {
+    "X-Sabi-Org-Key": "${m2mOrgKey}",
+    "Authorization": "Bearer ${m2mCandidateKey || "sbk_live_v1_..."}",
+    "Content-Type": "application/json"
+}
+
+response = requests.post(url, headers=headers)
+payload = response.json()
+
+# Feed verified data directly into local LLM / Agent context:
+verified_data = payload["verifiedData"]
+print("Tamper Status:", payload["blockchainProof"]["tamperStatus"])`}
+
+                      {selectedLanguage === "typescript" && `import fetch from "node-fetch";
+
+const res = await fetch("https://api.sabivault.io/api/v1/m2m/query", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    "X-Sabi-Org-Key": "${m2mOrgKey}",
+    "Authorization": "Bearer ${m2mCandidateKey || "sbk_live_v1_..."}"
+  }
+});
+
+const { verifiedData, blockchainProof } = await res.json();
+console.log("Verified Candidate Records:", verifiedData);`}
+                    </pre>
+
+                    <button
+                      onClick={() =>
+                        handleCopyKey(
+                          selectedLanguage === "curl"
+                            ? `curl -X POST https://api.sabivault.io/api/v1/m2m/query -H "X-Sabi-Org-Key: ${m2mOrgKey}" -H "Authorization: Bearer ${m2mCandidateKey || "sbk_live_v1_..."}"`
+                            : "See snippet"
+                        )
+                      }
+                      className="absolute right-3 top-3 text-slate-400 hover:text-white"
+                    >
+                      <Copy className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

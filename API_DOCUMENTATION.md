@@ -210,3 +210,4 @@ Organizations configure webhook listeners in the Super Admin dashboard to receiv
 * `credential.tier2_legalized`: Sent when a notary seals a pending transcript.
 * `key.revoked`: Sent when a candidate terminates an active API key early.
 * `security.tamper_detected`: Sent if an on-chain hash mismatch is detected.
+
