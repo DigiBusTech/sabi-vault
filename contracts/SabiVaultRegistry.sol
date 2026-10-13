@@ -175,3 +175,4 @@ contract SabiVaultRegistry {
         emit NotaryStatusUpdated(notary, isAuthorized, jurisdiction);
     }
 }
+

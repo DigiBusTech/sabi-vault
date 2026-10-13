@@ -1,5 +1,5 @@
 # SABI VAULT: MASTER PROJECT CONTEXT
-> **Status:** Phase 1 Core Complete (Cryptographic Hasher, Scoped Keys, Smart Contracts, Multi-Agents, UI & Test Suite Operational)  
+> **Status:** Phase 2 Complete (Ephemeral OAuth Parser, Sovereign Node Router, Supabase RLS Schema, Blockchain Ledger Client & Verified Test Suite)  
 > **Rule:** This file MUST be read at the beginning of any session by any AI agent, developer, or IDE before inspecting or modifying code. It MUST be updated during every commit or major milestone.
 
 ---

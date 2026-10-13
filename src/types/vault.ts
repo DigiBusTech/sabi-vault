@@ -208,3 +208,4 @@ export interface FullUserVault {
   achievements?: AchievementsData;
   lastSyncedAt: string;
 }
+

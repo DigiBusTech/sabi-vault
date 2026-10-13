@@ -81,4 +81,37 @@
 
 - **Outcome:** All 6 architectural integration tests passed with 100% success.
 
+---
+
+### Entry #003: Phase 2 Implementation - Storage Connectors, Sovereign Nodes & Database Schemas
+- **Date & Timestamp:** 2026-10-13 10:37:00 (Local)
+- **User Prompt / Intent:**
+  > "begin Phase 2"
+
+- **Actions Taken:**
+  1. **Google Drive OAuth Connector (`src/core/storage/google_drive.ts`):**
+     - Implemented `GoogleDriveConnector` to interact directly with Google Drive API v3 via OAuth 2.0.
+     - Ephemerally streams file binaries into memory with zero disk writes.
+  2. **Ephemeral Document Parser with Buffer Sanitization (`src/core/parser/ephemeral_parser.ts`):**
+     - Streams in-memory buffer, calculates SHA-256 immediately.
+     - Uses `MultiLLMGateway` to normalize raw extracted text into target 6 JSON schemas.
+     - Enforced Zero Raw Centralization Invariant: automatically wipes memory buffer (`buffer.fill(0)`) upon completion before garbage collection.
+  3. **Sovereign Regional Node Router (`src/core/sovereign/node_router.ts`):**
+     - Maps user nationality and residency to sovereign database nodes (`ng-west-africa` for NDPC compliance, `eu-central` for GDPR compliance, `na-east` for US privacy).
+     - Provides regional endpoint routing and sovereign node payout wallet resolution.
+  4. **Supabase / PostgreSQL Sovereign Partitioning Schema (`supabase/migrations/20261013000000_sovereign_nodes_schema.sql`):**
+     - Created tables: `sovereign_nodes`, `vault_profiles`, `vault_records` (JSONB structured records with SHA-256 indices), `scoped_api_keys`, and `enterprise_query_audits`.
+     - Configured strict Row Level Security (RLS) policies guaranteeing isolation between regional tenants and candidate vaults.
+  5. **Blockchain Ledger Client (`src/core/blockchain/ledger_client.ts`):**
+     - Ethers.js v6 client for Base Sepolia testnet interfacing with `SabiVaultRegistry.sol` and `SabiRevenueSplitter.sol`.
+     - Equipped with offline deterministic simulation mode for seamless zero-gas test execution.
+  6. **Automated Phase 2 Verification Suite (`tests/test_phase2_sovereign.mjs`):**
+     - Verified in-memory buffer sanitization (all bytes zeroed out).
+     - Verified regional node routing (NG -> NDPC, DE -> GDPR).
+     - Verified on-chain hash matching and tamper detection.
+     - Verified 60/40 GovTech revenue split mathematical precision with zero rounding loss.
+
+- **Outcome:** All Phase 2 sovereign infrastructure tests passed with 100% success.
+
+
 
