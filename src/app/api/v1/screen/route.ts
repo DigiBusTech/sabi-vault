@@ -7,6 +7,7 @@ import { FraudDetectionAgent } from "@/agents/fraud_detection_agent";
 import { verifyScopedApiKey, filterVaultByScope } from "@/core/crypto/scoped_key";
 import { SovereignNodeRouter } from "@/core/sovereign/node_router";
 import { FullUserVault } from "@/types/vault";
+import { globalUserStore } from "@/core/vault/user_store";
 
 // Sample verified candidate storage mock
 const MOCK_CANDIDATE_VAULT: FullUserVault = {
@@ -196,6 +197,17 @@ export async function POST(req: NextRequest) {
 
     // Step 6: 60/40 Micro-Transaction Accounting
     const sovereignNode = SovereignNodeRouter.resolveSovereignNode(MOCK_CANDIDATE_VAULT.residenceCountry);
+
+    // Step 7: Record Citizen Privacy Transparency Log
+    globalUserStore.recordAuditEntry({
+      requestingOrg: requestingOrg || "Enterprise Screener Portal",
+      orgType: "ENTERPRISE",
+      accessedScopes: allowedScopes,
+      purpose: `${selectedVertical.toUpperCase()} Multi-Agent Screening`,
+      integrityVerified: true,
+      onChainTx: "0x89f4b321a97d9120eef9234857b60e408d6c7b9a5e8e3d09a25b1285741f021c",
+      status: "VERIFIED_ACCESSED",
+    });
 
     return NextResponse.json({
       status: "SCREENING_COMPLETE",

@@ -1,5 +1,5 @@
 # SABI VAULT: MASTER PROJECT CONTEXT
-> **Status:** Super Admin Control Plane & M2M Developer Studio Complete (AES-256 Secrets Vault, Universal CRUD, Dual-Key M2M Handshake, 13 Dynamic Routes & Verified Test Suite)  
+> **Status:** Phase 2 (Citizen Vault Management & Key Manager), Phase 3A (Sovereign Govt Dashboard & 40% Fiscal Splitter), and Phase 3B (Enterprise Dynamic Criteria Studio & Batch Screening) Complete (21 Clean Next.js Routes, 100% Passed Master Integration Test Suite)  
 > **Rule:** This file MUST be read at the beginning of any session by any AI agent, developer, or IDE before inspecting or modifying code. It MUST be updated during every commit or major milestone.
 
 ---
@@ -106,8 +106,16 @@ sabi-vault/
 │   │   ├── (dashboard)/vault/         # B2C User Vault (6 categories, API key generator)
 │   │   ├── (dashboard)/enterprise/    # B2B Screening Engine & Requirement Upload
 │   │   ├── (dashboard)/notary/        # Tier-2 Notary/Institutional Attestation Portal
-│   │   └── api/                       # Scoped Query APIs, Webhooks, Gateway
+│   │   └── api/                       # 21 Scoped Query, Admin, Govt, Vault & M2M REST APIs
+│   ├── components/                    # Modular Dashboard Views (Citizen, Enterprise, Govt)
+│   │   ├── CitizenVaultView.tsx       # B2C Credential CRUD, Ephemeral Sync, Scoped Key Manager
+│   │   ├── EnterpriseScreeningView.tsx# B2B Dynamic Grounding Studio, Single & Bulk Screening
+│   │   └── SovereignGovtView.tsx      # GovTech Telemetry, 40% Fiscal Splitter & Fraud Radar
 │   ├── core/
+│   │   ├── admin/                     # Super admin store, AES-256 dynamic configuration vault
+│   │   ├── vault/                     # Citizen vault store, credential CRUD, key revocation
+│   │   ├── government/                # Sovereign node telemetry, 40% micro-split disbursement
+│   │   ├── enterprise/                # Dynamic criteria rubrics, parallel batch screening engine
 │   │   ├── blockchain/                # EVM interaction, hash anchors, contract clients
 │   │   ├── crypto/                    # SHA-256 hashing, scoped API key generators
 │   │   ├── sovereign/                 # Sovereign node routing & residency compliance

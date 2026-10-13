@@ -41,6 +41,9 @@ import {
 import { computeSha256 } from "@/core/crypto/hasher";
 import { generateScopedApiKey, verifyScopedApiKey, filterVaultByScope } from "@/core/crypto/scoped_key";
 import { VaultCategory, FullUserVault } from "@/types/vault";
+import { CitizenVaultView } from "@/components/CitizenVaultView";
+import { EnterpriseScreeningView } from "@/components/EnterpriseScreeningView";
+import { SovereignGovtView } from "@/components/SovereignGovtView";
 
 // Sample verified citizen vault data
 const INITIAL_VAULT: FullUserVault = {
@@ -149,7 +152,7 @@ const INITIAL_VAULT: FullUserVault = {
 };
 
 export default function SabiVaultDemo() {
-  const [activeTab, setActiveTab] = useState<"b2c" | "b2b" | "notary" | "admin" | "api_docs">("b2c");
+  const [activeTab, setActiveTab] = useState<"b2c" | "b2b" | "govt" | "notary" | "admin" | "api_docs">("b2c");
 
   // B2C Key Generator State
   const [selectedScopes, setSelectedScopes] = useState<VaultCategory[]>([
@@ -486,6 +489,17 @@ export default function SabiVaultDemo() {
             Enterprise Screening
           </button>
           <button
+            onClick={() => setActiveTab("govt")}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold transition-all ${
+              activeTab === "govt"
+                ? "bg-blue-600 text-white shadow-md shadow-blue-600/30"
+                : "text-slate-400 hover:text-slate-200"
+            }`}
+          >
+            <Globe2 className="w-3.5 h-3.5" />
+            Govt Dashboard
+          </button>
+          <button
             onClick={() => setActiveTab("notary")}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold transition-all ${
               activeTab === "notary"
@@ -552,7 +566,9 @@ export default function SabiVaultDemo() {
               {activeTab === "b2c"
                 ? "Citizen Sovereign Vault & Scoped Key Generator"
                 : activeTab === "b2b"
-                ? "Enterprise Multi-Agent Screening Gateway"
+                ? "Enterprise Screening & Dynamic Grounding Studio"
+                : activeTab === "govt"
+                ? "Sovereign Government Telemetry & 40% Fiscal Splitter"
                 : activeTab === "notary"
                 ? "Tier-2 Notary Attestation & Legalization Portal"
                 : activeTab === "admin"
@@ -563,7 +579,9 @@ export default function SabiVaultDemo() {
               {activeTab === "b2c"
                 ? "Your raw documents remain safely inside your personal Google Drive. Mint time-decaying, cryptographically signed API keys that grant organizations access only to specific verified categories."
                 : activeTab === "b2b"
-                ? "Verify applicant qualifications in seconds with zero manual document review, zero PDF forgery risk, and instant mathematical verification against on-chain hash ledgers."
+                ? "Create dynamic criteria grounding profiles and screen candidate pools in single or bulk batches with zero hallucination and mathematical on-chain proof."
+                : activeTab === "govt"
+                ? "Monitor regional sovereign node data residency, review 40% micro-transaction fee accumulations via smart contracts, and track national credential integrity threats."
                 : activeTab === "notary"
                 ? "Accredited notaries inspect submitted diplomas, transcripts, and affidavits, affixing their cryptographic seal directly onto the Base Sepolia ledger."
                 : activeTab === "admin"
@@ -574,460 +592,13 @@ export default function SabiVaultDemo() {
         </div>
 
         {/* TAB 1: CITIZEN VAULT (B2C) */}
-        {activeTab === "b2c" && (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            {/* Left Column: 6 Vault Categories */}
-            <div className="lg:col-span-7 space-y-6">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                  <Database className="w-5 h-5 text-emerald-400" />
-                  Standardized Vault Categories
-                </h2>
-                <span className="text-xs text-slate-400">Synced via OAuth (Google Drive)</span>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* 1. Academics */}
-                <div className="border border-slate-800 bg-slate-900/40 rounded-xl p-4 space-y-3 hover:border-emerald-500/30 transition-all">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <GraduationCap className="w-4 h-4 text-emerald-400" />
-                      <span className="text-sm font-bold text-white">Academics</span>
-                    </div>
-                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                      Tier 2 Notarized
-                    </span>
-                  </div>
-                  <div className="text-xs space-y-1 text-slate-300">
-                    <p className="font-semibold text-slate-100">BSc Computer Engineering</p>
-                    <p className="text-slate-400">University of Lagos • First Class (GPA: 4.84/5.0)</p>
-                    <p className="text-[10px] font-mono text-slate-500 truncate">
-                      SHA256: 3e2849e798bc...7852b855
-                    </p>
-                  </div>
-                </div>
-
-                {/* 2. Finance */}
-                <div className="border border-slate-800 bg-slate-900/40 rounded-xl p-4 space-y-3 hover:border-emerald-500/30 transition-all">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Wallet className="w-4 h-4 text-cyan-400" />
-                      <span className="text-sm font-bold text-white">Finance</span>
-                    </div>
-                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
-                      Tier 1 Hashed
-                    </span>
-                  </div>
-                  <div className="text-xs space-y-1 text-slate-300">
-                    <p className="font-semibold text-slate-100">Liquid Balance: NGN 8,750,000</p>
-                    <p className="text-slate-400">Zenith Bank PLC • Tax Clearance: VALID (FIRS)</p>
-                    <p className="text-[10px] font-mono text-slate-500 truncate">
-                      SHA256: 4b227777d4dd...cacdabf8a
-                    </p>
-                  </div>
-                </div>
-
-                {/* 3. Experience */}
-                <div className="border border-slate-800 bg-slate-900/40 rounded-xl p-4 space-y-3 hover:border-emerald-500/30 transition-all">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Briefcase className="w-4 h-4 text-emerald-400" />
-                      <span className="text-sm font-bold text-white">Experience</span>
-                    </div>
-                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                      Verified Ref
-                    </span>
-                  </div>
-                  <div className="text-xs space-y-1 text-slate-300">
-                    <p className="font-semibold text-slate-100">Senior Systems Engineer</p>
-                    <p className="text-slate-400">Paystack (Stripe) • 2022 - Present</p>
-                    <p className="text-[10px] font-mono text-slate-500 truncate">
-                      SHA256: 5f3a097de37b...64afe39d
-                    </p>
-                  </div>
-                </div>
-
-                {/* 4. Certifications */}
-                <div className="border border-slate-800 bg-slate-900/40 rounded-xl p-4 space-y-3 hover:border-emerald-500/30 transition-all">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <FileCheck className="w-4 h-4 text-purple-400" />
-                      <span className="text-sm font-bold text-white">Certifications</span>
-                    </div>
-                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">
-                      Tier 1 Hashed
-                    </span>
-                  </div>
-                  <div className="text-xs space-y-1 text-slate-300">
-                    <p className="font-semibold text-slate-100">AWS Solutions Architect Pro</p>
-                    <p className="text-slate-400">Amazon Web Services</p>
-                    <p className="text-[10px] font-mono text-slate-500 truncate">
-                      SHA256: 8a107d9d372b...ec29807
-                    </p>
-                  </div>
-                </div>
-
-                {/* 5. Portfolio */}
-                <div className="border border-slate-800 bg-slate-900/40 rounded-xl p-4 space-y-3 hover:border-emerald-500/30 transition-all">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Globe2 className="w-4 h-4 text-teal-400" />
-                      <span className="text-sm font-bold text-white">Portfolio</span>
-                    </div>
-                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-teal-500/20 text-teal-300 border border-teal-500/30">
-                      Public Identity
-                    </span>
-                  </div>
-                  <div className="text-xs space-y-1 text-slate-300">
-                    <p className="font-semibold text-slate-100">Distributed Systems Architect</p>
-                    <p className="text-slate-400">GitHub, Google Scholar verified</p>
-                  </div>
-                </div>
-
-                {/* 6. Achievements */}
-                <div className="border border-slate-800 bg-slate-900/40 rounded-xl p-4 space-y-3 hover:border-emerald-500/30 transition-all">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Award className="w-4 h-4 text-amber-400" />
-                      <span className="text-sm font-bold text-white">Achievements</span>
-                    </div>
-                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                      Tier 1 Hashed
-                    </span>
-                  </div>
-                  <div className="text-xs space-y-1 text-slate-300">
-                    <p className="font-semibold text-slate-100">Fintech Innovation Winner</p>
-                    <p className="text-slate-400">Techpoint Africa (2024)</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Right Column: Scoped API Key Generator */}
-            <div className="lg:col-span-5 space-y-6">
-              <div className="border border-slate-800 bg-gradient-to-b from-slate-900 to-[#0c1220] rounded-2xl p-6 shadow-xl space-y-5">
-                <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
-                  <Key className="w-5 h-5 text-emerald-400" />
-                  <h3 className="font-bold text-base text-white">Generate Scoped API Key</h3>
-                </div>
-
-                <div className="space-y-4 text-xs">
-                  <div>
-                    <label className="block text-slate-300 font-semibold mb-2">
-                      1. Select Allowed Categories (Data Redaction):
-                    </label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {(
-                        [
-                          "academics",
-                          "finance",
-                          "experience",
-                          "certifications",
-                          "portfolio",
-                          "achievements",
-                        ] as VaultCategory[]
-                      ).map((cat) => (
-                        <button
-                          key={cat}
-                          onClick={() => toggleScope(cat)}
-                          className={`px-3 py-2 rounded-lg border text-left font-medium capitalize transition-all ${
-                            selectedScopes.includes(cat)
-                              ? "bg-emerald-500/20 border-emerald-500 text-emerald-300 shadow-sm shadow-emerald-500/20"
-                              : "bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700"
-                          }`}
-                        >
-                          ✓ {cat}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-slate-300 font-semibold mb-1">2. Expiration (TTL):</label>
-                      <select
-                        value={keyTtlDays}
-                        onChange={(e) => setKeyTtlDays(Number(e.target.value))}
-                        className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-slate-200"
-                      >
-                        <option value={1}>24 Hours</option>
-                        <option value={7}>7 Days</option>
-                        <option value={14}>14 Days</option>
-                        <option value={30}>30 Days</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-slate-300 font-semibold mb-1">3. Max Queries:</label>
-                      <select
-                        value={maxQueries}
-                        onChange={(e) => setMaxQueries(Number(e.target.value))}
-                        className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-slate-200"
-                      >
-                        <option value={1}>1 (Single Use)</option>
-                        <option value={5}>5 Queries</option>
-                        <option value={10}>10 Queries</option>
-                        <option value={0}>Unlimited</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={handleGenerateKey}
-                    className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-black font-extrabold text-sm shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 transition-all"
-                  >
-                    <Key className="w-4 h-4" />
-                    Mint Cryptographic API Key
-                  </button>
-
-                  {generatedApiKey && (
-                    <div className="space-y-2 pt-2 border-t border-slate-800">
-                      <div className="flex items-center justify-between text-slate-300">
-                        <span className="font-semibold text-emerald-400">Live API Key Ready:</span>
-                        <button
-                          onClick={() => handleCopyKey(generatedApiKey)}
-                          className="flex items-center gap-1 text-[11px] text-slate-400 hover:text-white"
-                        >
-                          <Copy className="w-3.5 h-3.5" />
-                          {copyNotice ? "Copied!" : "Copy"}
-                        </button>
-                      </div>
-                      <div className="p-3 bg-black/60 border border-emerald-500/30 rounded-lg font-mono text-[11px] text-emerald-300 break-all select-all">
-                        {generatedApiKey}
-                      </div>
-                      <p className="text-[11px] text-slate-400">
-                        Pass this key to recruiters or immigration officers. They will only be able to view{" "}
-                        <span className="text-emerald-400 font-semibold">{selectedScopes.join(", ")}</span>.
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        {activeTab === "b2c" && <CitizenVaultView onMintKeyForDemo={(key) => setInputApiKey(key)} />}
 
         {/* TAB 2: ENTERPRISE SCREENING (B2B) */}
-        {activeTab === "b2b" && (
-          <div className="space-y-8">
-            {/* Input Controls */}
-            <div className="border border-slate-800 bg-slate-900/50 rounded-2xl p-6 space-y-4">
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-                <div className="lg:col-span-8 space-y-2">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">
-                    Candidate Scoped API Key:
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      value={inputApiKey}
-                      onChange={(e) => setInputApiKey(e.target.value)}
-                      placeholder="Paste candidate key (e.g. sbk_live_v1_...)"
-                      className="w-full bg-black/60 border border-slate-700 focus:border-cyan-500 rounded-xl px-4 py-3 text-xs font-mono text-cyan-300 placeholder-slate-600 outline-none"
-                    />
-                    {!inputApiKey && (
-                      <button
-                        onClick={handleGenerateKey}
-                        className="absolute right-2 top-2 px-3 py-1.5 rounded-lg bg-emerald-500/20 text-emerald-400 text-xs font-semibold hover:bg-emerald-500/30"
-                      >
-                        Use Demo Key
-                      </button>
-                    )}
-                  </div>
-                </div>
+        {activeTab === "b2b" && <EnterpriseScreeningView />}
 
-                <div className="lg:col-span-4 space-y-2">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">
-                    Screening Vertical:
-                  </label>
-                  <select
-                    value={selectedVertical}
-                    onChange={(e: any) => setSelectedVertical(e.target.value)}
-                    className="w-full bg-black/60 border border-slate-700 rounded-xl px-4 py-3 text-xs font-semibold text-slate-200 outline-none"
-                  >
-                    <option value="labour">Labour & Enterprise Hiring (Tech Lead)</option>
-                    <option value="immigration">Immigration & Visa Processing (Skilled Worker)</option>
-                    <option value="education">University Admissions (MSc Computer Science)</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between pt-2">
-                <div className="text-xs text-slate-400 flex items-center gap-2">
-                  <Coins className="w-4 h-4 text-amber-400" />
-                  Query Fee: <span className="font-semibold text-slate-200">$1.00</span> (Split: $0.60 Sabi / $0.40 Sovereign Node Host)
-                </div>
-
-                <button
-                  onClick={runScreeningPipeline}
-                  disabled={isScreening || !inputApiKey}
-                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 disabled:opacity-50 text-white font-extrabold text-xs shadow-lg shadow-cyan-500/20 flex items-center gap-2 transition-all"
-                >
-                  {isScreening ? (
-                    <>
-                      <RefreshCw className="w-4 h-4 animate-spin" />
-                      Running Multi-Agent Pipeline...
-                    </>
-                  ) : (
-                    <>
-                      <Cpu className="w-4 h-4" />
-                      Execute Multi-Agent Screening
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-
-            {/* Screening Results View */}
-            {screeningResult && (
-              <div className="space-y-6">
-                {screeningResult.status === "REJECTED" ? (
-                  <div className="p-6 rounded-2xl border border-red-500/30 bg-red-950/20 text-red-400 text-sm flex items-center gap-3">
-                    <AlertTriangle className="w-6 h-6 flex-shrink-0" />
-                    <div>
-                      <p className="font-bold">Screening Execution Failed</p>
-                      <p className="text-xs text-red-300">{screeningResult.error}</p>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                    {/* Top Summary Card */}
-                    <div className="lg:col-span-12 border border-slate-800 bg-slate-900/60 rounded-2xl p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                      <div>
-                        <div className="flex items-center gap-3">
-                          <span className="text-lg font-black text-white">
-                            Candidate Evaluation Dossier
-                          </span>
-                          <span className="px-3 py-1 rounded-full text-xs font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
-                            <CheckCircle2 className="w-3.5 h-3.5" />
-                            {screeningResult.criteriaEvaluation.verdict}
-                          </span>
-                        </div>
-                        <p className="text-xs text-slate-400 mt-1">
-                          Candidate ID: <span className="font-mono text-slate-300">{screeningResult.candidateId}</span> • Sovereign Node:{" "}
-                          <span className="text-emerald-400">{screeningResult.sovereignNode}</span>
-                        </p>
-                      </div>
-
-                      <div className="flex items-center gap-4">
-                        <div className="text-right">
-                          <div className="text-xs text-slate-400">Match Score</div>
-                          <div className="text-3xl font-black text-emerald-400">
-                            {screeningResult.criteriaEvaluation.compositeScore}%
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Agent 1: Integrity & Blockchain Ledger Check */}
-                    <div className="lg:col-span-6 border border-slate-800 bg-slate-900/40 rounded-2xl p-5 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-2">
-                          <Lock className="w-4 h-4" />
-                          1. Document Integrity Agent (Blockchain)
-                        </h4>
-                        <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
-                          TAMPER-PROOF MATCH
-                        </span>
-                      </div>
-                      <div className="text-xs space-y-2 text-slate-300 bg-black/40 p-3 rounded-xl border border-slate-800/80 font-mono">
-                        <div>
-                          <span className="text-slate-500">Ledger:</span> {screeningResult.integrityCheck.network}
-                        </div>
-                        <div>
-                          <span className="text-slate-500">Tx Hash:</span>{" "}
-                          <span className="text-emerald-300 truncate block">
-                            {screeningResult.integrityCheck.onChainTx}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="text-slate-500">Trust Level:</span>{" "}
-                          <span className="text-slate-200">{screeningResult.integrityCheck.tierLevel}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Agent 4: Fraud & Anomaly Audit */}
-                    <div className="lg:col-span-6 border border-slate-800 bg-slate-900/40 rounded-2xl p-5 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-2">
-                          <Shield className="w-4 h-4" />
-                          4. Fraud & Timeline Audit Agent
-                        </h4>
-                        <span className="text-[10px] font-bold text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/20">
-                          RISK SCORE: 0% (CLEAN)
-                        </span>
-                      </div>
-                      <div className="text-xs space-y-1 text-slate-300 bg-black/40 p-3 rounded-xl border border-slate-800/80">
-                        <p className="text-slate-300">{screeningResult.fraudAudit.remarks}</p>
-                        <p className="text-[11px] text-slate-400">
-                          ✓ Graduation chronology valid • ✓ Balance velocity stable • ✓ Zero duplicate credentials
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Agent 3: Strict RAG Rubric Breakdown */}
-                    <div className="lg:col-span-12 border border-slate-800 bg-slate-900/40 rounded-2xl p-6 space-y-4">
-                      <div className="flex items-center justify-between">
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-200 flex items-center gap-2">
-                          <Cpu className="w-4 h-4 text-purple-400" />
-                          3. Strict RAG Evaluator (Zero-Hallucination Verified Proofs)
-                        </h4>
-                        <span className="text-xs text-slate-400">Evaluated over Scoped JSON</span>
-                      </div>
-
-                      <div className="space-y-3">
-                        {screeningResult.criteriaEvaluation.rubricBreakdown.map((item: any, idx: number) => (
-                          <div
-                            key={idx}
-                            className="p-4 rounded-xl border border-slate-800 bg-black/30 flex flex-col md:flex-row items-start md:items-center justify-between gap-3"
-                          >
-                            <div className="space-y-1">
-                              <div className="flex items-center gap-2">
-                                <span className="font-bold text-sm text-white">{item.category}</span>
-                                <span
-                                  className={`text-[10px] font-bold px-2 py-0.5 rounded ${
-                                    item.status === "PASSED"
-                                      ? "bg-emerald-500/20 text-emerald-300"
-                                      : "bg-slate-800 text-slate-400"
-                                  }`}
-                                >
-                                  {item.status}
-                                </span>
-                              </div>
-                              <p className="text-xs text-slate-300">{item.proof}</p>
-                            </div>
-                            <div className="text-right">
-                              <span className="text-lg font-black text-white">{item.score}%</span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Smart Contract Revenue Split Receipt */}
-                    <div className="lg:col-span-12 border border-emerald-500/20 bg-emerald-950/10 rounded-2xl p-5 flex flex-col md:flex-row items-center justify-between gap-4 text-xs">
-                      <div className="flex items-center gap-3">
-                        <Coins className="w-5 h-5 text-amber-400" />
-                        <div>
-                          <span className="font-bold text-white">GovTech Micro-Transaction Settled:</span>{" "}
-                          <span className="text-slate-300 font-mono">
-                            {screeningResult.revenueSplitReceipt.contractExecuted}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-4 text-[11px] font-mono">
-                        <span className="text-emerald-400">{screeningResult.revenueSplitReceipt.platformShare}</span>
-                        <span className="text-slate-600">•</span>
-                        <span className="text-cyan-400">{screeningResult.revenueSplitReceipt.soovereignHostShare}</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        )}
+        {/* TAB 3: SOVEREIGN GOVERNMENT HUB */}
+        {activeTab === "govt" && <SovereignGovtView />}
 
         {/* TAB 3: NOTARY PORTAL (TIER 2) */}
         {activeTab === "notary" && (

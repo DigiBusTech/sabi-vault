@@ -5,6 +5,7 @@ import { BlockchainLedgerClient } from "@/core/blockchain/ledger_client";
 import { SovereignNodeRouter } from "@/core/sovereign/node_router";
 import { computeSha256 } from "@/core/crypto/hasher";
 import { FullUserVault } from "@/types/vault";
+import { globalUserStore } from "@/core/vault/user_store";
 
 // Sample sovereign storage record
 const CANDIDATE_STORAGE: FullUserVault = {
@@ -191,6 +192,17 @@ export async function POST(req: NextRequest) {
     // 6. Record Micro-Transaction Telemetry & Revenue Split
     globalAdminStore.recordQueryExecuted(1.0);
     const nodeConfig = SovereignNodeRouter.resolveSovereignNode(CANDIDATE_STORAGE.residenceCountry);
+
+    // 7. Record Citizen Transparency Audit Log
+    globalUserStore.recordAuditEntry({
+      requestingOrg: orgVerification.org.name,
+      orgType: orgVerification.org.type,
+      accessedScopes: allowedScopes,
+      purpose: "M2M Developer / Agent Direct Vault Query",
+      integrityVerified: true,
+      onChainTx: "0x89f4b321a97d9120eef9234857b60e408d6c7b9a5e8e3d09a25b1285741f021c",
+      status: "VERIFIED_ACCESSED",
+    });
 
     return NextResponse.json({
       status: "VERIFIED_SUCCESS",
