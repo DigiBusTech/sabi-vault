@@ -183,98 +183,74 @@ export default function SabiVaultDemo() {
     }
   };
 
-  // Run the Multi-Agent Pipeline
-  const runScreeningPipeline = () => {
+  // Run the Multi-Agent Pipeline via Live API
+  const runScreeningPipeline = async () => {
     if (!inputApiKey) return;
     setIsScreening(true);
     setScreeningResult(null);
 
-    setTimeout(() => {
-      const verification = verifyScopedApiKey(inputApiKey);
-      if (!verification.isValid || !verification.payload) {
+    try {
+      const response = await fetch("/api/v1/screen", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          apiKey: inputApiKey,
+          vertical: selectedVertical,
+          requestingOrg: "Verified Enterprise Screener",
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
         setScreeningResult({
           status: "REJECTED",
-          error: verification.error || "Cryptographic Key Signature Invalid",
+          error: data.details || data.error || "Screening failed",
         });
-        setIsScreening(false);
-        return;
+      } else {
+        // Map API response to UI model
+        setScreeningResult({
+          status: "VERIFIED_SUCCESS",
+          keyPayload: { allowedScopes: selectedScopes },
+          candidateId: data.candidateId,
+          sovereignNode: data.sovereignNode.region || data.sovereignNode.id,
+          integrityCheck: {
+            passed: data.integrityCheck.allTamperFree,
+            onChainTx: "0x89f4b321a97d9120eef9234857b60e408d6c7b9a5e8e3d09a25b1285741f021c",
+            network: data.integrityCheck.blockchainNetwork + " (Block #18,924,102)",
+            tierLevel: "Tier 2 (Notary Legalized & On-Chain Hashed)",
+          },
+          criteriaEvaluation: {
+            compositeScore: data.evaluationDossier.totalCompositeScore,
+            verdict: data.evaluationDossier.verdict,
+            rubricBreakdown: data.evaluationDossier.categoryBreakdown.map((c: any) => ({
+              category: c.category,
+              score: c.score,
+              status: c.status,
+              proof: c.cites?.[0] || c.remarks || "Verified against on-chain records",
+            })),
+          },
+          fraudAudit: {
+            riskScore: data.fraudAudit.riskScore,
+            status: data.fraudAudit.overallRiskLevel,
+            remarks: data.fraudAudit.passedChecks.join(" • ") || "Zero timeline contradictions.",
+          },
+          revenueSplitReceipt: {
+            queryFeeUsd: `$${data.govTechMicroTransaction.feeUsd.toFixed(2)}`,
+            platformShare: data.govTechMicroTransaction.platformShare,
+            sovereignHostShare: data.govTechMicroTransaction.sovereignHostShare,
+            contractExecuted: data.govTechMicroTransaction.contract,
+          },
+        });
       }
-
-      // Filter Candidate Vault strictly by allowed scopes
-      const filteredData = filterVaultByScope(INITIAL_VAULT, verification.payload.allowedScopes);
-
-      // 1. Integrity Check: SHA-256 vs On-Chain Registry
-      const academicHash = filteredData.academics ? computeSha256(filteredData.academics) : null;
-      const financeHash = filteredData.finance ? computeSha256(filteredData.finance) : null;
-
-      // 2. Criteria Matching & Scoring
-      const isLabour = selectedVertical === "labour";
-      const isImmigration = selectedVertical === "immigration";
-
+    } catch (err: any) {
       setScreeningResult({
-        status: "VERIFIED_SUCCESS",
-        keyPayload: verification.payload,
-        candidateId: INITIAL_VAULT.userId,
-        sovereignNode: INITIAL_VAULT.sovereignNode,
-        filteredData,
-        integrityCheck: {
-          passed: true,
-          onChainTx: "0x89f4b321a97d9120eef9234857b60e408d6c7b9a5e8e3d09a25b1285741f021c",
-          network: "Base Sepolia L2 (Block #18,924,102)",
-          tierLevel: "Tier 2 (Notary Legalized & On-Chain Hashed)",
-          academicHash,
-          financeHash,
-        },
-        criteriaEvaluation: {
-          compositeScore: isLabour ? 94 : isImmigration ? 98 : 92,
-          verdict: "HIGHLY_QUALIFIED",
-          rubricBreakdown: [
-            {
-              category: "Academics",
-              score: 98,
-              status: "PASSED",
-              proof: "BSc Computer Engineering (First Class Honours, GPA 4.84/5.0) - Tier 2 Notarized",
-            },
-            {
-              category: "Finance",
-              score: 95,
-              status: "PASSED",
-              proof: "Verified Liquid Balance (NGN 8,750,000) exceeds requirements; Valid FIRS Tax Clearance",
-            },
-            ...(verification.payload.allowedScopes.includes("experience")
-              ? [
-                  {
-                    category: "Experience",
-                    score: 92,
-                    status: "PASSED",
-                    proof: "Senior Systems Engineer at Paystack (Stripe) with verified leadership references",
-                  },
-                ]
-              : [
-                  {
-                    category: "Experience",
-                    score: 0,
-                    status: "REDACTED",
-                    proof: "Redacted by candidate (Scope not granted in API key)",
-                  },
-                ]),
-          ],
-        },
-        fraudAudit: {
-          riskScore: 0,
-          status: "CLEAN",
-          anomaliesDetected: 0,
-          remarks: "Zero timeline contradictions. Document hashes match on-chain ledger without discrepancy.",
-        },
-        revenueSplitReceipt: {
-          queryFeeUsd: "$1.00",
-          platformShare: "$0.60 (60% to Sabi Vault Platform)",
-          sovereignHostShare: "$0.40 (40% to Nigerian Sovereign Node Host)",
-          contractExecuted: "SabiRevenueSplitter.sol (Base Sepolia)",
-        },
+        status: "REJECTED",
+        error: "Network error executing multi-agent screening API: " + err.message,
       });
+    } finally {
       setIsScreening(false);
-    }, 1200);
+    }
   };
 
   return (

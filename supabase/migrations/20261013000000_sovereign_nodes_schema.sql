@@ -122,3 +122,4 @@ CREATE POLICY user_own_keys_all ON scoped_api_keys
 -- 4. Enterprise Audits: Read-only for involved user and organization
 CREATE POLICY user_view_own_audits ON enterprise_query_audits
     FOR SELECT USING (auth.uid()::text = target_vault_id);
+
