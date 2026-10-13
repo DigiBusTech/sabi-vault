@@ -23,6 +23,11 @@ import {
   Copy,
   ChevronRight,
   Globe2,
+  Stamp,
+  HelpCircle,
+  Play,
+  X,
+  FileText,
 } from "lucide-react";
 import { computeSha256 } from "@/core/crypto/hasher";
 import { generateScopedApiKey, verifyScopedApiKey, filterVaultByScope } from "@/core/crypto/scoped_key";
@@ -135,7 +140,7 @@ const INITIAL_VAULT: FullUserVault = {
 };
 
 export default function SabiVaultDemo() {
-  const [activeTab, setActiveTab] = useState<"b2c" | "b2b">("b2c");
+  const [activeTab, setActiveTab] = useState<"b2c" | "b2b" | "notary">("b2c");
 
   // B2C Key Generator State
   const [selectedScopes, setSelectedScopes] = useState<VaultCategory[]>([
@@ -153,6 +158,36 @@ export default function SabiVaultDemo() {
   const [isScreening, setIsScreening] = useState<boolean>(false);
   const [screeningResult, setScreeningResult] = useState<any | null>(null);
 
+  // Tier 2 Notary Attestation State
+  const [notaryQueue, setNotaryQueue] = useState([
+    {
+      id: "doc_unilag_degree",
+      candidateName: "Chinwe Okafor",
+      candidateId: "usr_chinwe_okafor_7721",
+      documentType: "BSc Academic Degree & Official Transcript",
+      institution: "University of Lagos (UNILAG)",
+      hash: "3e2849e798bc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      status: "PENDING_SEAL",
+      onChainTx: null as string | null,
+    },
+    {
+      id: "doc_sworn_affidavit",
+      candidateName: "Chinwe Okafor",
+      candidateId: "usr_chinwe_okafor_7721",
+      documentType: "Sworn Declaration of Age & Identity",
+      institution: "High Court of Lagos State",
+      hash: "7f9a123bc45de678f901234567890abcdef1234567890abcdef1234567890abc",
+      status: "PENDING_SEAL",
+      onChainTx: null as string | null,
+    },
+  ]);
+  const [isNotarizing, setIsNotarizing] = useState<string | null>(null);
+
+  // Pitch Mode & Defense Cheat-Sheet Modal States
+  const [pitchStep, setPitchStep] = useState<number>(0);
+  const [showPitchModal, setShowPitchModal] = useState<boolean>(false);
+  const [showDefenseModal, setShowDefenseModal] = useState<boolean>(false);
+
   // Handle Generating API Key
   const handleGenerateKey = () => {
     const payload = {
@@ -166,7 +201,7 @@ export default function SabiVaultDemo() {
     };
     const key = generateScopedApiKey(payload);
     setGeneratedApiKey(key);
-    setInputApiKey(key); // Auto-populate into B2B screener for seamless testing
+    setInputApiKey(key); // Auto-populate into B2B screener for seamless live demo
   };
 
   const handleCopyKey = () => {
@@ -208,7 +243,6 @@ export default function SabiVaultDemo() {
           error: data.details || data.error || "Screening failed",
         });
       } else {
-        // Map API response to UI model
         setScreeningResult({
           status: "VERIFIED_SUCCESS",
           keyPayload: { allowedScopes: selectedScopes },
@@ -253,6 +287,43 @@ export default function SabiVaultDemo() {
     }
   };
 
+  // Run Notary Attestation via Live API
+  const handleNotarizeDocument = async (docId: string, docHash: string) => {
+    setIsNotarizing(docId);
+    try {
+      const response = await fetch("/api/v1/notary/attest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          vaultId: "usr_chinwe_okafor_7721",
+          category: "academics",
+          documentHash: docHash,
+          notaryId: "notary_barrister_adewale_9921",
+          notaryJurisdiction: "Supreme Court of Nigeria / High Court Lagos",
+          sealSignature: "0xseal_signature_verified_valid_notary_adewale_bello",
+        }),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setNotaryQueue((prev) =>
+          prev.map((item) =>
+            item.id === docId
+              ? {
+                  ...item,
+                  status: "LEGALIZED_ON_CHAIN",
+                  onChainTx: data.notaryAttestation.onChainTxHash,
+                }
+              : item
+          )
+        );
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsNotarizing(null);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#070b14] text-slate-100 flex flex-col font-sans">
       {/* Top Navbar */}
@@ -274,36 +345,59 @@ export default function SabiVaultDemo() {
           </div>
         </div>
 
-        {/* View Switcher */}
+        {/* View Switcher: B2C, B2B, Notary */}
         <div className="flex items-center gap-2 bg-slate-900/90 border border-slate-800 p-1 rounded-xl">
           <button
             onClick={() => setActiveTab("b2c")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
               activeTab === "b2c"
                 ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/30"
                 : "text-slate-400 hover:text-slate-200"
             }`}
           >
-            <Key className="w-4 h-4" />
+            <Key className="w-3.5 h-3.5" />
             Citizen Vault (B2C)
           </button>
           <button
             onClick={() => setActiveTab("b2b")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
               activeTab === "b2b"
                 ? "bg-cyan-600 text-white shadow-md shadow-cyan-600/30"
                 : "text-slate-400 hover:text-slate-200"
             }`}
           >
-            <Cpu className="w-4 h-4" />
+            <Cpu className="w-3.5 h-3.5" />
             Enterprise Screening (B2B)
+          </button>
+          <button
+            onClick={() => setActiveTab("notary")}
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              activeTab === "notary"
+                ? "bg-amber-600 text-white shadow-md shadow-amber-600/30"
+                : "text-slate-400 hover:text-slate-200"
+            }`}
+          >
+            <Stamp className="w-3.5 h-3.5" />
+            Notary Portal (Tier 2)
           </button>
         </div>
 
-        {/* Regional Node Status */}
-        <div className="hidden md:flex items-center gap-3 text-xs bg-slate-900/60 border border-slate-800 px-3 py-1.5 rounded-lg">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          <span className="text-slate-300 font-mono text-[11px]">Sovereign Node: West Africa (NDPC)</span>
+        {/* Action Controls: 2-Minute Pitch & Technical Defense */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowPitchModal(true)}
+            className="flex items-center gap-1.5 text-xs bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-3 py-1.5 rounded-lg font-bold transition-all"
+          >
+            <Play className="w-3 h-3 fill-emerald-300" />
+            2-Min Pitch Script
+          </button>
+          <button
+            onClick={() => setShowDefenseModal(true)}
+            className="flex items-center gap-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 py-1.5 rounded-lg font-bold transition-all"
+          >
+            <HelpCircle className="w-3.5 h-3.5 text-cyan-400" />
+            Judge Defense Sheet
+          </button>
         </div>
       </header>
 
@@ -314,17 +408,21 @@ export default function SabiVaultDemo() {
           <div className="max-w-3xl space-y-2">
             <div className="inline-flex items-center gap-2 text-xs font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full">
               <Sparkles className="w-3.5 h-3.5" />
-              Zero Raw File Centralization • On-Chain Tamper Proofing • 60/40 GovTech Revenue Split
+              Zero Raw File Centralization • Regional Sovereign Nodes • 60/40 GovTech Revenue Split
             </div>
             <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-white">
               {activeTab === "b2c"
                 ? "Citizen Sovereign Vault & Scoped Key Generator"
-                : "Enterprise Multi-Agent Screening Gateway"}
+                : activeTab === "b2b"
+                ? "Enterprise Multi-Agent Screening Gateway"
+                : "Tier-2 Notary Attestation & Legalization Portal"}
             </h1>
             <p className="text-sm text-slate-300 leading-relaxed">
               {activeTab === "b2c"
-                ? "Your raw documents remain safely inside your personal cloud drive. Generate time-decaying, cryptographically signed API keys that grant organizations access only to specific verified categories."
-                : "Verify applicant qualifications in seconds with zero manual document review, zero PDF forgery risk, and instant mathematical verification against on-chain hash ledgers."}
+                ? "Your raw documents remain safely inside your private cloud drive (Google Drive). Generate time-decaying, cryptographically signed API keys that grant organizations access only to specific verified categories."
+                : activeTab === "b2b"
+                ? "Verify applicant qualifications in seconds with zero manual document review, zero PDF forgery risk, and instant mathematical verification against on-chain hash ledgers."
+                : "Accredited notaries and institutional registrars inspect submitted diplomas, transcripts, and affidavits, affixing their cryptographic seal directly onto the on-chain registry."}
             </p>
           </div>
         </div>
@@ -784,7 +882,222 @@ export default function SabiVaultDemo() {
             )}
           </div>
         )}
+
+        {/* TAB 3: NOTARY PORTAL (TIER 2) */}
+        {activeTab === "notary" && (
+          <div className="space-y-6">
+            <div className="border border-slate-800 bg-slate-900/40 rounded-2xl p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <Stamp className="w-5 h-5 text-amber-400" />
+                  <h3 className="font-bold text-base text-white">Accredited Notary Attestation Desk</h3>
+                </div>
+                <p className="text-xs text-slate-400">
+                  Logged in as: <span className="text-slate-200 font-semibold">Barrister Adewale Bello, SAN</span> (High Court of Lagos / Federal Republic of Nigeria)
+                </p>
+              </div>
+              <div className="text-xs font-mono bg-amber-500/10 text-amber-300 border border-amber-500/20 px-3 py-1.5 rounded-lg">
+                Notary License: SCN-BAR-2014-88421 (Active)
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                Pending Legalization Queue (Tier 2 Submissions):
+              </h4>
+
+              <div className="grid grid-cols-1 gap-4">
+                {notaryQueue.map((item) => (
+                  <div
+                    key={item.id}
+                    className="border border-slate-800 bg-slate-900/60 rounded-xl p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4"
+                  >
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <FileText className="w-4 h-4 text-amber-400" />
+                        <span className="font-bold text-sm text-white">{item.documentType}</span>
+                        <span
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                            item.status === "LEGALIZED_ON_CHAIN"
+                              ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+                              : "bg-amber-500/20 text-amber-300 border border-amber-500/30"
+                          }`}
+                        >
+                          {item.status === "LEGALIZED_ON_CHAIN" ? "✓ LEGALIZED ON-CHAIN" : "AWAITING NOTARY SEAL"}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-400">
+                        Candidate: <span className="text-slate-200 font-semibold">{item.candidateName}</span> ({item.candidateId}) • Issuing Institution:{" "}
+                        <span className="text-slate-300 font-semibold">{item.institution}</span>
+                      </p>
+                      <p className="text-[11px] font-mono text-slate-500">
+                        Document SHA-256: <span className="text-slate-400">{item.hash}</span>
+                      </p>
+                      {item.onChainTx && (
+                        <p className="text-[11px] font-mono text-emerald-400">
+                          On-Chain Tx Receipt: {item.onChainTx}
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      {item.status === "LEGALIZED_ON_CHAIN" ? (
+                        <div className="flex items-center gap-2 text-xs font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-4 py-2 rounded-xl">
+                          <CheckCircle2 className="w-4 h-4" />
+                          Seal Bound On-Chain
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => handleNotarizeDocument(item.id, item.hash)}
+                          disabled={isNotarizing === item.id}
+                          className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black font-extrabold text-xs shadow-lg shadow-amber-500/20 flex items-center gap-2 transition-all disabled:opacity-50"
+                        >
+                          {isNotarizing === item.id ? (
+                            <>
+                              <RefreshCw className="w-4 h-4 animate-spin" />
+                              Committing Seal to Ledger...
+                            </>
+                          ) : (
+                            <>
+                              <Stamp className="w-4 h-4" />
+                              Affix Notary Seal & Legalize On-Chain
+                            </>
+                          )}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
       </main>
+
+      {/* MODAL 1: 2-MINUTE WINNING PITCH SCRIPT WALKTHROUGH */}
+      {showPitchModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-[#0b101e] border border-slate-800 rounded-2xl max-w-2xl w-full p-6 space-y-6 shadow-2xl relative">
+            <button
+              onClick={() => setShowPitchModal(false)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-white"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
+              <Play className="w-5 h-5 text-emerald-400" />
+              <h3 className="font-black text-lg text-white">The 2-Minute Winning Pitch Guide</h3>
+            </div>
+
+            <div className="space-y-4 text-xs text-slate-300">
+              <div className="p-3 bg-slate-900/60 rounded-xl border border-slate-800">
+                <span className="font-bold text-emerald-400">0:00 - 0:30 (The Hook & Problem):</span>
+                <p className="mt-1 text-slate-300 italic">
+                  &quot;Every year, organizations spend thousands of hours manually reviewing PDF resumes, while governments and universities lose millions to forged documents. Candidates are forced to re-upload the same credentials to hundreds of portals. We built Sabi Vault—a sovereign data infrastructure and decentralized identity platform that replaces static PDFs with programmable, tamper-proof API keys.&quot;
+                </p>
+              </div>
+
+              <div className="p-3 bg-slate-900/60 rounded-xl border border-slate-800">
+                <span className="font-bold text-cyan-400">0:30 - 1:15 (The Live Demo Walkthrough):</span>
+                <p className="mt-1 text-slate-300">
+                  • <strong>Action 1 (User Side):</strong> Switch to Citizen Vault. Note files sync from private Google Drive (never stored raw). Select &apos;Academics&apos; & &apos;Finance&apos; and click &apos;Mint Cryptographic API Key&apos;.<br />
+                  • <strong>Action 2 (Enterprise Side):</strong> Switch to Enterprise Screening. Paste the key alongside a vertical.<br />
+                  • <strong>Action 3 (Verification & AI):</strong> Click &apos;Execute Screening&apos;. Show instant on-chain hash verification badge and zero-hallucination score.
+                </p>
+              </div>
+
+              <div className="p-3 bg-slate-900/60 rounded-xl border border-slate-800">
+                <span className="font-bold text-purple-400">1:15 - 1:45 (The Architecture & GovTech Model):</span>
+                <p className="mt-1 text-slate-300 italic">
+                  &quot;Sabi Vault uses a three-tier model: physical files stay in the user&apos;s cloud, structured text sits on country-specific database nodes for strict GDPR/NDPC compliance, and cryptographic hashes live on-chain. When organizations pay micro-transactions to query keys, smart contracts split the fee 60/40 between our platform and the sovereign government hosting the node.&quot;
+                </p>
+              </div>
+
+              <div className="p-3 bg-slate-900/60 rounded-xl border border-slate-800">
+                <span className="font-bold text-amber-400">1:45 - 2:00 (The Vision):</span>
+                <p className="mt-1 text-slate-300 italic">
+                  &quot;We are turning static legal compliance into a sovereign, profit-generating data network for nations while giving users total ownership of their digital credentials.&quot;
+                </p>
+              </div>
+            </div>
+
+            <div className="flex justify-end">
+              <button
+                onClick={() => setShowPitchModal(false)}
+                className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs"
+              >
+                Got It, Let&apos;s Present
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 2: TECHNICAL DEFENSE CHEAT-SHEET FOR JUDGES */}
+      {showDefenseModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-[#0b101e] border border-slate-800 rounded-2xl max-w-3xl w-full p-6 space-y-6 shadow-2xl relative max-h-[85vh] overflow-y-auto">
+            <button
+              onClick={() => setShowDefenseModal(false)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-white"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
+              <HelpCircle className="w-5 h-5 text-cyan-400" />
+              <h3 className="font-black text-lg text-white">Technical Defense Cheat-Sheet for Judges</h3>
+            </div>
+
+            <div className="space-y-4 text-xs">
+              <div className="p-4 bg-slate-900/80 rounded-xl border border-slate-800 space-y-1">
+                <p className="font-bold text-emerald-400 text-sm">&quot;Where are raw documents stored? Is this GDPR compliant?&quot;</p>
+                <p className="text-slate-300">
+                  <strong>Defense:</strong> &quot;We never store raw documents on our servers or on the blockchain. Files remain in the user&apos;s personal Google Drive/Dropbox via OAuth. Only parsed JSON text lives on localized PostgreSQL database nodes within the user&apos;s home country, satisfying NDPC and GDPR data residency laws.&quot;
+                </p>
+              </div>
+
+              <div className="p-4 bg-slate-900/80 rounded-xl border border-slate-800 space-y-1">
+                <p className="font-bold text-cyan-400 text-sm">&quot;Why do you need blockchain if you already have a database?&quot;</p>
+                <p className="text-slate-300">
+                  <strong>Defense:</strong> &quot;Databases can be altered by admins or hackers. We store a SHA-256 hash string on-chain upon cloud sync or notary seal. When queried, we re-hash the data—if a single character was modified in the database, the hashes won&apos;t match.&quot;
+                </p>
+              </div>
+
+              <div className="p-4 bg-slate-900/80 rounded-xl border border-slate-800 space-y-1">
+                <p className="font-bold text-purple-400 text-sm">&quot;What if an LLM hallucinates candidate qualifications?&quot;</p>
+                <p className="text-slate-300">
+                  <strong>Defense:</strong> &quot;We use a strict Retrieval-Augmented Generation (RAG) pipeline over structured JSON schemas. The LLM acts purely as an evaluator against the uploaded requirement document and must cite exact JSON fields.&quot;
+                </p>
+              </div>
+
+              <div className="p-4 bg-slate-900/80 rounded-xl border border-slate-800 space-y-1">
+                <p className="font-bold text-amber-400 text-sm">&quot;What happens if your primary AI model goes down during bulk queries?&quot;</p>
+                <p className="text-slate-300">
+                  <strong>Defense:</strong> &quot;Queries route through our multi-provider gateway configured with fallback providers (Google Gemini Flash $\rightarrow$ Groq LLaMA 3.3 $\rightarrow$ OpenAI mini $\rightarrow$ Deterministic engine) to ensure zero operational downtime.&quot;
+                </p>
+              </div>
+
+              <div className="p-4 bg-slate-900/80 rounded-xl border border-slate-800 space-y-1">
+                <p className="font-bold text-teal-400 text-sm">&quot;How do you handle un-notarized vs. legal documents?&quot;</p>
+                <p className="text-slate-300">
+                  <strong>Defense:</strong> &quot;We support a two-tier verification system. Tier 1 documents (bank statements) are hashed automatically upon cloud sync. Tier 2 documents (degrees/affidavits) require human notary verification before binding the seal and hash on-chain.&quot;
+                </p>
+              </div>
+            </div>
+
+            <div className="flex justify-end">
+              <button
+                onClick={() => setShowDefenseModal(false)}
+                className="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl text-xs"
+              >
+                Close Cheat-Sheet
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Footer */}
       <footer className="border-t border-slate-800/80 py-6 px-6 text-center text-xs text-slate-500">
@@ -793,4 +1106,3 @@ export default function SabiVaultDemo() {
     </div>
   );
 }
-
