@@ -8,31 +8,25 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        poppins: ["Poppins", "sans-serif"],
+        montserrat: ["Montserrat", "sans-serif"],
+        sans: ["Montserrat", "sans-serif"],
+      },
       colors: {
-        background: "var(--background)",
-        foreground: "var(--foreground)",
-        vault: {
-          50: "#f0fdf4",
-          100: "#dcfce7",
-          500: "#22c55e",
-          600: "#16a34a",
-          700: "#15803d",
-          800: "#166534",
-          900: "#14532d",
-          950: "#052e16",
+        background: "#ffffff",
+        foreground: "#0f172a",
+        brand: {
+          green: "#059669",
+          "green-hover": "#047857",
+          "green-light": "#ecfdf5",
+          dark: "#0f172a",
+          "dark-subtle": "#1e293b",
+          white: "#ffffff",
         },
-        sovereign: {
-          50: "#f8fafc",
-          100: "#f1f5f9",
-          500: "#64748b",
-          800: "#1e293b",
-          900: "#0f172a",
-          950: "#020617",
-        }
       },
     },
   },
   plugins: [],
 };
 export default config;
-

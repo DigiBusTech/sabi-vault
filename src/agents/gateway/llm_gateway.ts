@@ -8,6 +8,8 @@
  * 4. Deterministic Mock Fallback (Testing / Offline fail-safe)
  */
 
+import { getConfigValueSync } from "@/core/config/platform_config";
+
 export interface LLMMessage {
   role: "system" | "user" | "assistant";
   content: string;
@@ -31,9 +33,11 @@ export class MultiLLMGateway {
   private openAiApiKey: string | undefined;
 
   constructor() {
-    this.geminiApiKey = process.env.GEMINI_API_KEY;
-    this.groqApiKey = process.env.GROQ_API_KEY;
-    this.openAiApiKey = process.env.OPENAI_API_KEY;
+    // Resolved per instantiation from the dynamic platform config
+    // (dashboard-managed, legacy env fallback handled inside the service).
+    this.geminiApiKey = getConfigValueSync("ai.gemini_api_key") || undefined;
+    this.groqApiKey = getConfigValueSync("ai.groq_api_key") || undefined;
+    this.openAiApiKey = getConfigValueSync("ai.openai_api_key") || undefined;
   }
 
   /**

@@ -1,8 +1,7 @@
 import { VaultCategory, VerificationTier } from "@/types/vault";
 import { verifyScopedApiKey, filterVaultByScope } from "@/core/crypto/scoped_key";
-import { computeSha256 } from "@/core/crypto/hasher";
 import { globalUserStore } from "@/core/vault/user_store";
-import { randomBytes } from "crypto";
+import { IntegrityAgent } from "@/agents/integrity_agent";
 
 export interface CriteriaProfile {
   id: string;
@@ -31,7 +30,7 @@ export interface CandidateEvaluationResult {
   sovereignNode: string;
   compositeScore: number; // 0-100
   verdict: "QUALIFIED" | "CONDITIONALLY_QUALIFIED" | "REJECTED";
-  integrityStatus: "TAMPER_FREE_VERIFIED" | "TAMPER_DETECTED" | "KEY_INVALID";
+  integrityStatus: "TAMPER_FREE_VERIFIED" | "TAMPER_DETECTED" | "KEY_INVALID" | "VAULT_NOT_FOUND";
   onChainTx: string;
   verifiedCategories: VaultCategory[];
   scoresBreakdown: {
@@ -115,16 +114,16 @@ class EnterpriseCriteriaMasterStore {
   }
 
   // --- CANDIDATE SCREENING ENGINE ---
-  public evaluateCandidate(
+  public async evaluateCandidate(
     scopedKey: string,
     rubricId: string,
     requestingOrg: string = "Enterprise Evaluator"
-  ): CandidateEvaluationResult {
+  ): Promise<CandidateEvaluationResult> {
     const rubric = this.rubrics.get(rubricId) || this.rubrics.get("rubric_immigration_tech_visa")!;
     const verification = verifyScopedApiKey(scopedKey);
 
     if (!verification.isValid || !verification.payload) {
-      return {
+      return Promise.resolve({
         candidateId: "UNKNOWN",
         keyId: "INVALID",
         sovereignNode: "UNKNOWN",
@@ -137,26 +136,80 @@ class EnterpriseCriteriaMasterStore {
         citations: ["Cryptographic key signature invalid, forged, or expired."],
         anomaliesDetected: ["INVALID_SCOPED_KEY"],
         evaluatedAt: new Date().toISOString(),
-      };
+      });
     }
 
     const payload = verification.payload;
-    const vault = globalUserStore.getVault();
+    const vault = globalUserStore.findVault(payload.vaultId);
+    if (!vault) {
+      return Promise.resolve({
+        candidateId: payload.vaultId,
+        keyId: payload.keyId,
+        sovereignNode: payload.sovereignNode,
+        compositeScore: 0,
+        verdict: "REJECTED",
+        integrityStatus: "VAULT_NOT_FOUND",
+        onChainTx: "",
+        verifiedCategories: [],
+        scoresBreakdown: {},
+        citations: ["Candidate vault was not found."],
+        anomaliesDetected: ["CANDIDATE_VAULT_NOT_FOUND"],
+        evaluatedAt: new Date().toISOString(),
+      });
+    }
     const redactedVault = filterVaultByScope(vault, payload.allowedScopes);
 
-    // Record key usage
+    const integrityAgent = new IntegrityAgent();
+    const verifiedCategories: VaultCategory[] = [];
+    for (const category of payload.allowedScopes) {
+      const categoryData = redactedVault[category];
+      if (!categoryData) {
+        return {
+          candidateId: payload.vaultId,
+          keyId: payload.keyId,
+          sovereignNode: payload.sovereignNode,
+          compositeScore: 0,
+          verdict: "REJECTED",
+          integrityStatus: "TAMPER_DETECTED",
+          onChainTx: "",
+          verifiedCategories,
+          scoresBreakdown: {},
+          citations: [`Consented category '${category}' has no stored data.`],
+          anomaliesDetected: ["INTEGRITY_CHECK_INCOMPLETE"],
+          evaluatedAt: new Date().toISOString(),
+        };
+      }
+      const integrity = await integrityAgent.verifyCategoryIntegrity(payload.vaultId, category, categoryData);
+      if (!integrity.isTamperFree) {
+        return {
+          candidateId: payload.vaultId,
+          keyId: payload.keyId,
+          sovereignNode: payload.sovereignNode,
+          compositeScore: 0,
+          verdict: "REJECTED",
+          integrityStatus: "TAMPER_DETECTED",
+          onChainTx: "",
+          verifiedCategories,
+          scoresBreakdown: {},
+          citations: [integrity.anomalyDetails || "On-chain integrity verification failed."],
+          anomaliesDetected: ["INTEGRITY_VERIFICATION_FAILED"],
+          evaluatedAt: new Date().toISOString(),
+        };
+      }
+      verifiedCategories.push(category);
+    }
     globalUserStore.recordKeyUsage(payload.keyId);
 
     // Record transparency audit log
-    const onChainTx = `0x${randomBytes(32).toString("hex")}`;
     globalUserStore.recordAuditEntry({
       requestingOrg,
       orgType: "ENTERPRISE",
       accessedScopes: payload.allowedScopes,
       purpose: `Automated screening against ${rubric.name}`,
       integrityVerified: true,
-      onChainTx,
+      onChainTx: "",
       status: "VERIFIED_ACCESSED",
+      targetVaultId: payload.vaultId,
     });
 
     // Score candidate strictly against rubric
@@ -272,8 +325,8 @@ class EnterpriseCriteriaMasterStore {
       compositeScore: roundedScore,
       verdict,
       integrityStatus: "TAMPER_FREE_VERIFIED",
-      onChainTx,
-      verifiedCategories: payload.allowedScopes,
+      onChainTx: "",
+      verifiedCategories,
       scoresBreakdown,
       citations,
       anomaliesDetected: anomalies,
@@ -282,20 +335,20 @@ class EnterpriseCriteriaMasterStore {
   }
 
   // --- BATCH SCREENING RUNNER ---
-  public screenBatch(
+  public async screenBatch(
     keys: string[],
     rubricId: string,
     requestingOrg: string = "Batch Enterprise Screener"
-  ): {
+  ): Promise<{
     rubricUsed: CriteriaProfile;
     totalCandidates: number;
     qualifiedCount: number;
     conditionallyQualifiedCount: number;
     rejectedCount: number;
     candidates: CandidateEvaluationResult[];
-  } {
+  }> {
     const rubric = this.rubrics.get(rubricId) || this.rubrics.get("rubric_immigration_tech_visa")!;
-    const results = keys.map((key) => this.evaluateCandidate(key, rubricId, requestingOrg));
+    const results = await Promise.all(keys.map((key) => this.evaluateCandidate(key, rubricId, requestingOrg)));
 
     // Sort descending by composite score
     results.sort((a, b) => b.compositeScore - a.compositeScore);

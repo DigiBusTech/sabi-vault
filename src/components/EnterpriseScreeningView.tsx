@@ -3,42 +3,79 @@
 import React, { useState, useEffect } from "react";
 import {
   Cpu,
-  Key,
   Shield,
-  Layers,
   Coins,
   CheckCircle2,
   AlertTriangle,
   Sliders,
   Plus,
-  FileText,
   Search,
   Sparkles,
   Users,
-  Copy,
-  ChevronRight,
-  TrendingUp,
-  Award,
-  Lock,
   Check,
+  X,
+  RefreshCw,
+  ScanSearch,
+  FileText,
 } from "lucide-react";
 import { CriteriaProfile, CandidateEvaluationResult } from "@/core/enterprise/criteria_store";
 
+function verdictClasses(verdict: string | undefined): string {
+  switch (verdict) {
+    case "HIGHLY_QUALIFIED":
+    case "QUALIFIED":
+      return "bg-emerald-100 text-emerald-700";
+    case "MARGINAL":
+    case "CONDITIONALLY_QUALIFIED":
+      return "bg-amber-100 text-amber-700";
+    case "UNQUALIFIED":
+    case "REJECTED":
+      return "bg-red-100 text-red-600";
+    default:
+      return "bg-slate-100 text-slate-500";
+  }
+}
+
+const AGENT_STAGES = [
+  { name: "Integrity Agent", desc: "On-chain hash vs ledger" },
+  { name: "Strict RAG Evaluator", desc: "Rubric grounding, zero hallucination" },
+  { name: "Fraud and Anomaly Radar", desc: "Pattern and tenure analysis" },
+] as const;
+
 export function EnterpriseScreeningView() {
   const [rubrics, setRubrics] = useState<CriteriaProfile[]>([]);
-  const [selectedRubricId, setSelectedRubricId] = useState<string>("rubric_immigration_tech_visa");
+  const [selectedRubricId, setSelectedRubricId] = useState<string>("");
   const [activeMode, setActiveMode] = useState<"single" | "bulk">("single");
+  const [isLoadingRubrics, setIsLoadingRubrics] = useState<boolean>(true);
 
   // Single Screening State
   const [singleKey, setSingleKey] = useState<string>("");
-  const [requestingOrg, setRequestingOrg] = useState<string>("Verified Enterprise Screener");
+  const [requestingOrg, setRequestingOrg] = useState<string>("");
   const [isSingleLoading, setIsSingleLoading] = useState<boolean>(false);
   const [singleResult, setSingleResult] = useState<CandidateEvaluationResult | null>(null);
+  const [singleError, setSingleError] = useState<string | null>(null);
 
   // Bulk Screening State
   const [bulkKeysText, setBulkKeysText] = useState<string>("");
   const [isBulkLoading, setIsBulkLoading] = useState<boolean>(false);
   const [bulkResult, setBulkResult] = useState<any | null>(null);
+  const [bulkError, setBulkError] = useState<string | null>(null);
+
+  // Agent stage animation while screening
+  const [agentStage, setAgentStage] = useState<number>(0);
+  useEffect(() => {
+    const running = isSingleLoading || isBulkLoading;
+    if (!running) {
+      setAgentStage(0);
+      return;
+    }
+    setAgentStage(0);
+    const timer = window.setInterval(
+      () => setAgentStage((s) => Math.min(s + 1, AGENT_STAGES.length - 1)),
+      900
+    );
+    return () => window.clearInterval(timer);
+  }, [isSingleLoading, isBulkLoading]);
 
   // Custom Rubric Modal State
   const [showCustomModal, setShowCustomModal] = useState<boolean>(false);
@@ -49,17 +86,24 @@ export function EnterpriseScreeningView() {
   const [customMinFunds, setCustomMinFunds] = useState<string>("10000");
   const [customMinExp, setCustomMinExp] = useState<string>("3");
   const [customTier2Required, setCustomTier2Required] = useState<boolean>(true);
+  const [customError, setCustomError] = useState<string | null>(null);
+  const [isSavingRubric, setIsSavingRubric] = useState<boolean>(false);
 
-  // Fetch rubrics
   const loadRubrics = async () => {
     try {
+      setIsLoadingRubrics(true);
       const res = await fetch("/api/v1/enterprise/criteria");
       if (res.ok) {
         const data = await res.json();
         setRubrics(data.profiles);
+        if (data.profiles?.length && !selectedRubricId) {
+          setSelectedRubricId(data.profiles[0].id);
+        }
       }
     } catch (err) {
       console.error("Failed to load rubrics:", err);
+    } finally {
+      setIsLoadingRubrics(false);
     }
   };
 
@@ -69,11 +113,11 @@ export function EnterpriseScreeningView() {
 
   const activeRubric = rubrics.find((r) => r.id === selectedRubricId) || rubrics[0];
 
-  // Execute Single Screening
   const handleSingleScreen = async () => {
     if (!singleKey) return;
     setIsSingleLoading(true);
     setSingleResult(null);
+    setSingleError(null);
 
     try {
       const res = await fetch("/api/v1/enterprise/screen-batch", {
@@ -81,8 +125,8 @@ export function EnterpriseScreeningView() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           keys: [singleKey],
-          rubricId: selectedRubricId,
-          requestingOrg,
+          rubricId: activeRubric?.id,
+          requestingOrg: requestingOrg || "Enterprise Screener",
         }),
       });
 
@@ -90,16 +134,15 @@ export function EnterpriseScreeningView() {
       if (res.ok && data.candidates?.length > 0) {
         setSingleResult(data.candidates[0]);
       } else {
-        alert(data.error || "Single screening failed.");
+        setSingleError(data.error || "Screening failed. Verify the candidate key and quota.");
       }
-    } catch (err) {
-      console.error("Single screening error:", err);
+    } catch {
+      setSingleError("Network error while screening the candidate.");
     } finally {
       setIsSingleLoading(false);
     }
   };
 
-  // Execute Bulk Screening
   const handleBulkScreen = async () => {
     const rawKeys = bulkKeysText
       .split("\n")
@@ -109,6 +152,7 @@ export function EnterpriseScreeningView() {
     if (rawKeys.length === 0) return;
     setIsBulkLoading(true);
     setBulkResult(null);
+    setBulkError(null);
 
     try {
       const res = await fetch("/api/v1/enterprise/screen-batch", {
@@ -116,8 +160,8 @@ export function EnterpriseScreeningView() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           keys: rawKeys,
-          rubricId: selectedRubricId,
-          requestingOrg: "Enterprise High-Volume Screener",
+          rubricId: activeRubric?.id,
+          requestingOrg: requestingOrg || "Enterprise Screener",
         }),
       });
 
@@ -125,34 +169,19 @@ export function EnterpriseScreeningView() {
       if (res.ok) {
         setBulkResult(data);
       } else {
-        alert(data.error || "Batch screening failed.");
+        setBulkError(data.error || "Batch screening failed.");
       }
-    } catch (err) {
-      console.error("Batch screening error:", err);
+    } catch {
+      setBulkError("Network error while screening the pool.");
     } finally {
       setIsBulkLoading(false);
     }
   };
 
-  // Preload Demo Keys for Batch
-  const handlePreloadDemoBatch = async () => {
-    try {
-      const res = await fetch("/api/v1/vault/keys");
-      if (res.ok) {
-        const data = await res.json();
-        const primaryKey = data.keys?.[0]?.rawKey || "";
-        setBulkKeysText(
-          `${primaryKey}\n${primaryKey}#cand_2\n${primaryKey}#cand_3`
-        );
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  // Create Custom Rubric
   const handleCreateCustomRubric = async () => {
     if (!customName || !customDescription) return;
+    setIsSavingRubric(true);
+    setCustomError(null);
     try {
       const res = await fetch("/api/v1/enterprise/criteria", {
         method: "POST",
@@ -176,496 +205,666 @@ export function EnterpriseScreeningView() {
         setShowCustomModal(false);
         setCustomName("");
         setCustomDescription("");
+      } else {
+        setCustomError(data.error || "Could not save the rubric.");
       }
-    } catch (err) {
-      console.error("Failed to create criteria profile:", err);
+    } catch {
+      setCustomError("Network error while saving the rubric.");
+    } finally {
+      setIsSavingRubric(false);
     }
   };
 
-  return (
-    <div className="space-y-8">
-      {/* Top Banner: Dynamic Criteria Studio & Screening Overview */}
-      <div className="border border-slate-800 bg-[#0c1220] rounded-2xl p-6 shadow-xl space-y-6">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-5">
-          <div>
-            <div className="inline-flex items-center gap-1.5 text-[11px] font-bold text-cyan-400 bg-cyan-500/10 border border-cyan-500/20 px-2.5 py-0.5 rounded-full mb-2">
-              <Sliders className="w-3.5 h-3.5" />
-              Dynamic Grounding & Zero-Hallucination RAG Studio
-            </div>
-            <h2 className="text-xl font-extrabold text-white">Enterprise Screening & Criteria Studio</h2>
-            <p className="text-xs text-slate-400">
-              Configure strict mathematical evaluation rubrics. Autonomous agents verify structured candidate JSON
-              against Base Sepolia on-chain hashes.
-            </p>
-          </div>
+  const sectionAnchor = "scroll-mt-24 lg:scroll-mt-8";
+  const isScreening = isSingleLoading || isBulkLoading;
 
-          <div className="flex items-center gap-3">
+  return (
+    <div className="space-y-10">
+      {/* ---- Overview ---- */}
+      <section id="overview" className={sectionAnchor}>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          {[
+            {
+              icon: Sliders,
+              label: "Grounding rubrics",
+              value: `${rubrics.length} available`,
+              sub: "Strict mathematical evaluation rules",
+            },
+            {
+              icon: ScanSearch,
+              label: "Screening engine",
+              value: "3-agent pipeline",
+              sub: "Integrity · RAG evaluator · fraud radar",
+            },
+            {
+              icon: Shield,
+              label: "Ledger enforcement",
+              value: "Fail-closed",
+              sub: "Unknown or tampered hashes are rejected",
+            },
+          ].map((stat, i) => (
+            <div
+              key={stat.label}
+              className="clean-card dash-card-in flex items-center gap-3.5 rounded-2xl p-4"
+              style={{ animationDelay: `${i * 70}ms` }}
+            >
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+                <stat.icon className="h-5 w-5" />
+              </span>
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">
+                  {stat.label}
+                </p>
+                <p className="truncate text-sm font-extrabold text-slate-900">{stat.value}</p>
+                <p className="text-[11px] text-slate-500">{stat.sub}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ---- Criteria studio ---- */}
+      <section id="rubrics" className={`${sectionAnchor} dash-card-in`} style={{ animationDelay: "120ms" }}>
+        <div className="clean-card rounded-2xl p-6">
+          <div className="flex flex-col justify-between gap-4 border-b border-slate-100 pb-5 md:flex-row md:items-center">
+            <div>
+              <h2 className="flex items-center gap-2 font-heading text-base font-bold text-slate-900">
+                <Sliders className="h-4 w-4 text-emerald-600" />
+                Criteria studio
+              </h2>
+              <p className="mt-1 max-w-lg text-xs leading-relaxed text-slate-500">
+                Configure the rubric candidates are evaluated against. The evaluator only reads
+                verified, structured fields. Missing data fails the category; it is never guessed.
+              </p>
+            </div>
             <button
               onClick={() => setShowCustomModal(true)}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold transition-all shadow-md shadow-cyan-600/20"
+              className="flex shrink-0 items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white transition-all duration-200 hover:bg-emerald-700 active:scale-[0.98]"
             >
-              <Plus className="w-3.5 h-3.5" />
-              New Grounding Rubric
+              <Plus className="h-3.5 w-3.5" />
+              New rubric
             </button>
           </div>
-        </div>
 
-        {/* Rubric Selector & Rule Breakdown */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <div className="lg:col-span-4 space-y-3">
-            <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider">
-              Active Evaluation Rubric:
-            </label>
-            <select
-              value={selectedRubricId}
-              onChange={(e) => setSelectedRubricId(e.target.value)}
-              className="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs font-bold text-cyan-300 outline-none focus:border-cyan-500"
-            >
-              {rubrics.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.name} ({r.category})
-                </option>
-              ))}
-            </select>
+          <div className="mt-5 grid grid-cols-1 gap-6 lg:grid-cols-12">
+            <div className="space-y-3 lg:col-span-4">
+              <label htmlFor="rubric-select" className="block text-xs font-bold uppercase tracking-wider text-slate-500">
+                Active evaluation rubric
+              </label>
+              {isLoadingRubrics ? (
+                <div className="skeleton h-11 rounded-xl" />
+              ) : (
+                <select
+                  id="rubric-select"
+                  value={activeRubric?.id || ""}
+                  onChange={(e) => setSelectedRubricId(e.target.value)}
+                  className="w-full rounded-xl border border-slate-200 bg-white p-3 text-xs font-bold text-slate-900 outline-none transition-colors focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                >
+                  {rubrics.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.name} ({r.category})
+                    </option>
+                  ))}
+                </select>
+              )}
+
+              {activeRubric && (
+                <p className="rounded-xl border border-slate-100 bg-slate-50 p-3 text-xs italic leading-relaxed text-slate-500">
+                  &ldquo;{activeRubric.description}&rdquo;
+                </p>
+              )}
+            </div>
 
             {activeRubric && (
-              <p className="text-xs text-slate-400 leading-relaxed italic bg-black/40 p-3 rounded-xl border border-slate-800/80">
-                "{activeRubric.description}"
-              </p>
+              <div className="grid grid-cols-2 gap-3 text-xs sm:grid-cols-4 lg:col-span-8">
+                {[
+                  {
+                    label: "Min GPA",
+                    value: activeRubric.minGpa ? `${activeRubric.minGpa} / 5.0` : "None",
+                  },
+                  {
+                    label: "Liquid funds",
+                    value: activeRubric.minLiquidFundsUsd
+                      ? `$${activeRubric.minLiquidFundsUsd.toLocaleString()}`
+                      : "None",
+                  },
+                  {
+                    label: "Min experience",
+                    value: activeRubric.minExperienceYears
+                      ? `${activeRubric.minExperienceYears}+ years`
+                      : "None",
+                  },
+                  {
+                    label: "Tier-2 notary seal",
+                    value: activeRubric.mandatoryTier2Notarization ? "Mandatory" : "Optional",
+                  },
+                ].map((rule) => (
+                  <div
+                    key={rule.label}
+                    className="space-y-1 rounded-xl border border-slate-200 bg-white p-3"
+                  >
+                    <span className="block text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                      {rule.label}
+                    </span>
+                    <span className="block text-sm font-extrabold text-slate-900">{rule.value}</span>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
-
-          {activeRubric && (
-            <div className="lg:col-span-8 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-              <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800 space-y-1">
-                <span className="text-[10px] text-slate-400 font-bold uppercase">Min GPA Required</span>
-                <div className="text-sm font-extrabold text-white">
-                  {activeRubric.minGpa ? `${activeRubric.minGpa} / 5.0` : "None"}
-                </div>
-              </div>
-
-              <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800 space-y-1">
-                <span className="text-[10px] text-slate-400 font-bold uppercase">Liquid Funds</span>
-                <div className="text-sm font-extrabold text-emerald-400">
-                  {activeRubric.minLiquidFundsUsd
-                    ? `$${activeRubric.minLiquidFundsUsd.toLocaleString()} USD`
-                    : "None"}
-                </div>
-              </div>
-
-              <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800 space-y-1">
-                <span className="text-[10px] text-slate-400 font-bold uppercase">Min Experience</span>
-                <div className="text-sm font-extrabold text-cyan-400">
-                  {activeRubric.minExperienceYears ? `${activeRubric.minExperienceYears}+ Years` : "None"}
-                </div>
-              </div>
-
-              <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800 space-y-1">
-                <span className="text-[10px] text-slate-400 font-bold uppercase">Tier-2 Notarized</span>
-                <div className="text-sm font-extrabold text-amber-400">
-                  {activeRubric.mandatoryTier2Notarization ? "Mandatory" : "Optional"}
-                </div>
-              </div>
-            </div>
-          )}
         </div>
-      </div>
+      </section>
 
-      {/* Mode Switcher: Single vs Bulk */}
-      <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
-        <button
-          onClick={() => setActiveMode("single")}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-            activeMode === "single"
-              ? "bg-cyan-600 text-white shadow-md shadow-cyan-600/30"
-              : "text-slate-400 hover:text-slate-200"
-          }`}
-        >
-          <Search className="w-3.5 h-3.5" />
-          Single Candidate Screening
-        </button>
-        <button
-          onClick={() => setActiveMode("bulk")}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-            activeMode === "bulk"
-              ? "bg-purple-600 text-white shadow-md shadow-purple-600/30"
-              : "text-slate-400 hover:text-slate-200"
-          }`}
-        >
-          <Users className="w-3.5 h-3.5" />
-          Bulk Candidate Screening Queue
-        </button>
-      </div>
+      {/* ---- Screening ---- */}
+      <section id="screening" className={sectionAnchor}>
+        {/* Mode tabs */}
+        <div className="mb-5 inline-flex rounded-xl border border-slate-200 bg-white p-1" role="tablist" aria-label="Screening mode">
+          {(
+            [
+              { id: "single" as const, label: "Single candidate", icon: Search },
+              { id: "bulk" as const, label: "Bulk queue", icon: Users },
+            ]
+          ).map((tab) => (
+            <button
+              key={tab.id}
+              role="tab"
+              aria-selected={activeMode === tab.id}
+              onClick={() => setActiveMode(tab.id)}
+              className={`flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-bold transition-all duration-200 ${
+                activeMode === tab.id
+                  ? "bg-slate-900 text-white"
+                  : "text-slate-500 hover:text-slate-900"
+              }`}
+            >
+              <tab.icon className="h-3.5 w-3.5" />
+              {tab.label}
+            </button>
+          ))}
+        </div>
 
-      {/* MODE 1: SINGLE CANDIDATE SCREENING */}
-      {activeMode === "single" && (
-        <div className="space-y-6">
-          <div className="border border-slate-800 bg-[#0c1220] rounded-2xl p-6 shadow-xl space-y-4">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-              <div className="lg:col-span-8 space-y-2">
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider">
-                  Candidate Scoped API Key:
-                </label>
-                <input
-                  type="text"
-                  value={singleKey}
-                  onChange={(e) => setSingleKey(e.target.value)}
-                  placeholder="Paste candidate scoped key (e.g. sbk_live_v1_...)"
-                  className="w-full bg-black/60 border border-slate-700 focus:border-cyan-500 rounded-xl px-4 py-3 text-xs font-mono text-cyan-300 placeholder-slate-600 outline-none"
-                />
-              </div>
-
-              <div className="lg:col-span-4 space-y-2">
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider">
-                  Requesting Organization:
-                </label>
-                <input
-                  type="text"
-                  value={requestingOrg}
-                  onChange={(e) => setRequestingOrg(e.target.value)}
-                  className="w-full bg-black/60 border border-slate-700 rounded-xl px-4 py-3 text-xs font-semibold text-slate-200 outline-none"
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between pt-2">
-              <div className="text-xs text-slate-400 flex items-center gap-2">
-                <Coins className="w-4 h-4 text-amber-400" />
-                Query Fee: <span className="font-semibold text-slate-200">$1.00</span> ($0.60 Sabi / $0.40 Sovereign Node Host)
-              </div>
-
-              <button
-                onClick={handleSingleScreen}
-                disabled={isSingleLoading || !singleKey}
-                className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 disabled:opacity-50 text-white font-extrabold text-xs shadow-lg shadow-cyan-500/20 flex items-center gap-2 transition-all"
-              >
-                {isSingleLoading ? <Sparkles className="w-4 h-4 animate-spin" /> : <Cpu className="w-4 h-4" />}
-                {isSingleLoading ? "Evaluating..." : "Run Multi-Agent Screening"}
-              </button>
-            </div>
-          </div>
-
-          {/* Single Screening Result Dossier */}
-          {singleResult && (
-            <div className="border border-slate-800 bg-[#0c1220] rounded-2xl p-6 shadow-2xl space-y-6">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-extrabold text-white">
-                      Candidate ID: {singleResult.candidateId}
-                    </span>
+        {/* Agent pipeline progress (shown while screening) */}
+        {isScreening && (
+          <div className="clean-card mb-5 rounded-2xl p-5">
+            <ol className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              {AGENT_STAGES.map((stage, i) => {
+                const isDone = i < agentStage;
+                const isCurrent = i === agentStage;
+                return (
+                  <li
+                    key={stage.name}
+                    className={`flex items-center gap-3 rounded-xl border p-3 transition-colors duration-300 ${
+                      isDone
+                        ? "border-emerald-200 bg-emerald-50/60"
+                        : isCurrent
+                        ? "border-emerald-300 bg-white"
+                        : "border-slate-100 bg-slate-50/50"
+                    }`}
+                  >
                     <span
-                      className={`text-xs font-extrabold px-3 py-1 rounded-full ${
-                        singleResult.verdict === "QUALIFIED"
-                          ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
-                          : singleResult.verdict === "CONDITIONALLY_QUALIFIED"
-                          ? "bg-amber-500/20 text-amber-300 border border-amber-500/30"
-                          : "bg-red-500/20 text-red-300 border border-red-500/30"
+                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors duration-300 ${
+                        isDone
+                          ? "bg-emerald-600 text-white"
+                          : isCurrent
+                          ? "bg-emerald-100 text-emerald-700"
+                          : "bg-slate-100 text-slate-300"
                       }`}
+                      style={isCurrent ? { animation: "scanStagePulse 1.2s ease-out infinite" } : undefined}
                     >
-                      {singleResult.verdict}
+                      {isDone ? <Check className="h-4 w-4" /> : <Cpu className="h-4 w-4" />}
                     </span>
-                  </div>
-                  <p className="text-xs text-slate-400">
-                    Sovereign Node: {singleResult.sovereignNode} • Evaluated against {activeRubric?.name}
-                  </p>
-                </div>
-
-                <div className="text-right">
-                  <div className="text-2xl font-black text-cyan-400">
-                    {singleResult.compositeScore} / 100
-                  </div>
-                  <span className="text-[10px] text-slate-400 font-semibold uppercase">
-                    Composite Fit Score
-                  </span>
-                </div>
-              </div>
-
-              {/* 3 Agent Badges */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
-                <div className="p-3.5 rounded-xl bg-slate-900/60 border border-emerald-500/30 space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-slate-200">1. Integrity Agent</span>
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                  </div>
-                  <p className="text-[11px] text-emerald-300 font-mono">
-                    Ledger Status: {singleResult.integrityStatus}
-                  </p>
-                </div>
-
-                <div className="p-3.5 rounded-xl bg-slate-900/60 border border-cyan-500/30 space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-slate-200">2. Strict RAG Evaluator</span>
-                    <Sparkles className="w-4 h-4 text-cyan-400" />
-                  </div>
-                  <p className="text-[11px] text-slate-300">
-                    Zero Hallucination Guarantee • Mathematical Schema Match
-                  </p>
-                </div>
-
-                <div className="p-3.5 rounded-xl bg-slate-900/60 border border-amber-500/30 space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-slate-200">3. Fraud & Anomaly Radar</span>
-                    <Shield className="w-4 h-4 text-amber-400" />
-                  </div>
-                  <p className="text-[11px] text-slate-300">
-                    {singleResult.anomaliesDetected?.length > 0
-                      ? `${singleResult.anomaliesDetected.length} Anomaly Flagged`
-                      : "Zero Anomalies Detected"}
-                  </p>
-                </div>
-              </div>
-
-              {/* Citations Box */}
-              <div className="space-y-2">
-                <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">
-                  Verbatim Verified Proof Citations:
-                </span>
-                <div className="space-y-1.5">
-                  {singleResult.citations?.map((cit, idx) => (
-                    <div
-                      key={idx}
-                      className="p-2.5 rounded-lg bg-black/40 border border-slate-800 text-xs font-mono text-slate-300 flex items-center gap-2"
-                    >
-                      <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                      <span>{cit}</span>
+                    <div>
+                      <p className={`text-xs font-bold ${isDone || isCurrent ? "text-slate-900" : "text-slate-400"}`}>
+                        {stage.name}
+                      </p>
+                      <p className="text-[10px] text-slate-400">{stage.desc}</p>
                     </div>
-                  ))}
+                  </li>
+                );
+              })}
+            </ol>
+          </div>
+        )}
+
+        {activeMode === "single" && (
+          <div className="space-y-6">
+            <div className="clean-card dash-card-in rounded-2xl p-6" style={{ animationDelay: "80ms" }}>
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+                <div className="space-y-1.5 lg:col-span-8">
+                  <label htmlFor="single-key" className="block text-xs font-bold uppercase tracking-wider text-slate-500">
+                    Candidate scoped API key
+                  </label>
+                  <input
+                    id="single-key"
+                    type="text"
+                    value={singleKey}
+                    onChange={(e) => setSingleKey(e.target.value)}
+                    placeholder="Paste candidate scoped key (e.g. sbk_live_v1_...)"
+                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 font-mono text-xs text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                  />
+                  <p className="text-[11px] text-slate-400">
+                    The key defines exactly which categories you can see. Everything else stays sealed.
+                  </p>
+                </div>
+
+                <div className="space-y-1.5 lg:col-span-4">
+                  <label htmlFor="requesting-org" className="block text-xs font-bold uppercase tracking-wider text-slate-500">
+                    Requesting organization
+                  </label>
+                  <input
+                    id="requesting-org"
+                    type="text"
+                    value={requestingOrg}
+                    onChange={(e) => setRequestingOrg(e.target.value)}
+                    placeholder="Recorded in the candidate's audit ledger"
+                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs font-semibold text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                  />
                 </div>
               </div>
 
-              {/* GovTech 60/40 Micro-Transaction Settlement Receipt */}
-              <div className="p-4 rounded-xl bg-gradient-to-r from-emerald-950/20 via-slate-900 to-cyan-950/20 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-                <div className="space-y-0.5">
-                  <div className="font-bold text-white flex items-center gap-2">
-                    <Coins className="w-4 h-4 text-amber-400" />
-                    GovTech 60/40 Micro-Transaction Executed
-                  </div>
-                  <p className="text-[11px] text-slate-400">
-                    $0.60 to Sabi Platform Treasury • $0.40 directly to Sovereign Node Host
-                  </p>
+              {singleError && (
+                <div className="mt-4 flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50 p-3.5">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-500" />
+                  <p className="text-xs font-medium leading-relaxed text-red-700">{singleError}</p>
                 </div>
-                <div className="text-[10px] font-mono text-slate-400 bg-black/60 px-3 py-1.5 rounded-lg border border-slate-800">
-                  On-Chain Tx: {singleResult.onChainTx.substring(0, 16)}...
-                </div>
+              )}
+
+              <div className="mt-5 flex flex-col justify-between gap-3 border-t border-slate-100 pt-4 sm:flex-row sm:items-center">
+                <p className="flex items-center gap-2 text-xs text-slate-500">
+                  <Coins className="h-4 w-4 text-amber-500" />
+                  Query fee: <span className="font-bold text-slate-900">$1.00</span> settled on-chain per evaluation
+                </p>
+                <button
+                  onClick={handleSingleScreen}
+                  disabled={isSingleLoading || !singleKey || !activeRubric}
+                  className="flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-6 py-2.5 text-xs font-extrabold text-white transition-all duration-200 hover:bg-emerald-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {isSingleLoading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Cpu className="h-4 w-4" />}
+                  {isSingleLoading ? "Evaluating..." : "Run multi-agent screening"}
+                </button>
               </div>
             </div>
-          )}
-        </div>
-      )}
 
-      {/* MODE 2: BULK CANDIDATE SCREENING QUEUE */}
-      {activeMode === "bulk" && (
-        <div className="space-y-6">
-          <div className="border border-slate-800 bg-[#0c1220] rounded-2xl p-6 shadow-xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <div>
-                <h3 className="font-bold text-sm text-white">Batch Candidate Key Ingestion</h3>
-                <p className="text-xs text-slate-400">
-                  Enter one candidate scoped API key per line to screen candidate pools in parallel.
+            {/* Single result dossier */}
+            {singleResult && (
+              <div
+                className="clean-card space-y-6 rounded-2xl p-6"
+                style={{ animation: "dashCardIn 0.45s cubic-bezier(0.16,1,0.3,1) both" }}
+              >
+                <div className="flex flex-col justify-between gap-4 border-b border-slate-100 pb-4 sm:flex-row sm:items-center">
+                  <div className="space-y-1.5">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-sm font-extrabold text-slate-900">
+                        Candidate {singleResult.candidateId}
+                      </span>
+                      <span
+                        className={`rounded-full px-3 py-1 text-xs font-extrabold ${verdictClasses(singleResult.verdict)}`}
+                      >
+                        {String(singleResult.verdict).replace(/_/g, " ")}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500">
+                      Node: {singleResult.sovereignNode} · evaluated against {activeRubric?.name}
+                    </p>
+                  </div>
+                  <div className="text-left sm:text-right">
+                    <div className="font-heading text-2xl font-black text-emerald-600">
+                      {singleResult.compositeScore}
+                      <span className="text-sm font-bold text-slate-400"> / 100</span>
+                    </div>
+                    <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                      Composite fit score
+                    </span>
+                  </div>
+                </div>
+
+                {/* Agent verdicts */}
+                <div className="grid grid-cols-1 gap-3 text-xs md:grid-cols-3">
+                  <div className="space-y-1 rounded-xl border border-emerald-200 bg-emerald-50/50 p-3.5">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-slate-900">Integrity agent</span>
+                      <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                    </div>
+                    <p className="font-mono text-[11px] text-emerald-700">
+                      Ledger: {singleResult.integrityStatus}
+                    </p>
+                  </div>
+                  <div className="space-y-1 rounded-xl border border-slate-200 bg-slate-50 p-3.5">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-slate-900">RAG evaluator</span>
+                      <Sparkles className="h-4 w-4 text-emerald-600" />
+                    </div>
+                    <p className="text-[11px] text-slate-600">
+                      Zero-hallucination grounding · schema-matched scoring
+                    </p>
+                  </div>
+                  <div className="space-y-1 rounded-xl border border-amber-200 bg-amber-50/60 p-3.5">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-slate-900">Fraud radar</span>
+                      <Shield className="h-4 w-4 text-amber-500" />
+                    </div>
+                    <p className="text-[11px] text-slate-600">
+                      {singleResult.anomaliesDetected?.length > 0
+                        ? `${singleResult.anomaliesDetected.length} anomaly flag(s) raised`
+                        : "Zero anomalies detected"}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Citations */}
+                {singleResult.citations?.length > 0 && (
+                  <div className="space-y-2">
+                    <span className="block text-xs font-bold uppercase tracking-wider text-slate-500">
+                      Verbatim verified citations
+                    </span>
+                    <div className="space-y-1.5">
+                      {singleResult.citations.map((cit, idx) => (
+                        <div
+                          key={idx}
+                          className="flex items-center gap-2 rounded-lg border border-slate-100 bg-slate-50 p-2.5 font-mono text-xs text-slate-700"
+                        >
+                          <Check className="h-3.5 w-3.5 shrink-0 text-emerald-600" />
+                          <span>{cit}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Settlement receipt */}
+                <div className="flex flex-col justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs sm:flex-row sm:items-center">
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-2 font-bold text-slate-900">
+                      <Coins className="h-4 w-4 text-amber-500" />
+                      Micro-transaction settled
+                    </div>
+                    <p className="text-[11px] text-slate-500">
+                      $0.60 platform treasury · $0.40 sovereign node host, executed by splitter contract
+                    </p>
+                  </div>
+                  {singleResult.onChainTx && (
+                    <div className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 font-mono text-[10px] text-slate-500">
+                      tx {singleResult.onChainTx.substring(0, 18)}...
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Single empty state */}
+            {!singleResult && !isSingleLoading && !singleError && (
+              <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-white/60 px-6 py-12 text-center">
+                <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-white text-slate-300 ring-1 ring-slate-200">
+                  <ScanSearch className="h-6 w-6" />
+                </span>
+                <p className="mt-3 text-sm font-bold text-slate-700">No evaluation yet</p>
+                <p className="mt-1 max-w-sm text-xs leading-relaxed text-slate-500">
+                  Paste a candidate&apos;s scoped key above. The integrity agent checks the ledger first;
+                  unknown or tampered hashes fail closed.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeMode === "bulk" && (
+          <div className="space-y-6">
+            <div className="clean-card dash-card-in rounded-2xl p-6" style={{ animationDelay: "80ms" }}>
+              <div className="border-b border-slate-100 pb-3">
+                <h3 className="font-heading text-sm font-bold text-slate-900">Batch key ingestion</h3>
+                <p className="mt-1 text-xs text-slate-500">
+                  One candidate scoped key per line. The pool is screened in parallel against{" "}
+                  <span className="font-semibold text-slate-700">{activeRubric?.name || "the active rubric"}</span>.
                 </p>
               </div>
 
-              <button
-                onClick={handlePreloadDemoBatch}
-                className="px-3 py-1.5 rounded-lg bg-purple-500/20 text-purple-300 border border-purple-500/30 text-xs font-semibold hover:bg-purple-500/30"
-              >
-                Pre-fill Demo Batch
-              </button>
+              <textarea
+                rows={4}
+                value={bulkKeysText}
+                onChange={(e) => setBulkKeysText(e.target.value)}
+                placeholder={"sbk_live_v1_...\nsbk_live_v1_...\nsbk_live_v1_..."}
+                aria-label="Candidate scoped keys, one per line"
+                className="mt-4 w-full rounded-xl border border-slate-200 bg-white p-3 font-mono text-xs text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+              />
+
+              {bulkError && (
+                <div className="mt-4 flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50 p-3.5">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-500" />
+                  <p className="text-xs font-medium leading-relaxed text-red-700">{bulkError}</p>
+                </div>
+              )}
+
+              <div className="mt-4 flex items-center justify-end">
+                <button
+                  onClick={handleBulkScreen}
+                  disabled={isBulkLoading || !bulkKeysText.trim() || !activeRubric}
+                  className="flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-6 py-2.5 text-xs font-extrabold text-white transition-all duration-200 hover:bg-emerald-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {isBulkLoading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Users className="h-4 w-4" />}
+                  {isBulkLoading ? "Evaluating pool..." : "Execute batch screening"}
+                </button>
+              </div>
             </div>
 
-            <textarea
-              rows={4}
-              value={bulkKeysText}
-              onChange={(e) => setBulkKeysText(e.target.value)}
-              placeholder="sbk_live_v1_...\nsbk_live_v1_...\nsbk_live_v1_..."
-              className="w-full bg-black/60 border border-slate-700 focus:border-purple-500 rounded-xl p-3 font-mono text-xs text-purple-300 placeholder-slate-600 outline-none"
-            />
-
-            <div className="flex items-center justify-between pt-2">
-              <span className="text-xs text-slate-400">
-                Evaluation Grounding: <span className="font-semibold text-white">{activeRubric?.name}</span>
-              </span>
-
-              <button
-                onClick={handleBulkScreen}
-                disabled={isBulkLoading || !bulkKeysText}
-                className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-400 hover:to-indigo-500 disabled:opacity-50 text-white font-extrabold text-xs shadow-lg shadow-purple-500/20 flex items-center gap-2 transition-all"
+            {/* Bulk leaderboard */}
+            {bulkResult && (
+              <div
+                className="clean-card space-y-4 rounded-2xl p-6"
+                style={{ animation: "dashCardIn 0.45s cubic-bezier(0.16,1,0.3,1) both" }}
               >
-                {isBulkLoading ? <Sparkles className="w-4 h-4 animate-spin" /> : <Users className="w-4 h-4" />}
-                {isBulkLoading ? "Evaluating Pool..." : "Execute Batch Parallel Screening"}
-              </button>
-            </div>
-          </div>
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                  <div>
+                    <h3 className="font-heading text-sm font-bold text-slate-900">Ranked leaderboard</h3>
+                    <p className="mt-0.5 text-xs text-slate-500">
+                      {bulkResult.totalCandidates} evaluated · {bulkResult.qualifiedCount} qualified ·{" "}
+                      {bulkResult.conditionallyQualifiedCount} conditional · {bulkResult.rejectedCount} rejected
+                    </p>
+                  </div>
+                </div>
 
-          {/* Bulk Leaderboard Results Table */}
-          {bulkResult && (
-            <div className="border border-slate-800 bg-[#0c1220] rounded-2xl p-6 shadow-2xl space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                <div>
-                  <h3 className="font-bold text-sm text-white">Ranked Candidate Leaderboard</h3>
-                  <p className="text-xs text-slate-400">
-                    {bulkResult.totalCandidates} evaluated: {bulkResult.qualifiedCount} Qualified,{" "}
-                    {bulkResult.conditionallyQualifiedCount} Conditional, {bulkResult.rejectedCount} Rejected
-                  </p>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead>
+                      <tr className="border-b border-slate-100 text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                        <th className="p-3">Rank</th>
+                        <th className="p-3">Candidate</th>
+                        <th className="p-3">Score</th>
+                        <th className="p-3">Verdict</th>
+                        <th className="p-3">Integrity</th>
+                        <th className="p-3">Node</th>
+                        <th className="p-3">Verified categories</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {bulkResult.candidates?.map((cand: any, idx: number) => (
+                        <tr key={idx} className="transition-colors hover:bg-slate-50">
+                          <td className="p-3 font-bold text-emerald-600">#{idx + 1}</td>
+                          <td className="p-3 font-mono font-semibold text-slate-900">{cand.candidateId}</td>
+                          <td className="p-3 font-extrabold text-slate-900">{cand.compositeScore}</td>
+                          <td className="p-3">
+                            <span
+                              className={`rounded px-2 py-0.5 text-[10px] font-bold ${verdictClasses(cand.verdict)}`}
+                            >
+                              {String(cand.verdict).replace(/_/g, " ")}
+                            </span>
+                          </td>
+                          <td className="p-3">
+                            {cand.integrityStatus === "VERIFIED" || cand.integrityStatus === "MATCH" ? (
+                              <span className="flex items-center gap-1 font-semibold text-emerald-600">
+                                <Check className="h-3 w-3" /> Tamper-free
+                              </span>
+                            ) : (
+                              <span className="flex items-center gap-1 font-semibold text-red-500">
+                                <X className="h-3 w-3" /> {String(cand.integrityStatus || "Unknown")}
+                              </span>
+                            )}
+                          </td>
+                          <td className="p-3 font-mono text-slate-500">{cand.sovereignNode}</td>
+                          <td className="p-3 text-slate-600">{cand.verifiedCategories?.join(", ")}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </div>
+            )}
+          </div>
+        )}
+      </section>
 
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-900/80 text-slate-400 border-b border-slate-800 font-semibold uppercase text-[10px]">
-                    <tr>
-                      <th className="p-3">Rank</th>
-                      <th className="p-3">Candidate ID</th>
-                      <th className="p-3">Score</th>
-                      <th className="p-3">Verdict</th>
-                      <th className="p-3">Integrity</th>
-                      <th className="p-3">Node</th>
-                      <th className="p-3">Verified Categories</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800/60 font-mono">
-                    {bulkResult.candidates?.map((cand: any, idx: number) => (
-                      <tr key={idx} className="hover:bg-slate-900/40 transition-colors">
-                        <td className="p-3 font-bold text-cyan-400">#{idx + 1}</td>
-                        <td className="p-3 text-white font-semibold">{cand.candidateId}</td>
-                        <td className="p-3 font-extrabold text-white">{cand.compositeScore} / 100</td>
-                        <td className="p-3">
-                          <span
-                            className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                              cand.verdict === "QUALIFIED"
-                                ? "bg-emerald-500/20 text-emerald-300"
-                                : cand.verdict === "CONDITIONALLY_QUALIFIED"
-                                ? "bg-amber-500/20 text-amber-300"
-                                : "bg-red-500/20 text-red-300"
-                            }`}
-                          >
-                            {cand.verdict}
-                          </span>
-                        </td>
-                        <td className="p-3 text-emerald-400">✓ Tamper-Free</td>
-                        <td className="p-3 text-slate-400">{cand.sovereignNode}</td>
-                        <td className="p-3 text-slate-300 font-sans">
-                          {cand.verifiedCategories?.join(", ")}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* New Grounding Rubric Modal */}
+      {/* ---- New rubric modal ---- */}
       {showCustomModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="border border-slate-800 bg-[#0c1220] rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <h3 className="font-bold text-base text-white">Create Custom Grounding Rubric</h3>
-              <button
-                onClick={() => setShowCustomModal(false)}
-                className="text-slate-400 hover:text-white text-xs font-bold"
-              >
-                ✕
-              </button>
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-slate-900/50 backdrop-blur-[2px]"
+            onClick={() => setShowCustomModal(false)}
+            aria-hidden="true"
+          />
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Create custom rubric"
+            className="relative w-full max-w-lg space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl"
+            style={{ animation: "dashCardIn 0.3s cubic-bezier(0.16,1,0.3,1) both" }}
+          >
+            <button
+              type="button"
+              onClick={() => setShowCustomModal(false)}
+              aria-label="Close"
+              className="absolute right-4 top-4 rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+            >
+              <X className="h-4 w-4" />
+            </button>
+
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+                <FileText className="h-4 w-4" />
+              </span>
+              <div>
+                <h3 className="font-heading text-base font-bold text-slate-900">Create grounding rubric</h3>
+                <p className="text-xs text-slate-500">Candidates are scored strictly against these rules</p>
+              </div>
             </div>
 
             <div className="space-y-3 text-xs">
               <div>
-                <label className="block text-slate-300 font-semibold mb-1">Rubric Name:</label>
+                <label htmlFor="rubric-name" className="mb-1.5 block font-semibold text-slate-700">
+                  Rubric name
+                </label>
                 <input
+                  id="rubric-name"
                   type="text"
                   value={customName}
                   onChange={(e) => setCustomName(e.target.value)}
                   placeholder="e.g. Senior Smart Contract Auditor"
-                  className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-slate-200 outline-none focus:border-cyan-500"
+                  className="w-full rounded-lg border border-slate-200 bg-white p-2.5 text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
                 />
               </div>
 
               <div>
-                <label className="block text-slate-300 font-semibold mb-1">Domain Category:</label>
+                <label htmlFor="rubric-category" className="mb-1.5 block font-semibold text-slate-700">
+                  Domain category
+                </label>
                 <select
+                  id="rubric-category"
                   value={customCategory}
                   onChange={(e: any) => setCustomCategory(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-slate-200 outline-none"
+                  className="w-full rounded-lg border border-slate-200 bg-white p-2.5 text-slate-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
                 >
-                  <option value="LABOUR">Labour & Enterprise Hiring</option>
-                  <option value="IMMIGRATION">Immigration & Visa Processing</option>
-                  <option value="EDUCATION">Education & University Admissions</option>
-                  <option value="CUSTOM">Custom Organization Rubric</option>
+                  <option value="LABOUR">Labour and enterprise hiring</option>
+                  <option value="IMMIGRATION">Immigration and visa processing</option>
+                  <option value="EDUCATION">Education and university admissions</option>
+                  <option value="CUSTOM">Custom organization rubric</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-slate-300 font-semibold mb-1">Grounding Description:</label>
+                <label htmlFor="rubric-desc" className="mb-1.5 block font-semibold text-slate-700">
+                  Grounding description
+                </label>
                 <textarea
+                  id="rubric-desc"
                   value={customDescription}
                   onChange={(e) => setCustomDescription(e.target.value)}
                   placeholder="Strict qualification requirements for applicants..."
                   rows={2}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-slate-200 outline-none focus:border-cyan-500"
+                  className="w-full resize-none rounded-lg border border-slate-200 bg-white p-2.5 text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
                 />
               </div>
 
               <div className="grid grid-cols-3 gap-2">
                 <div>
-                  <label className="block text-slate-300 font-semibold mb-1">Min GPA:</label>
+                  <label htmlFor="rubric-gpa" className="mb-1.5 block font-semibold text-slate-700">
+                    Min GPA
+                  </label>
                   <input
+                    id="rubric-gpa"
                     type="number"
                     step="0.1"
                     value={customMinGpa}
                     onChange={(e) => setCustomMinGpa(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-slate-200 outline-none"
+                    className="w-full rounded-lg border border-slate-200 bg-white p-2.5 text-slate-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
                   />
                 </div>
                 <div>
-                  <label className="block text-slate-300 font-semibold mb-1">Min Funds ($):</label>
+                  <label htmlFor="rubric-funds" className="mb-1.5 block font-semibold text-slate-700">
+                    Min funds ($)
+                  </label>
                   <input
+                    id="rubric-funds"
                     type="number"
                     value={customMinFunds}
                     onChange={(e) => setCustomMinFunds(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-slate-200 outline-none"
+                    className="w-full rounded-lg border border-slate-200 bg-white p-2.5 text-slate-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
                   />
                 </div>
                 <div>
-                  <label className="block text-slate-300 font-semibold mb-1">Min Years:</label>
+                  <label htmlFor="rubric-exp" className="mb-1.5 block font-semibold text-slate-700">
+                    Min years
+                  </label>
                   <input
+                    id="rubric-exp"
                     type="number"
                     value={customMinExp}
                     onChange={(e) => setCustomMinExp(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-slate-200 outline-none"
+                    className="w-full rounded-lg border border-slate-200 bg-white p-2.5 text-slate-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
                   />
                 </div>
               </div>
 
               <div className="flex items-center gap-2 pt-1">
                 <input
-                  type="checkbox"
                   id="tier2check"
+                  type="checkbox"
                   checked={customTier2Required}
                   onChange={(e) => setCustomTier2Required(e.target.checked)}
-                  className="rounded bg-slate-900 border-slate-800"
+                  className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
                 />
-                <label htmlFor="tier2check" className="text-slate-300 font-medium">
-                  Mandatory Tier-2 Institutional Notarization Required
+                <label htmlFor="tier2check" className="font-medium text-slate-700">
+                  Mandatory Tier-2 institutional notarization
                 </label>
               </div>
+
+              {customError && (
+                <div className="rounded-lg border border-red-200 bg-red-50 p-2.5 font-medium text-red-700">
+                  {customError}
+                </div>
+              )}
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+            <div className="flex items-center justify-end gap-2 border-t border-slate-100 pt-4">
               <button
                 onClick={() => setShowCustomModal(false)}
-                className="px-4 py-2 rounded-xl text-slate-400 hover:text-white text-xs font-semibold"
+                className="rounded-xl px-4 py-2 text-xs font-semibold text-slate-500 transition-colors hover:text-slate-900"
               >
                 Cancel
               </button>
               <button
                 onClick={handleCreateCustomRubric}
-                className="px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold transition-all"
+                disabled={!customName || !customDescription || isSavingRubric}
+                className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white transition-all duration-200 hover:bg-emerald-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Save Grounding Rubric
+                {isSavingRubric && <RefreshCw className="h-3.5 w-3.5 animate-spin" />}
+                Save rubric
               </button>
             </div>
           </div>

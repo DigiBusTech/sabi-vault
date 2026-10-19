@@ -1,8 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { globalUserStore } from "@/core/vault/user_store";
+import { revokeKeyId } from "@/core/crypto/scoped_key";
+import { authenticateUser } from "@/lib/auth/auth_guard";
 
 export async function POST(req: NextRequest) {
   try {
+    const auth = await authenticateUser(req);
+    if (!auth.isAuthenticated || !auth.user) {
+      return NextResponse.json({ error: auth.error || "Authentication required" }, { status: auth.status });
+    }
+
     const body = await req.json();
     const { keyId } = body;
 
@@ -10,17 +17,28 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "keyId is required." }, { status: 400 });
     }
 
-    const success = globalUserStore.revokeKey(keyId);
+    const keyOwner = globalUserStore.getKeyOwner(keyId);
+    if (!keyOwner) {
+      return NextResponse.json({ error: "Key not found." }, { status: 404 });
+    }
+
+    const ownerUserId = auth.user.role === "super_admin" ? keyOwner : auth.user.userId;
+    const success = globalUserStore.revokeKey(keyId, ownerUserId);
     if (!success) {
       return NextResponse.json({ error: "Key not found." }, { status: 404 });
     }
 
+    // Register with cryptographic revocation registry
+    revokeKeyId(keyId);
+
     return NextResponse.json({
       success: true,
       message: `Scoped Key ${keyId} revoked successfully.`,
-      keys: globalUserStore.listKeys(),
+      keyId,
+      status: "REVOKED",
     });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
+

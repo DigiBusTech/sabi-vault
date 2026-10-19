@@ -4,116 +4,14 @@ import { IntegrityAgent } from "@/agents/integrity_agent";
 import { CriteriaAgent } from "@/agents/criteria_agent";
 import { StrictRAGEvaluationAgent } from "@/agents/evaluation_agent";
 import { FraudDetectionAgent } from "@/agents/fraud_detection_agent";
-import { verifyScopedApiKey, filterVaultByScope } from "@/core/crypto/scoped_key";
+import { verifyScopedApiKey, filterVaultByScope, recordKeyExecution } from "@/core/crypto/scoped_key";
 import { SovereignNodeRouter } from "@/core/sovereign/node_router";
-import { FullUserVault } from "@/types/vault";
 import { globalUserStore } from "@/core/vault/user_store";
+import { authenticateM2M } from "@/lib/auth/auth_guard";
 
-// Sample verified candidate storage mock
-const MOCK_CANDIDATE_VAULT: FullUserVault = {
-  userId: "usr_chinwe_okafor_7721",
-  sovereignNode: "ng-west-africa",
-  residenceCountry: "NG",
-  lastSyncedAt: new Date().toISOString(),
-  finance: {
-    userId: "usr_chinwe_okafor_7721",
-    bankRecords: [
-      {
-        institutionName: "Zenith Bank PLC",
-        currency: "NGN",
-        currentLiquidBalance: 8750000,
-        averageThreeMonthBalance: 8200000,
-        statementPeriod: { from: "2026-06-01", to: "2026-09-01" },
-        verifiedAt: "2026-09-05T12:00:00Z",
-        hashRef: "4b227777d4dd1fc61c6f884f48641d02b4d121d3fd328cb08b5531fcacdabf8a",
-      },
-    ],
-    taxClearance: {
-      taxId: "FIRS-TCC-2026-99014",
-      jurisdiction: "Federal Republic of Nigeria",
-      status: "VALID",
-      validUntil: "2026-12-31",
-      hashRef: "9e107d9d372bb6826bd81d3542a419d6dae2ee1cb1213f56e9c402b88ec29807",
-    },
-  },
-  academics: {
-    userId: "usr_chinwe_okafor_7721",
-    degrees: [
-      {
-        id: "deg_01",
-        institution: "University of Lagos",
-        degreeType: "BSc",
-        fieldOfStudy: "Computer Engineering",
-        graduationYear: 2022,
-        gpa: 4.84,
-        maxGpa: 5.0,
-        honors: "First Class Honours",
-        isNotarized: true,
-        tier: 2,
-        hashRef: "3e2849e798bc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      },
-    ],
-  },
-  experience: {
-    userId: "usr_chinwe_okafor_7721",
-    experiences: [
-      {
-        id: "exp_01",
-        company: "Paystack (Stripe)",
-        jobTitle: "Senior Systems Engineer",
-        employmentType: "Full-time",
-        startDate: "2022-03-01",
-        isCurrent: true,
-        responsibilities: [
-          "Engineered multi-currency settlement engine processing $12M daily.",
-          "Designed fault-tolerant event sourcing system with 99.99% uptime.",
-        ],
-        technologiesUsed: ["Go", "TypeScript", "PostgreSQL", "Kafka"],
-        verifiedReference: {
-          contactName: "Tunde Adeyemi (VP Eng)",
-          officialEmail: "tunde@paystack.com",
-          isVerified: true,
-        },
-        hashRef: "5f3a097de37b942baad06145e54b0c619a1f22327b2ebbcfbec78f5564afe39d",
-      },
-    ],
-  },
-  certifications: {
-    userId: "usr_chinwe_okafor_7721",
-    certifications: [
-      {
-        id: "cert_01",
-        title: "AWS Certified Solutions Architect - Professional",
-        issuingOrganization: "Amazon Web Services",
-        issueDate: "2023-05-15",
-        tier: 1,
-        hashRef: "8a107d9d372bb6826bd81d3542a419d6dae2ee1cb1213f56e9c402b88ec29807",
-      },
-    ],
-  },
-  portfolio: {
-    userId: "usr_chinwe_okafor_7721",
-    headline: "Staff Distributed Systems Architect & Cryptographic Identity Researcher",
-    bio: "Pioneering sovereign data infrastructures, verifiable credentials, and decentralized consensus networks.",
-    publicLinks: [
-      { label: "GitHub", url: "https://github.com/chinwe-okafor" },
-      { label: "Research", url: "https://scholar.google.com/citations?user=chinwe" },
-    ],
-  },
-  achievements: {
-    userId: "usr_chinwe_okafor_7721",
-    achievements: [
-      {
-        id: "ach_01",
-        title: "Africa Fintech Innovation Award Winner",
-        issuer: "Techpoint Africa",
-        date: "2024",
-        description: "Awarded top engineering innovation for zero-loss payment routing.",
-        hashRef: "2b9e107d9d372bb6826bd81d3542a419d6dae2ee1cb1213f56e9c402b88ec298",
-      },
-    ],
-  },
-};
+
+
+
 
 /**
  * POST /api/v1/screen
@@ -128,6 +26,11 @@ const MOCK_CANDIDATE_VAULT: FullUserVault = {
  */
 export async function POST(req: NextRequest) {
   try {
+    const orgAuth = await authenticateM2M(req);
+    if (!orgAuth.isValid || !orgAuth.org) {
+      return NextResponse.json({ error: orgAuth.error || "Unauthorized organization" }, { status: 401 });
+    }
+
     const body = await req.json();
     const { apiKey, criteriaText, vertical, requestingOrg } = body;
 
@@ -136,7 +39,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Step 1: Validate Scoped Key & Redact Non-Permitted Scopes
-    const keyVerification = verifyScopedApiKey(apiKey);
+    const keyVerification = verifyScopedApiKey(apiKey, undefined, orgAuth.org.id);
     if (!keyVerification.isValid || !keyVerification.payload) {
       return NextResponse.json(
         { error: "Invalid or expired candidate API key", details: keyVerification.error },
@@ -145,12 +48,23 @@ export async function POST(req: NextRequest) {
     }
 
     const { vaultId, allowedScopes } = keyVerification.payload;
-    const scopedCandidateData = filterVaultByScope(MOCK_CANDIDATE_VAULT, allowedScopes);
+    const candidateVault = globalUserStore.findVault(vaultId);
+    if (!candidateVault) {
+      return NextResponse.json({ error: "Candidate vault was not found." }, { status: 404 });
+    }
+    const scopedCandidateData = filterVaultByScope(candidateVault, allowedScopes);
+    const scopesToVerify = allowedScopes.filter((scope) => Boolean((scopedCandidateData as any)[scope]));
+    if (scopesToVerify.length === 0 || scopesToVerify.length !== allowedScopes.length) {
+      return NextResponse.json(
+        { error: "Candidate vault is missing one or more consented categories; integrity cannot be verified." },
+        { status: 409 }
+      );
+    }
 
     // Step 2: Agent 1 - Document Integrity & Blockchain Ledger Verification
     const integrityAgent = new IntegrityAgent();
     const integrityResults: Record<string, any> = {};
-    let allTamperFree = true;
+    let allTamperFree = scopesToVerify.length > 0;
 
     for (const scope of allowedScopes) {
       if ((scopedCandidateData as any)[scope]) {
@@ -165,15 +79,30 @@ export async function POST(req: NextRequest) {
     }
 
     if (!allTamperFree) {
+      globalUserStore.recordAuditEntry({
+        requestingOrg: requestingOrg || "Enterprise Screener Portal",
+        orgType: "ENTERPRISE",
+        accessedScopes: allowedScopes,
+        purpose: `${(vertical || "labour").toUpperCase()} Multi-Agent Screening (TAMPER DETECTED)`,
+        integrityVerified: false,
+        onChainTx: "",
+        status: "TAMPER_DETECTED",
+        targetVaultId: vaultId,
+      });
+
       return NextResponse.json(
         {
           status: "REJECTED_TAMPER_DETECTED",
           error: "Critical integrity failure: database record does not match on-chain ledger hash.",
           integrityResults,
         },
-        { status: 403 }
+        { status: 409 }
       );
     }
+
+    // Record Key Usage Quota
+    recordKeyExecution(keyVerification.payload.keyId);
+    globalUserStore.recordKeyUsage(keyVerification.payload.keyId);
 
     // Step 3: Agent 2 - Criteria Ingestion Agent
     const gateway = new MultiLLMGateway();
@@ -196,7 +125,8 @@ export async function POST(req: NextRequest) {
     );
 
     // Step 6: 60/40 Micro-Transaction Accounting
-    const sovereignNode = SovereignNodeRouter.resolveSovereignNode(MOCK_CANDIDATE_VAULT.residenceCountry);
+    const sovereignNode = SovereignNodeRouter.resolveSovereignNode(candidateVault.residenceCountry || "NG");
+
 
     // Step 7: Record Citizen Privacy Transparency Log
     globalUserStore.recordAuditEntry({
@@ -205,8 +135,9 @@ export async function POST(req: NextRequest) {
       accessedScopes: allowedScopes,
       purpose: `${selectedVertical.toUpperCase()} Multi-Agent Screening`,
       integrityVerified: true,
-      onChainTx: "0x89f4b321a97d9120eef9234857b60e408d6c7b9a5e8e3d09a25b1285741f021c",
+      onChainTx: "",
       status: "VERIFIED_ACCESSED",
+      targetVaultId: vaultId,
     });
 
     return NextResponse.json({
@@ -240,4 +171,3 @@ export async function POST(req: NextRequest) {
     );
   }
 }
-

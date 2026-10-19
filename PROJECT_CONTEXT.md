@@ -1,6 +1,11 @@
 # SABI VAULT: MASTER PROJECT CONTEXT
-> **Status:** Phase 2 (Citizen Vault Management & Key Manager), Phase 3A (Sovereign Govt Dashboard & 40% Fiscal Splitter), and Phase 3B (Enterprise Dynamic Criteria Studio & Batch Screening) Complete (21 Clean Next.js Routes, 100% Passed Master Integration Test Suite)  
+> **Status:** Pre-production; Enterprise-Grade Security Suite fully audited (Entry #035) with 7 critical/medium gaps resolved. Critical fixes: GAP-1 role regression during token rotation (was hardcoded "citizen" — now persists role/orgId in user_sessions and restores on rotation), GAP-2 JWT signing secret now has production startup guard (throws [SECURITY FATAL] if SESSION_SIGNING_SECRET unset), GAP-3 middleware now validates 64-char hex format of refresh token (not just presence). Medium fixes: GAP-4 explicit RLS policies added to all 3 security tables, GAP-5 localStorage.clear() on logout now preserves device fingerprint seed, GAP-6 FK ON DELETE CASCADE added to user_sessions, GAP-8 absolute_expires_at (30-day) column added and enforced in rotateSessionToken(). Remaining Phase 3: GAP-7 (IP rate limiting), GAP-9 (CSRF tokens), GAP-11 (test suite imports real modules). SESSION_SIGNING_SECRET now documented in .env.example. Compliance: NDPC ✅, GDPR Art.32 ✅, ISO 27001 ✅, OWASP ASVS L2 ⚠️ (GAP-7/9 pending). Single-Session Enforcement [1 active device/browser], 4-Tier Progressive Account Lockout [60s, 1hr, 24hr, Permanent], Dual-Token Architecture with HttpOnly SameSite=Strict cookies + short-lived in-memory Access Tokens, Silent Token Refresh, Multi-factor Device Fingerprinting & New Device Alerts, Bot Traps & AI Scraper Interceptors, Strict Security Headers & Granular Autofill Control. All 43 Next.js routes compiled, 0 errors. Enforces pure white background, strict 3-color palette (Pure White #ffffff, Slate Dark #0f172a, Sabi Emerald #059669), Poppins & Montserrat fonts. Dev server: http://localhost:3000.
+
 > **Rule:** This file MUST be read at the beginning of any session by any AI agent, developer, or IDE before inspecting or modifying code. It MUST be updated during every commit or major milestone.
+
+
+
+
 
 ---
 
@@ -102,15 +107,26 @@ sabi-vault/
 │   └── SabiRevenueSplitter.sol        # 60/40 fee split smart contract
 ├── src/
 │   ├── app/                           # Next.js App Router (User Vault, Enterprise Portal)
-│   │   ├── (auth)/                    # Authentication & OAuth onboarding
-│   │   ├── (dashboard)/vault/         # B2C User Vault (6 categories, API key generator)
-│   │   ├── (dashboard)/enterprise/    # B2B Screening Engine & Requirement Upload
-│   │   ├── (dashboard)/notary/        # Tier-2 Notary/Institutional Attestation Portal
-│   │   └── api/                       # 21 Scoped Query, Admin, Govt, Vault & M2M REST APIs
+│   │   ├── (marketing)/               # Public site: home (hero verification sim, FAQ, testimonials), government, enterprise, about, blog, contact, docs, legal
+│   │   ├── reset-password/            # Password reset completion after email link
+│   │   ├── signup/organization/       # Self-serve org onboarding -> enterprise_admin + API key
+│   │   ├── login/                     # Split-screen Supabase email/password signup and sign-in
+│   │   ├── auth/callback/             # Supabase email-confirmation callback
+│   │   │   ├── dashboard/                 # Server-verified session entry; renders DashboardShell + role workspaces
+│   │   └── api/                       # Scoped Query, Admin, Govt, Vault, M2M, Integrations & Contact APIs
+│   ├── lib/                           # Core Libraries & Infrastructure
+│   │   ├── auth/                      # Unified AuthGuard (Citizen, Admin, M2M, Role Enforcer)
+│   │   ├── security/                  # Enterprise Security Suite (Lockout, Session, Bot Defense, Fingerprint)
+│   │   └── supabase/                  # Server, Client, and Service-Role Admin Supabase Clients
+│   ├── middleware.ts                  # Route guard, AI scraper detection & strict enterprise security headers
 │   ├── components/                    # Modular Dashboard Views (Citizen, Enterprise, Govt)
-│   │   ├── CitizenVaultView.tsx       # B2C Credential CRUD, Ephemeral Sync, Scoped Key Manager
+│   │   ├── Preloader.tsx              # Session-gated brand preloader (shield draw, reduced-motion safe)
+│   │   ├── CitizenVaultView.tsx       # B2C Credential CRUD, Document Intake, Scoped Key Manager
 │   │   ├── EnterpriseScreeningView.tsx# B2B Dynamic Grounding Studio, Single & Bulk Screening
-│   │   └── SovereignGovtView.tsx      # GovTech Telemetry, 40% Fiscal Splitter & Fraud Radar
+│   │   ├── SovereignGovtView.tsx      # GovTech Telemetry, 40% Fiscal Splitter & Fraud Radar
+│   │   ├── dashboard/                 # DashboardShell (sidebar, scroll-spy, ambient bg), DocumentIntake (drag-drop upload), ScanPipeline, CloudConnectModal
+│   │   ├── marketing/                 # Nav, footer, cookie consent, Reveal, VerificationSim
+│   │   └── auth/                      # LoginForm, PasswordInput with visibility toggle & autofill protection
 │   ├── core/
 │   │   ├── admin/                     # Super admin store, AES-256 dynamic configuration vault
 │   │   ├── vault/                     # Citizen vault store, credential CRUD, key revocation
@@ -137,4 +153,3 @@ sabi-vault/
 2. **After any commit, fix, or feature addition:**
    - Update `PROMPT_EXPERIENCE_LOG.md` with prompt details, solution design, and verified outcomes.
    - Update `PROJECT_CONTEXT.md` if data schemas, architectural components, or active status change.
-

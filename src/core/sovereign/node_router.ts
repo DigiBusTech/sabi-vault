@@ -16,36 +16,53 @@ export interface SovereignNodeConfig {
   isHealthy: boolean;
 }
 
+import { getConfigValueSync } from "@/core/config/platform_config";
+
 export class SovereignNodeRouter {
-  private static REGIONAL_NODES: Record<string, SovereignNodeConfig> = {
-    "ng-west-africa": {
-      nodeId: "ng-west-africa",
-      regionName: "West Africa Sovereign Hub (Lagos / Abuja)",
-      jurisdiction: "Nigeria / ECOWAS",
-      complianceFramework: "NDPC",
-      endpointUrl: process.env.SOVEREIGN_NODE_NG_URL || "https://ng-node.sabi-vault.internal",
-      payoutAddress: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e", // Sovereign Regional Host payout
-      isHealthy: true,
-    },
-    "eu-central": {
-      nodeId: "eu-central",
-      regionName: "EU Central Sovereign Hub (Frankfurt / Dublin)",
-      jurisdiction: "European Union",
-      complianceFramework: "GDPR",
-      endpointUrl: process.env.SOVEREIGN_NODE_EU_URL || "https://eu-node.sabi-vault.internal",
-      payoutAddress: "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC",
-      isHealthy: true,
-    },
-    "na-east": {
-      nodeId: "na-east",
-      regionName: "North America Sovereign Hub (N. Virginia)",
-      jurisdiction: "United States / Canada",
-      complianceFramework: "US_PRIVACY",
-      endpointUrl: process.env.SOVEREIGN_NODE_NA_URL || "https://na-node.sabi-vault.internal",
-      payoutAddress: "0x90F79bf6EB2c4f870365E785982E1f101E93b906",
-      isHealthy: true,
-    },
-  };
+  // Endpoint URLs resolve from the dynamic platform config (dashboard-managed)
+  // at call time so node changes hot-reload without a redeploy.
+  private static nodeEndpoint(nodeId: string, fallback: string): string {
+    const configKeys: Record<string, string> = {
+      "ng-west-africa": "nodes.ng_west_africa_url",
+      "eu-central": "nodes.eu_central_url",
+      "na-east": "nodes.na_east_url",
+    };
+    const key = configKeys[nodeId];
+    const resolved = key ? getConfigValueSync(key) : "";
+    return resolved || fallback;
+  }
+
+  private static get REGIONAL_NODES(): Record<string, SovereignNodeConfig> {
+    return {
+      "ng-west-africa": {
+        nodeId: "ng-west-africa",
+        regionName: "West Africa Sovereign Hub (Lagos / Abuja)",
+        jurisdiction: "Nigeria / ECOWAS",
+        complianceFramework: "NDPC",
+        endpointUrl: this.nodeEndpoint("ng-west-africa", "https://ng-node.sabi-vault.internal"),
+        payoutAddress: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e", // Sovereign Regional Host payout
+        isHealthy: true,
+      },
+      "eu-central": {
+        nodeId: "eu-central",
+        regionName: "EU Central Sovereign Hub (Frankfurt / Dublin)",
+        jurisdiction: "European Union",
+        complianceFramework: "GDPR",
+        endpointUrl: this.nodeEndpoint("eu-central", "https://eu-node.sabi-vault.internal"),
+        payoutAddress: "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC",
+        isHealthy: true,
+      },
+      "na-east": {
+        nodeId: "na-east",
+        regionName: "North America Sovereign Hub (N. Virginia)",
+        jurisdiction: "United States / Canada",
+        complianceFramework: "US_PRIVACY",
+        endpointUrl: this.nodeEndpoint("na-east", "https://na-node.sabi-vault.internal"),
+        payoutAddress: "0x90F79bf6EB2c4f870365E785982E1f101E93b906",
+        isHealthy: true,
+      },
+    };
+  }
 
   /**
    * Resolves which sovereign regional database node is legally mandated

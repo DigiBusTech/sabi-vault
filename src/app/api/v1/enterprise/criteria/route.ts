@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { globalCriteriaStore, CriteriaProfile } from "@/core/enterprise/criteria_store";
 import { randomBytes } from "crypto";
+import { authorizeRoles } from "@/lib/auth/auth_guard";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const auth = await authorizeRoles(req, ["enterprise_admin", "super_admin", "citizen"]);
+  if (!auth.authorized) {
+    return auth.response!;
+  }
+
   const profiles = globalCriteriaStore.listProfiles();
   return NextResponse.json({
     success: true,
@@ -13,6 +19,11 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
+    const auth = await authorizeRoles(req, ["enterprise_admin", "super_admin"]);
+    if (!auth.authorized) {
+      return auth.response!;
+    }
+
     const body = await req.json();
     const {
       name,
@@ -61,3 +72,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
+
+

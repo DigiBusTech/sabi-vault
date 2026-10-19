@@ -1,5 +1,6 @@
 import { ethers } from "ethers";
 import { VerificationTier } from "@/types/vault";
+import { getConfigValueSync } from "@/core/config/platform_config";
 
 export interface OnChainVerificationResponse {
   isMatch: boolean;
@@ -7,7 +8,9 @@ export interface OnChainVerificationResponse {
   timestamp: number;
   blockNumber?: number;
   txHash?: string;
+  isSimulated?: boolean;
 }
+
 
 // Minimal ABI definitions for Sabi Vault smart contracts
 export const REGISTRY_ABI = [
@@ -37,11 +40,21 @@ export class BlockchainLedgerClient {
 
   // In-memory ledger cache for local simulation / zero-cost testnet runs
   private static localSimulationLedger: Map<string, { hash: string; tier: VerificationTier; timestamp: number }> = new Map();
+  private get simulationEnabled(): boolean {
+    if (process.env.NODE_ENV === "production") return false;
+    const setting = getConfigValueSync("blockchain.simulation_mode");
+    return setting !== "false";
+  }
+
 
   constructor(
-    rpcUrl: string = process.env.BASE_SEPOLIA_RPC || "https://sepolia.base.org",
-    registryAddress: string = process.env.REGISTRY_CONTRACT_ADDRESS || "0x1234567890123456789012345678901234567890",
-    splitterAddress: string = process.env.SPLITTER_CONTRACT_ADDRESS || "0x0987654321098765432109876543210987654321"
+    rpcUrl: string = getConfigValueSync("blockchain.base_sepolia_rpc") || "https://sepolia.base.org",
+    registryAddress: string =
+      getConfigValueSync("blockchain.registry_contract_address") ||
+      "0x1234567890123456789012345678901234567890",
+    splitterAddress: string =
+      getConfigValueSync("blockchain.splitter_contract_address") ||
+      "0x0987654321098765432109876543210987654321"
   ) {
     this.rpcUrl = rpcUrl;
     this.registryAddress = registryAddress;
@@ -63,35 +76,46 @@ export class BlockchainLedgerClient {
     sha256Hex: string,
     tier: VerificationTier = VerificationTier.TIER_1_STANDARD_HASHED,
     signerPrivateKey?: string
-  ): Promise<{ txHash: string; timestamp: number }> {
+  ): Promise<{ txHash: string; timestamp: number; isSimulated?: boolean }> {
+
     const key = `${vaultId}:${category}`;
     const timestamp = Math.floor(Date.now() / 1000);
+    const privateKey = signerPrivateKey || getConfigValueSync("blockchain.signer_private_key") || undefined;
+    const registryConfigured =
+      this.registryAddress !== "0x1234567890123456789012345678901234567890";
 
-    // Save in local simulation ledger for immediate synchronous testing
+    if (privateKey && this.provider && registryConfigured) {
+      try {
+        const wallet = new ethers.Wallet(privateKey, this.provider);
+        const contract = new ethers.Contract(this.registryAddress, REGISTRY_ABI, wallet);
+        const bytes32Hash = "0x" + sha256Hex;
+        const tx = await contract.commitTier1Hash(vaultId, category, bytes32Hash);
+        const receipt = await tx.wait();
+        if (!receipt || receipt.status !== 1) {
+          throw new Error("Blockchain transaction was not confirmed successfully.");
+        }
+        return { txHash: receipt.hash, timestamp, isSimulated: false };
+      } catch (err) {
+        if (!this.simulationEnabled) {
+          throw new Error("Blockchain commit failed; refusing to return a simulated receipt.", { cause: err });
+        }
+      }
+    }
+
+    if (!this.simulationEnabled) {
+      throw new Error("Blockchain signing is not configured; refusing to simulate a production commit.");
+    }
+
     BlockchainLedgerClient.localSimulationLedger.set(key, {
       hash: sha256Hex.toLowerCase(),
       tier,
       timestamp,
     });
-
-    if (signerPrivateKey && this.provider) {
-      try {
-        const wallet = new ethers.Wallet(signerPrivateKey, this.provider);
-        const contract = new ethers.Contract(this.registryAddress, REGISTRY_ABI, wallet);
-        const bytes32Hash = "0x" + sha256Hex;
-        const tx = await contract.commitTier1Hash(vaultId, category, bytes32Hash);
-        const receipt = await tx.wait();
-        return { txHash: receipt.hash, timestamp };
-      } catch (err: any) {
-        console.warn(`[BlockchainClient] Live transaction failed, fell back to simulated confirmation: ${err.message}`);
-      }
-    }
-
-    // Deterministic simulation transaction hash
     const simTxHash = ethers.keccak256(ethers.toUtf8Bytes(`${key}:${sha256Hex}:${timestamp}`));
     return {
       txHash: simTxHash,
       timestamp,
+      isSimulated: true,
     };
   }
 
@@ -104,7 +128,9 @@ export class BlockchainLedgerClient {
     expectedSha256Hex: string
   ): Promise<OnChainVerificationResponse> {
     const key = `${vaultId}:${category}`;
-    const recorded = BlockchainLedgerClient.localSimulationLedger.get(key);
+    const recorded = this.simulationEnabled
+      ? BlockchainLedgerClient.localSimulationLedger.get(key)
+      : undefined;
 
     if (recorded) {
       const isMatch = recorded.hash.toLowerCase() === expectedSha256Hex.toLowerCase();
@@ -112,19 +138,83 @@ export class BlockchainLedgerClient {
         isMatch,
         tier: recorded.tier,
         timestamp: recorded.timestamp,
-        blockNumber: 18924102,
-        txHash: ethers.keccak256(ethers.toUtf8Bytes(key)),
+        isSimulated: true,
       };
     }
 
-    // Default simulation response when testing without prior commitment
+    // Attempt live on-chain check via JSON-RPC if configured
+    if (this.provider && this.registryAddress && this.registryAddress !== "0x1234567890123456789012345678901234567890") {
+      try {
+        const contract = new ethers.Contract(this.registryAddress, REGISTRY_ABI, this.provider);
+        const bytes32Hash = "0x" + expectedSha256Hex;
+        const [isMatch, tier, timestamp] = await contract.verifyHash(vaultId, category, bytes32Hash);
+        return {
+          isMatch: Boolean(isMatch),
+          tier: Number(tier) as VerificationTier,
+          timestamp: Number(timestamp),
+          isSimulated: false,
+        };
+      } catch (err: any) {
+        console.warn(`[BlockchainClient] On-chain verification query failed: ${err.message}`);
+      }
+    }
+
+    // Fail closed: Unknown or uncommitted document returns false
     return {
-      isMatch: true,
+      isMatch: false,
       tier: VerificationTier.TIER_1_STANDARD_HASHED,
-      timestamp: Math.floor(Date.now() / 1000),
-      blockNumber: 18924102,
-      txHash: "0x89f4b321a97d9120eef9234857b60e408d6c7b9a5e8e3d09a25b1285741f021c",
+      timestamp: 0,
+      isSimulated: false,
     };
   }
-}
 
+  /**
+   * Commits a Tier 2 Notarized / Authenticated Hash with accredited notary seal signature.
+   */
+  async commitTier2NotarizedHash(
+    vaultId: string,
+    category: string,
+    sha256Hex: string,
+    sealSignature: string,
+    notaryAddress?: string,
+    signerPrivateKey?: string
+  ): Promise<{ txHash: string; timestamp: number; isSimulated: boolean }> {
+    const key = `${vaultId}:${category}`;
+    const timestamp = Math.floor(Date.now() / 1000);
+
+    const privateKey = signerPrivateKey || getConfigValueSync("blockchain.signer_private_key") || undefined;
+    const registryConfigured =
+      this.registryAddress !== "0x1234567890123456789012345678901234567890";
+
+    if (privateKey && this.provider && registryConfigured) {
+      try {
+        const wallet = new ethers.Wallet(privateKey, this.provider);
+        const contract = new ethers.Contract(this.registryAddress, REGISTRY_ABI, wallet);
+        const bytes32Hash = "0x" + sha256Hex;
+        const tx = await contract.commitTier2NotarizedHash(vaultId, category, bytes32Hash, sealSignature);
+        const receipt = await tx.wait();
+        if (!receipt || receipt.status !== 1) {
+          throw new Error("Blockchain transaction was not confirmed successfully.");
+        }
+        return { txHash: receipt.hash, timestamp, isSimulated: false };
+      } catch (err) {
+        if (!this.simulationEnabled) {
+          throw new Error("Tier 2 blockchain commit failed; refusing to return a simulated receipt.", { cause: err });
+        }
+      }
+    }
+
+    if (!this.simulationEnabled) {
+      throw new Error("Blockchain signing is not configured; refusing to simulate a Tier 2 production commit.");
+    }
+
+    BlockchainLedgerClient.localSimulationLedger.set(key, {
+      hash: sha256Hex.toLowerCase(),
+      tier: VerificationTier.TIER_2_AUTHENTICATED_LEGALIZED,
+      timestamp,
+    });
+    const simTxHash = ethers.keccak256(ethers.toUtf8Bytes(`${key}:tier2:${sealSignature}:${timestamp}`));
+    return { txHash: simTxHash, timestamp, isSimulated: true };
+  }
+
+}

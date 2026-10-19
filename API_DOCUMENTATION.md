@@ -40,6 +40,8 @@ To ensure **institutional accountability** alongside **citizen data sovereignty*
 
 ## 2. API Endpoints
 
+The compatibility endpoints `POST /api/v1/vault/query` and `POST /api/v1/screen` also require both `X-Sabi-Org-Key` and the candidate's scoped bearer key. The organization name used in audit records is resolved from the organization key, not accepted from caller-provided text. Recipient-bound candidate keys are accepted only for their bound organization.
+
 ### 2.1 Direct Scoped Query (`POST /api/v1/m2m/query`)
 Allows external systems to retrieve clean, structured, tamper-proof JSON to feed their internal databases or custom AI models.
 
@@ -210,4 +212,3 @@ Organizations configure webhook listeners in the Super Admin dashboard to receiv
 * `credential.tier2_legalized`: Sent when a notary seals a pending transcript.
 * `key.revoked`: Sent when a candidate terminates an active API key early.
 * `security.tamper_detected`: Sent if an on-chain hash mismatch is detected.
-

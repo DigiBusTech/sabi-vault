@@ -36,39 +36,40 @@ export class EphemeralDocumentParser {
     fileName: string,
     inferredCategory?: VaultCategory
   ): Promise<ParsedDocumentOutput> {
-    // 1. Calculate cryptographic SHA-256 hash of the original raw file
-    const sha256Hash = computeSha256(buffer);
+    try {
+      // 1. Calculate cryptographic SHA-256 hash of the original raw file
+      const sha256Hash = computeSha256(buffer);
 
-    // 2. Extract textual content from buffer
-    // For text/UTF-8 or simulated OCR buffer:
-    const extractedText = this.extractTextFromBuffer(buffer, fileName);
+      // 2. Extract textual content from buffer
+      const extractedText = this.extractTextFromBuffer(buffer, fileName);
 
-    // 3. Classify category if not explicitly provided
-    const category = inferredCategory || this.classifyCategory(fileName, extractedText);
+      // 3. Classify category if not explicitly provided
+      const category = inferredCategory || this.classifyCategory(fileName, extractedText);
 
-    // 4. Structure data into target JSON schema via Multi-LLM Gateway
-    const structuredData = await this.structureTextToJson(extractedText, category, fileName);
+      // 4. Structure data into target JSON schema via Multi-LLM Gateway
+      const structuredData = await this.structureTextToJson(extractedText, category, fileName);
 
-    // 5. Determine default verification tier (Tier 1 by default; Academics/Affidavits flagged for Tier 2)
-    const tier =
-      category === "academics"
-        ? VerificationTier.TIER_2_AUTHENTICATED_LEGALIZED
-        : VerificationTier.TIER_1_STANDARD_HASHED;
+      // 5. Determine default verification tier (Tier 1 standard, Tier 2 for academics/legal)
+      const tier =
+        category === "academics"
+          ? VerificationTier.TIER_2_AUTHENTICATED_LEGALIZED
+          : VerificationTier.TIER_1_STANDARD_HASHED;
 
-    // 6. STRICT ZERO-CENTRALIZATION SECURITY ACTION:
-    // Explicitly overwrite the buffer bytes in memory with zeros
-    buffer.fill(0);
-
-    return {
-      documentName: fileName,
-      category,
-      tier,
-      sha256Hash,
-      structuredData,
-      extractedTextSnippet: extractedText.substring(0, 200),
-      processedAt: new Date().toISOString(),
-    };
+      return {
+        documentName: fileName,
+        category,
+        tier,
+        sha256Hash,
+        structuredData,
+        extractedTextSnippet: extractedText.substring(0, 200),
+        processedAt: new Date().toISOString(),
+      };
+    } finally {
+      // STRICT ZERO-CENTRALIZATION INVARIANT: Overwrite buffer in-memory with zeroes
+      buffer.fill(0);
+    }
   }
+
 
   private extractTextFromBuffer(buffer: Buffer, fileName: string): string {
     // Check if buffer contains recognizable text/strings

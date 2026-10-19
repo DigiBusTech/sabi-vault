@@ -3,8 +3,8 @@
 
 ## MANDATORY WORKFLOW FOR EVERY QUERY:
 1. **STEP 1 - READ CONTEXT FIRST:**
-   - You MUST read `c:\Users\ekpou\Desktop\sabi vault\PROJECT_CONTEXT.md` to understand the current architecture, data schemas, security rules, and active components.
-   - You MUST read `c:\Users\ekpou\Desktop\sabi vault\PROMPT_EXPERIENCE_LOG.md` to review user prompts, prior decisions, known issues, and lessons learned.
+   - You MUST read `./PROJECT_CONTEXT.md` to understand the current architecture, data schemas, security rules, and active components.
+   - You MUST read `./PROMPT_EXPERIENCE_LOG.md` to review user prompts, prior decisions, known issues, and lessons learned.
 2. **STEP 2 - COMPLY WITH CORE ARCHITECTURAL INVARIANTS:**
    - **Zero Raw Document Centralization:** Sabi Vault never saves physical user PDFs to our servers. Files reside in the user's private Google Drive/Dropbox via OAuth.
    - **Sovereign Node Isolation:** Structured JSON data resides on regional database nodes (PostgreSQL/Supabase) partitioned to satisfy NDPC, GDPR, and regional data residency.

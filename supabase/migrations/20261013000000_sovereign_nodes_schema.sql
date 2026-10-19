@@ -29,16 +29,20 @@ ON CONFLICT (node_id) DO NOTHING;
 -- 2. CITIZEN VAULT PROFILES
 CREATE TABLE IF NOT EXISTS vault_profiles (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id VARCHAR(128) UNIQUE NOT NULL,
+    auth_user_id UUID,
+    user_id VARCHAR(128) UNIQUE NOT NULL, -- Canonical string identifier (e.g. usr_...)
     email VARCHAR(255) UNIQUE NOT NULL,
     citizenship_country VARCHAR(3) NOT NULL, -- ISO Alpha-3 or Alpha-2
     residence_country VARCHAR(3) NOT NULL,
     sovereign_node_id VARCHAR(64) NOT NULL REFERENCES sovereign_nodes(node_id),
     oauth_google_drive_connected BOOLEAN DEFAULT FALSE,
     oauth_last_synced_at TIMESTAMPTZ,
+    status VARCHAR(32) NOT NULL DEFAULT 'ACTIVE' CHECK (status IN ('ACTIVE', 'FROZEN', 'PENDING_VERIFICATION')),
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+
 
 -- 3. STRUCTURED VAULT RECORDS (ZERO RAW PDFS STORED)
 CREATE TABLE IF NOT EXISTS vault_records (
@@ -71,12 +75,46 @@ CREATE TABLE IF NOT EXISTS scoped_api_keys (
     max_queries INT NOT NULL DEFAULT 5,
     query_count INT NOT NULL DEFAULT 0,
     is_revoked BOOLEAN DEFAULT FALSE,
+    recipient_org VARCHAR(64),
+    label VARCHAR(255),
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_scoped_keys_lookup ON scoped_api_keys(key_id);
 
--- 5. ENTERPRISE QUERY & REVENUE AUDIT LOGS
+-- 5. ORGANIZATIONS & MEMBERSHIP REGISTRY
+CREATE TABLE IF NOT EXISTS organizations (
+    id VARCHAR(64) PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    type VARCHAR(32) NOT NULL CHECK (type IN ('GOVERNMENT', 'ENTERPRISE', 'UNIVERSITY', 'BORDER_SECURITY')),
+    org_api_key_hash VARCHAR(64) NOT NULL,
+    rate_limit_per_min INT NOT NULL DEFAULT 60,
+    status VARCHAR(32) NOT NULL DEFAULT 'ACTIVE' CHECK (status IN ('ACTIVE', 'SUSPENDED')),
+    jurisdiction VARCHAR(64) NOT NULL,
+    webhook_url TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS organization_members (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    org_id VARCHAR(64) NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    auth_user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+    role VARCHAR(32) NOT NULL CHECK (role IN ('ADMIN', 'EVALUATOR', 'AUDITOR')),
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 6. ACCREDITED NOTARY REGISTRY
+CREATE TABLE IF NOT EXISTS notaries (
+    id VARCHAR(64) PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    jurisdiction VARCHAR(64) NOT NULL,
+    accreditation_number VARCHAR(128) UNIQUE NOT NULL,
+    wallet_address VARCHAR(42) NOT NULL,
+    is_authorized BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 7. ENTERPRISE QUERY & REVENUE AUDIT LOGS
 CREATE TABLE IF NOT EXISTS enterprise_query_audits (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     query_id VARCHAR(64) UNIQUE NOT NULL,
@@ -103,23 +141,62 @@ ALTER TABLE vault_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE vault_records ENABLE ROW LEVEL SECURITY;
 ALTER TABLE scoped_api_keys ENABLE ROW LEVEL SECURITY;
 ALTER TABLE enterprise_query_audits ENABLE ROW LEVEL SECURITY;
+ALTER TABLE organizations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE organization_members ENABLE ROW LEVEL SECURITY;
+ALTER TABLE notaries ENABLE ROW LEVEL SECURITY;
 
--- 1. Vault Profiles: Users can only see and edit their own profile
+-- 1. Vault Profiles: User can see/update their profile
 CREATE POLICY user_own_profile_select ON vault_profiles
-    FOR SELECT USING (auth.uid()::text = user_id);
+    FOR SELECT USING (auth.uid() = auth_user_id OR auth.uid()::text = user_id OR auth.uid() = id);
 
 CREATE POLICY user_own_profile_update ON vault_profiles
-    FOR UPDATE USING (auth.uid()::text = user_id);
+    FOR UPDATE USING (auth.uid() = auth_user_id OR auth.uid()::text = user_id OR auth.uid() = id);
 
--- 2. Vault Records: Users have complete control over their structured records
+-- 2. Vault Records: Complete sovereign control by citizen
 CREATE POLICY user_own_records_all ON vault_records
-    FOR ALL USING (auth.uid()::text = vault_id);
+    FOR ALL USING (
+        EXISTS (
+            SELECT 1 FROM vault_profiles vp 
+            WHERE vp.user_id = vault_records.vault_id 
+            AND (auth.uid() = vp.auth_user_id OR auth.uid()::text = vp.user_id OR auth.uid() = vp.id)
+        )
+    );
 
--- 3. Scoped API Keys: Users can manage their issued keys
+-- 3. Scoped API Keys: Citizen manages issued keys
 CREATE POLICY user_own_keys_all ON scoped_api_keys
-    FOR ALL USING (auth.uid()::text = vault_id);
+    FOR ALL USING (
+        EXISTS (
+            SELECT 1 FROM vault_profiles vp 
+            WHERE vp.user_id = scoped_api_keys.vault_id 
+            AND (auth.uid() = vp.auth_user_id OR auth.uid()::text = vp.user_id OR auth.uid() = vp.id)
+        )
+    );
 
--- 4. Enterprise Audits: Read-only for involved user and organization
+-- 4. Enterprise Audits: Read-only for citizen vault owner
 CREATE POLICY user_view_own_audits ON enterprise_query_audits
-    FOR SELECT USING (auth.uid()::text = target_vault_id);
+    FOR SELECT USING (
+        EXISTS (
+            SELECT 1 FROM vault_profiles vp 
+            WHERE vp.user_id = enterprise_query_audits.target_vault_id 
+            AND (auth.uid() = vp.auth_user_id OR auth.uid()::text = vp.user_id OR auth.uid() = vp.id)
+        )
+    );
+
+-- 5. Organization Membership: Members can view their organization
+CREATE POLICY org_members_view ON organizations
+    FOR SELECT USING (
+        EXISTS (
+            SELECT 1 FROM organization_members om 
+            WHERE om.org_id = organizations.id 
+            AND om.auth_user_id = auth.uid()
+        )
+    );
+
+-- 6. Organization Members Table Policies
+CREATE POLICY org_members_select ON organization_members
+    FOR SELECT USING (auth_user_id = auth.uid());
+
+-- 7. Notaries Registry Policies
+CREATE POLICY notaries_public_read ON notaries
+    FOR SELECT USING (is_authorized = TRUE);
 

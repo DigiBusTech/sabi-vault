@@ -11,62 +11,71 @@ import {
   FileCheck,
   Globe2,
   Award,
-  Sparkles,
   RefreshCw,
   Copy,
   Plus,
   Trash2,
   Lock,
   CheckCircle2,
-  AlertTriangle,
   History,
-  Cloud,
   Check,
   ExternalLink,
+  AlertTriangle,
+  X,
+  FileUp,
+  Link2,
 } from "lucide-react";
 import { VaultCategory, FullUserVault } from "@/types/vault";
+import { DocumentIntake } from "@/components/dashboard/DocumentIntake";
 
 interface CitizenVaultViewProps {
   onMintKeyForDemo?: (key: string) => void;
 }
 
+const CATEGORIES: {
+  id: VaultCategory;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+}[] = [
+  { id: "academics", label: "Academics", icon: GraduationCap },
+  { id: "finance", label: "Finance", icon: Wallet },
+  { id: "experience", label: "Experience", icon: Briefcase },
+  { id: "certifications", label: "Certifications", icon: FileCheck },
+  { id: "achievements", label: "Achievements", icon: Award },
+  { id: "portfolio", label: "Portfolio", icon: Globe2 },
+];
+
 export function CitizenVaultView({ onMintKeyForDemo }: CitizenVaultViewProps) {
   const [vault, setVault] = useState<FullUserVault | null>(null);
   const [activeCategory, setActiveCategory] = useState<VaultCategory>("academics");
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   // Scoped Keys State
   const [keysList, setKeysList] = useState<any[]>([]);
-  const [selectedScopes, setSelectedScopes] = useState<VaultCategory[]>([
-    "academics",
-    "finance",
-  ]);
+  const [selectedScopes, setSelectedScopes] = useState<VaultCategory[]>(["academics", "finance"]);
   const [keyTtlDays, setKeyTtlDays] = useState<number>(14);
   const [maxQueries, setMaxQueries] = useState<number>(5);
   const [keyLabel, setKeyLabel] = useState<string>("");
   const [isMinting, setIsMinting] = useState<boolean>(false);
   const [copiedKeyId, setCopiedKeyId] = useState<string | null>(null);
-
-  // Ephemeral Cloud Sync State
-  const [cloudFileName, setCloudFileName] = useState<string>("");
-  const [cloudCategory, setCloudCategory] = useState<VaultCategory>("certifications");
-  const [cloudProvider, setCloudProvider] = useState<"google_drive" | "dropbox">("google_drive");
-  const [isSyncing, setIsSyncing] = useState<boolean>(false);
-  const [syncSuccessMsg, setSyncSuccessMsg] = useState<string | null>(null);
+  const [mintError, setMintError] = useState<string | null>(null);
 
   // Manual Add Credential Modal
   const [showAddModal, setShowAddModal] = useState<boolean>(false);
   const [newItemTitle, setNewItemTitle] = useState<string>("");
   const [newItemInstitution, setNewItemInstitution] = useState<string>("");
   const [newItemDetail, setNewItemDetail] = useState<string>("");
+  const [addError, setAddError] = useState<string | null>(null);
+  const [isAdding, setIsAdding] = useState<boolean>(false);
 
   // Audit Logs State
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
 
-  // Fetch data on load
   const loadVaultData = async () => {
     try {
       setIsLoading(true);
+      setLoadError(null);
       const [vaultRes, keysRes, auditRes] = await Promise.all([
         fetch("/api/v1/vault/credentials"),
         fetch("/api/v1/vault/keys"),
@@ -76,6 +85,8 @@ export function CitizenVaultView({ onMintKeyForDemo }: CitizenVaultViewProps) {
       if (vaultRes.ok) {
         const data = await vaultRes.json();
         setVault(data.vault);
+      } else {
+        setLoadError("Could not load your vault. Check your session and retry.");
       }
       if (keysRes.ok) {
         const data = await keysRes.json();
@@ -85,8 +96,8 @@ export function CitizenVaultView({ onMintKeyForDemo }: CitizenVaultViewProps) {
         const data = await auditRes.json();
         setAuditLogs(data.auditLogs);
       }
-    } catch (err) {
-      console.error("Failed to load vault data:", err);
+    } catch {
+      setLoadError("Network error while loading your vault.");
     } finally {
       setIsLoading(false);
     }
@@ -103,17 +114,15 @@ export function CitizenVaultView({ onMintKeyForDemo }: CitizenVaultViewProps) {
   };
 
   const toggleScope = (scope: VaultCategory) => {
-    if (selectedScopes.includes(scope)) {
-      setSelectedScopes(selectedScopes.filter((s) => s !== scope));
-    } else {
-      setSelectedScopes([...selectedScopes, scope]);
-    }
+    setSelectedScopes((current) =>
+      current.includes(scope) ? current.filter((s) => s !== scope) : [...current, scope]
+    );
   };
 
-  // Mint new Scoped Key
   const handleMintKey = async () => {
     if (selectedScopes.length === 0) return;
     setIsMinting(true);
+    setMintError(null);
     try {
       const res = await fetch("/api/v1/vault/keys", {
         method: "POST",
@@ -130,15 +139,16 @@ export function CitizenVaultView({ onMintKeyForDemo }: CitizenVaultViewProps) {
         setKeysList([data.key, ...keysList]);
         if (onMintKeyForDemo) onMintKeyForDemo(data.key.rawKey);
         setKeyLabel("");
+      } else {
+        setMintError(data.error || "Key minting failed.");
       }
-    } catch (err) {
-      console.error("Mint key failed:", err);
+    } catch {
+      setMintError("Network error while minting the key.");
     } finally {
       setIsMinting(false);
     }
   };
 
-  // Revoke Scoped Key
   const handleRevokeKey = async (keyId: string) => {
     try {
       const res = await fetch("/api/v1/vault/keys/revoke", {
@@ -147,15 +157,15 @@ export function CitizenVaultView({ onMintKeyForDemo }: CitizenVaultViewProps) {
         body: JSON.stringify({ keyId }),
       });
       if (res.ok) {
-        const data = await res.json();
-        setKeysList(data.keys);
+        setKeysList((currentKeys) =>
+          currentKeys.map((key) => (key.keyId === keyId ? { ...key, status: "REVOKED" } : key))
+        );
       }
     } catch (err) {
       console.error("Revoke key failed:", err);
     }
   };
 
-  // Delete Credential Item
   const handleDeleteCredential = async (category: VaultCategory, itemId: string) => {
     try {
       const res = await fetch(`/api/v1/vault/credentials?category=${category}&itemId=${itemId}`, {
@@ -170,41 +180,10 @@ export function CitizenVaultView({ onMintKeyForDemo }: CitizenVaultViewProps) {
     }
   };
 
-  // Run Ephemeral Cloud Sync
-  const handleCloudSync = async () => {
-    if (!cloudFileName) return;
-    setIsSyncing(true);
-    setSyncSuccessMsg(null);
-    try {
-      const res = await fetch("/api/v1/vault/credentials", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "cloud_sync",
-          fileName: cloudFileName,
-          category: cloudCategory,
-          provider: cloudProvider,
-        }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setVault(data.vault);
-        setSyncSuccessMsg(
-          `Synced '${cloudFileName}' ephemerally: SHA-256 anchored, raw buffer zeroed in memory.`
-        );
-        setCloudFileName("");
-        setTimeout(() => setSyncSuccessMsg(null), 4000);
-      }
-    } catch (err) {
-      console.error("Cloud sync failed:", err);
-    } finally {
-      setIsSyncing(false);
-    }
-  };
-
-  // Add Manual Credential
   const handleAddManualCredential = async () => {
     if (!newItemTitle) return;
+    setIsAdding(true);
+    setAddError(null);
     try {
       let itemData: any = {};
       if (activeCategory === "academics") {
@@ -259,10 +238,7 @@ export function CitizenVaultView({ onMintKeyForDemo }: CitizenVaultViewProps) {
       const res = await fetch("/api/v1/vault/credentials", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          category: activeCategory,
-          itemData,
-        }),
+        body: JSON.stringify({ category: activeCategory, itemData }),
       });
       const data = await res.json();
       if (res.ok) {
@@ -271,9 +247,13 @@ export function CitizenVaultView({ onMintKeyForDemo }: CitizenVaultViewProps) {
         setNewItemTitle("");
         setNewItemInstitution("");
         setNewItemDetail("");
+      } else {
+        setAddError(data.error || "Could not add the record.");
       }
-    } catch (err) {
-      console.error("Add credential failed:", err);
+    } catch {
+      setAddError("Network error while adding the record.");
+    } finally {
+      setIsAdding(false);
     }
   };
 
@@ -284,604 +264,581 @@ export function CitizenVaultView({ onMintKeyForDemo }: CitizenVaultViewProps) {
     if (cat === "experience") return vault.experience?.experiences?.length || 0;
     if (cat === "certifications") return vault.certifications?.certifications?.length || 0;
     if (cat === "achievements") return vault.achievements?.achievements?.length || 0;
-    if (cat === "portfolio") return vault.portfolio?.publicLinks?.length || 1;
+    if (cat === "portfolio") return vault.portfolio?.publicLinks?.length || 0;
     return 0;
   };
 
-  return (
-    <div className="space-y-8">
-      {/* Sovereign Header Status */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="border border-emerald-500/30 bg-emerald-950/20 rounded-2xl p-4 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center">
-            <Shield className="w-5 h-5 text-emerald-400" />
-          </div>
-          <div>
-            <div className="text-[10px] uppercase font-bold text-emerald-400 tracking-wider">
-              Sovereign Node Isolation
-            </div>
-            <div className="text-sm font-extrabold text-white">
-              {vault?.sovereignNode || "ng-west-africa"}
-            </div>
-            <div className="text-[11px] text-slate-400">Strict NDPC Compliance • Zero Server PDFs</div>
-          </div>
-        </div>
+  const totalRecords = CATEGORIES.reduce((sum, c) => sum + getCategoryCount(c.id), 0);
+  const activeKeys = keysList.filter((k) => k.status === "ACTIVE").length;
 
-        <div className="border border-cyan-500/30 bg-cyan-950/20 rounded-2xl p-4 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-cyan-500/20 border border-cyan-500/30 flex items-center justify-center">
-            <Lock className="w-5 h-5 text-cyan-400" />
-          </div>
-          <div>
-            <div className="text-[10px] uppercase font-bold text-cyan-400 tracking-wider">
-              Cryptographic Immutability
-            </div>
-            <div className="text-sm font-extrabold text-white">Base Sepolia L2 Ledger</div>
-            <div className="text-[11px] text-slate-400">SHA-256 Notarized Hash Verification</div>
-          </div>
-        </div>
+  const sectionAnchor = "scroll-mt-24 lg:scroll-mt-8";
 
-        <div className="border border-purple-500/30 bg-purple-950/20 rounded-2xl p-4 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-purple-500/20 border border-purple-500/30 flex items-center justify-center">
-            <Key className="w-5 h-5 text-purple-400" />
-          </div>
-          <div>
-            <div className="text-[10px] uppercase font-bold text-purple-400 tracking-wider">
-              Active Scoped Keys
-            </div>
-            <div className="text-sm font-extrabold text-white">
-              {keysList.filter((k) => k.status === "ACTIVE").length} Keys Active
-            </div>
-            <div className="text-[11px] text-slate-400">Time-Decaying & Quota Protected</div>
-          </div>
-        </div>
-      </div>
+  const deleteButton = (onClick: () => void) => (
+    <button
+      onClick={onClick}
+      className="rounded-lg p-1.5 text-slate-300 transition-colors hover:bg-red-50 hover:text-red-500"
+      title="Delete entry"
+      aria-label="Delete entry"
+    >
+      <Trash2 className="h-4 w-4" />
+    </button>
+  );
 
-      {/* Main Grid: Left = 6 Category Manager, Right = Scoped Key Generator */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* Left Column (7 cols): Category Navigation & Credential CRUD */}
-        <div className="lg:col-span-7 space-y-6">
-          <div className="border border-slate-800 bg-[#0c1220] rounded-2xl p-6 shadow-xl space-y-5">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
-              <div>
-                <h2 className="text-base font-bold text-white flex items-center gap-2">
-                  <Database className="w-4 h-4 text-emerald-400" />
-                  Sovereign Credential Vault
-                </h2>
-                <p className="text-xs text-slate-400">
-                  Organized into 6 standardized data categories. Zero raw files stored centrally.
+  const hashLine = (hashRef?: string) =>
+    hashRef ? (
+      <p className="max-w-md truncate font-mono text-[10px] text-slate-400">
+        SHA-256: {hashRef}
+      </p>
+    ) : null;
+
+  const tierBadge = (tier: number | undefined, label: string) => (
+    <span
+      className={`rounded px-2 py-0.5 text-[10px] font-bold ${
+        tier === 2
+          ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200"
+          : "bg-slate-100 text-slate-600 ring-1 ring-slate-200"
+      }`}
+    >
+      {label}
+    </span>
+  );
+
+  const renderCategoryBody = () => {
+    if (activeCategory === "academics") {
+      return (
+        <div className="space-y-3">
+          {vault?.academics?.degrees?.map((deg: any) => (
+            <div
+              key={deg.id}
+              className="flex items-start justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4 transition-all duration-200 hover:border-slate-300 hover:shadow-sm"
+            >
+              <div className="space-y-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-sm font-bold text-slate-900">
+                    {deg.degreeType} {deg.fieldOfStudy}
+                  </span>
+                  {tierBadge(deg.tier, `Tier ${deg.tier || 1} ${deg.tier === 2 ? "Notarized" : "Hashed"}`)}
+                </div>
+                <p className="text-xs text-slate-600">
+                  {deg.institution} · Class of {deg.graduationYear} (GPA: {deg.gpa}/{deg.maxGpa || 5.0})
                 </p>
+                {hashLine(deg.hashRef)}
               </div>
+              {deleteButton(() => handleDeleteCredential("academics", deg.id))}
+            </div>
+          ))}
+        </div>
+      );
+    }
 
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setShowAddModal(true)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-semibold hover:bg-emerald-500/30 transition-all"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  Add Entry
-                </button>
+    if (activeCategory === "finance") {
+      return (
+        <div className="space-y-3">
+          {vault?.finance?.bankRecords?.map((bank: any, idx: number) => (
+            <div
+              key={idx}
+              className="flex items-start justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4 transition-all duration-200 hover:border-slate-300 hover:shadow-sm"
+            >
+              <div className="space-y-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-sm font-bold text-slate-900">
+                    {bank.currency} {bank.currentLiquidBalance?.toLocaleString()} liquid funds
+                  </span>
+                  {tierBadge(1, "Tier 1 Hashed")}
+                </div>
+                <p className="text-xs text-slate-600">
+                  {bank.institutionName} · 3-mo avg: {bank.currency}{" "}
+                  {bank.averageThreeMonthBalance?.toLocaleString()}
+                </p>
+                {hashLine(bank.hashRef)}
               </div>
+              {deleteButton(() => handleDeleteCredential("finance", bank.institutionName))}
             </div>
+          ))}
+        </div>
+      );
+    }
 
-            {/* 6 Category Tabs */}
-            <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-              {(
-                [
-                  { id: "academics", label: "Academics", icon: GraduationCap },
-                  { id: "finance", label: "Finance", icon: Wallet },
-                  { id: "experience", label: "Experience", icon: Briefcase },
-                  { id: "certifications", label: "Certs", icon: FileCheck },
-                  { id: "portfolio", label: "Portfolio", icon: Globe2 },
-                  { id: "achievements", label: "Awards", icon: Award },
-                ] as const
-              ).map((cat) => {
-                const Icon = cat.icon;
-                const count = getCategoryCount(cat.id as VaultCategory);
-                const isActive = activeCategory === cat.id;
-                return (
-                  <button
-                    key={cat.id}
-                    onClick={() => setActiveCategory(cat.id as VaultCategory)}
-                    className={`flex flex-col items-center justify-center p-2.5 rounded-xl border text-xs font-medium transition-all ${
-                      isActive
-                        ? "bg-emerald-500/20 border-emerald-500 text-white shadow-md shadow-emerald-500/20"
-                        : "bg-slate-900/60 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-slate-200"
-                    }`}
-                  >
-                    <Icon className={`w-4 h-4 mb-1 ${isActive ? "text-emerald-400" : "text-slate-400"}`} />
-                    <span className="truncate w-full text-center">{cat.label}</span>
-                    <span className="text-[10px] opacity-75 font-mono">({count})</span>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Credential Items List for Active Category */}
-            <div className="space-y-3 min-h-[220px]">
-              {activeCategory === "academics" && (
-                <div className="space-y-3">
-                  {vault?.academics?.degrees?.map((deg: any) => (
-                    <div
-                      key={deg.id}
-                      className="border border-slate-800 bg-slate-900/40 rounded-xl p-4 flex items-start justify-between gap-3 hover:border-slate-700 transition-all"
-                    >
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-white text-sm">
-                            {deg.degreeType} {deg.fieldOfStudy}
-                          </span>
-                          <span
-                            className={`text-[10px] font-bold px-2 py-0.5 rounded ${
-                              deg.tier === 2
-                                ? "bg-amber-500/20 text-amber-300 border border-amber-500/30"
-                                : "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
-                            }`}
-                          >
-                            Tier {deg.tier || 1} {deg.tier === 2 ? "Notarized" : "Hashed"}
-                          </span>
-                        </div>
-                        <p className="text-xs text-slate-300">
-                          {deg.institution} • Class of {deg.graduationYear} (GPA: {deg.gpa}/{deg.maxGpa || 5.0})
-                        </p>
-                        <p className="text-[10px] font-mono text-slate-500 truncate max-w-md">
-                          SHA-256: {deg.hashRef || "Computed On-Chain"}
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => handleDeleteCredential("academics", deg.id)}
-                        className="text-slate-500 hover:text-red-400 p-1.5 transition-colors"
-                        title="Delete entry"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ))}
+    if (activeCategory === "experience") {
+      return (
+        <div className="space-y-3">
+          {vault?.experience?.experiences?.map((exp: any) => (
+            <div
+              key={exp.id}
+              className="flex items-start justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4 transition-all duration-200 hover:border-slate-300 hover:shadow-sm"
+            >
+              <div className="space-y-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-sm font-bold text-slate-900">{exp.jobTitle}</span>
+                  {tierBadge(1, "Verified tenure")}
                 </div>
-              )}
-
-              {activeCategory === "finance" && (
-                <div className="space-y-3">
-                  {vault?.finance?.bankRecords?.map((bank: any, idx: number) => (
-                    <div
-                      key={idx}
-                      className="border border-slate-800 bg-slate-900/40 rounded-xl p-4 flex items-start justify-between gap-3 hover:border-slate-700 transition-all"
-                    >
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-white text-sm">
-                            {bank.currency} {bank.currentLiquidBalance?.toLocaleString()} Liquid Funds
-                          </span>
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
-                            Tier 1 Hashed
-                          </span>
-                        </div>
-                        <p className="text-xs text-slate-300">
-                          {bank.institutionName} • 3-Mo Avg: {bank.currency}{" "}
-                          {bank.averageThreeMonthBalance?.toLocaleString()}
-                        </p>
-                        <p className="text-[10px] font-mono text-slate-500 truncate max-w-md">
-                          SHA-256: {bank.hashRef}
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => handleDeleteCredential("finance", bank.institutionName)}
-                        className="text-slate-500 hover:text-red-400 p-1.5 transition-colors"
-                        title="Delete entry"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {activeCategory === "experience" && (
-                <div className="space-y-3">
-                  {vault?.experience?.experiences?.map((exp: any) => (
-                    <div
-                      key={exp.id}
-                      className="border border-slate-800 bg-slate-900/40 rounded-xl p-4 flex items-start justify-between gap-3 hover:border-slate-700 transition-all"
-                    >
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-white text-sm">{exp.jobTitle}</span>
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                            Verified Tenure
-                          </span>
-                        </div>
-                        <p className="text-xs text-slate-300">
-                          {exp.company} • {exp.employmentType} (Since {exp.startDate})
-                        </p>
-                        <p className="text-[11px] text-slate-400">{exp.responsibilities?.join(" • ")}</p>
-                      </div>
-                      <button
-                        onClick={() => handleDeleteCredential("experience", exp.id)}
-                        className="text-slate-500 hover:text-red-400 p-1.5 transition-colors"
-                        title="Delete entry"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {activeCategory === "certifications" && (
-                <div className="space-y-3">
-                  {vault?.certifications?.certifications?.map((cert: any) => (
-                    <div
-                      key={cert.id}
-                      className="border border-slate-800 bg-slate-900/40 rounded-xl p-4 flex items-start justify-between gap-3 hover:border-slate-700 transition-all"
-                    >
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-white text-sm">{cert.title}</span>
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">
-                            Tier 1 Hashed
-                          </span>
-                        </div>
-                        <p className="text-xs text-slate-300">
-                          Issued by {cert.issuingOrganization} ({cert.issueDate})
-                        </p>
-                        <p className="text-[10px] font-mono text-slate-500 truncate max-w-md">
-                          SHA-256: {cert.hashRef}
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => handleDeleteCredential("certifications", cert.id)}
-                        className="text-slate-500 hover:text-red-400 p-1.5 transition-colors"
-                        title="Delete entry"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {activeCategory === "achievements" && (
-                <div className="space-y-3">
-                  {vault?.achievements?.achievements?.map((ach: any) => (
-                    <div
-                      key={ach.id}
-                      className="border border-slate-800 bg-slate-900/40 rounded-xl p-4 flex items-start justify-between gap-3 hover:border-slate-700 transition-all"
-                    >
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-white text-sm">{ach.title}</span>
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                            Award
-                          </span>
-                        </div>
-                        <p className="text-xs text-slate-300">
-                          Issuer: {ach.issuer} ({ach.date})
-                        </p>
-                        <p className="text-[11px] text-slate-400">{ach.description}</p>
-                      </div>
-                      <button
-                        onClick={() => handleDeleteCredential("achievements", ach.id)}
-                        className="text-slate-500 hover:text-red-400 p-1.5 transition-colors"
-                        title="Delete entry"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {activeCategory === "portfolio" && (
-                <div className="border border-slate-800 bg-slate-900/40 rounded-xl p-4 space-y-3">
-                  <div className="space-y-1">
-                    <span className="font-bold text-white text-sm">{vault?.portfolio?.headline}</span>
-                    <p className="text-xs text-slate-300">{vault?.portfolio?.bio}</p>
-                    <p className="text-[11px] text-slate-400 italic">
-                      "{vault?.portfolio?.personalStatement}"
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap gap-2 pt-2">
-                    {vault?.portfolio?.publicLinks?.map((link: any, idx: number) => (
-                      <a
-                        key={idx}
-                        href={link.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="flex items-center gap-1 text-[11px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-lg hover:bg-emerald-500/20"
-                      >
-                        <ExternalLink className="w-3 h-3" />
-                        {link.label}
-                      </a>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Ephemeral Cloud Sync Action Box */}
-            <div className="border border-slate-800/80 bg-black/40 rounded-xl p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-200 flex items-center gap-2">
-                  <Cloud className="w-4 h-4 text-cyan-400" />
-                  Ephemeral Cloud Sync (Zero Raw Storage Connector)
-                </span>
-                <span className="text-[10px] text-slate-400">OAuth Google Drive / Dropbox</span>
+                <p className="text-xs text-slate-600">
+                  {exp.company} · {exp.employmentType} (since {exp.startDate})
+                </p>
+                <p className="text-[11px] text-slate-500">{exp.responsibilities?.join(" · ")}</p>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 text-xs">
-                <input
-                  type="text"
-                  value={cloudFileName}
-                  onChange={(e) => setCloudFileName(e.target.value)}
-                  placeholder="e.g. Stanford_Machine_Learning_Certificate.pdf"
-                  className="sm:col-span-6 bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 placeholder-slate-600 outline-none focus:border-cyan-500"
-                />
-                <select
-                  value={cloudCategory}
-                  onChange={(e) => setCloudCategory(e.target.value as VaultCategory)}
-                  className="sm:col-span-3 bg-slate-900 border border-slate-800 rounded-lg px-2 py-2 text-slate-200 outline-none"
-                >
-                  <option value="certifications">Certifications</option>
-                  <option value="academics">Academics</option>
-                  <option value="finance">Finance</option>
-                  <option value="achievements">Achievements</option>
-                </select>
-                <button
-                  onClick={handleCloudSync}
-                  disabled={isSyncing || !cloudFileName}
-                  className="sm:col-span-3 bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 text-white font-bold rounded-lg px-3 py-2 flex items-center justify-center gap-1.5 transition-all"
-                >
-                  {isSyncing ? (
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                  ) : (
-                    <Sparkles className="w-3.5 h-3.5" />
-                  )}
-                  {isSyncing ? "Parsing..." : "Stream & Anchor"}
-                </button>
-              </div>
+              {deleteButton(() => handleDeleteCredential("experience", exp.id))}
+            </div>
+          ))}
+        </div>
+      );
+    }
 
-              {syncSuccessMsg && (
-                <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                  <span>{syncSuccessMsg}</span>
+    if (activeCategory === "certifications") {
+      return (
+        <div className="space-y-3">
+          {vault?.certifications?.certifications?.map((cert: any) => (
+            <div
+              key={cert.id}
+              className="flex items-start justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4 transition-all duration-200 hover:border-slate-300 hover:shadow-sm"
+            >
+              <div className="space-y-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-sm font-bold text-slate-900">{cert.title}</span>
+                  {tierBadge(cert.tier, `Tier ${cert.tier || 1} Hashed`)}
                 </div>
+                <p className="text-xs text-slate-600">
+                  Issued by {cert.issuingOrganization} ({cert.issueDate})
+                </p>
+                {hashLine(cert.hashRef)}
+              </div>
+              {deleteButton(() => handleDeleteCredential("certifications", cert.id))}
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    if (activeCategory === "achievements") {
+      return (
+        <div className="space-y-3">
+          {vault?.achievements?.achievements?.map((ach: any) => (
+            <div
+              key={ach.id}
+              className="flex items-start justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4 transition-all duration-200 hover:border-slate-300 hover:shadow-sm"
+            >
+              <div className="space-y-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-sm font-bold text-slate-900">{ach.title}</span>
+                  {tierBadge(1, "Award")}
+                </div>
+                <p className="text-xs text-slate-600">
+                  Issuer: {ach.issuer} ({ach.date})
+                </p>
+                <p className="text-[11px] text-slate-500">{ach.description}</p>
+              </div>
+              {deleteButton(() => handleDeleteCredential("achievements", ach.id))}
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    // portfolio
+    return (
+      <div className="rounded-xl border border-slate-200 bg-white p-5">
+        {vault?.portfolio?.headline ? (
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <span className="text-sm font-bold text-slate-900">{vault.portfolio.headline}</span>
+              <p className="text-xs text-slate-600">{vault.portfolio.bio}</p>
+              {vault.portfolio.personalStatement && (
+                <p className="text-[11px] italic text-slate-500">
+                  &ldquo;{vault.portfolio.personalStatement}&rdquo;
+                </p>
               )}
             </div>
-          </div>
-
-          {/* Citizen Privacy & Transparency Audit Ledger */}
-          <div className="border border-slate-800 bg-[#0c1220] rounded-2xl p-6 shadow-xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                <History className="w-4 h-4 text-cyan-400" />
-                Citizen Privacy & Transparency Ledger
-              </h3>
-              <span className="text-[10px] font-semibold text-slate-400 bg-slate-900 px-2 py-0.5 rounded">
-                Real-Time Access Audit
-              </span>
-            </div>
-            <p className="text-xs text-slate-400">
-              Every time an enterprise, embassy, or AI agent evaluates your credentials via an API key, it is
-              cryptographically logged here. Zero dark surveillance.
-            </p>
-
-            <div className="space-y-2.5 max-h-[220px] overflow-y-auto pr-1">
-              {auditLogs.map((log) => (
-                <div
-                  key={log.id}
-                  className="p-3 rounded-xl bg-slate-900/60 border border-slate-800/80 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2 hover:border-slate-700 transition-all"
+            <div className="flex flex-wrap gap-2 pt-1">
+              {vault.portfolio.publicLinks?.map((link: any, idx: number) => (
+                <a
+                  key={idx}
+                  href={link.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 transition-colors hover:bg-emerald-100"
                 >
-                  <div className="space-y-0.5">
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-white">{log.requestingOrg}</span>
-                      <span className="text-[10px] font-semibold px-1.5 py-0.2 rounded bg-slate-800 text-slate-300">
-                        {log.orgType}
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-slate-400">{log.purpose}</p>
-                    <div className="flex items-center gap-1.5 pt-0.5">
-                      <span className="text-[10px] text-slate-500 font-mono">
-                        Scopes: {log.accessedScopes?.join(", ")}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="text-left sm:text-right shrink-0 space-y-0.5">
-                    <div className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">
-                      <Check className="w-3 h-3" />
-                      Tamper-Free Verified
-                    </div>
-                    <div className="text-[10px] text-slate-500">
-                      {new Date(log.timestamp).toLocaleDateString()} •{" "}
-                      {new Date(log.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                    </div>
-                  </div>
-                </div>
+                  <ExternalLink className="h-3 w-3" />
+                  {link.label}
+                </a>
               ))}
             </div>
           </div>
-        </div>
+        ) : (
+          <p className="text-xs text-slate-500">
+            No public portfolio profile yet. Add one to give verifiers context beyond documents.
+          </p>
+        )}
+      </div>
+    );
+  };
 
-        {/* Right Column (5 cols): Live Scoped Key Minting & Active Keys Table */}
-        <div className="lg:col-span-5 space-y-6">
-          {/* Key Generator Card */}
-          <div className="border border-slate-800 bg-gradient-to-b from-slate-900 to-[#0c1220] rounded-2xl p-6 shadow-xl space-y-5">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <div className="flex items-center gap-2">
-                <Key className="w-5 h-5 text-emerald-400" />
-                <h3 className="font-bold text-base text-white">Mint Scoped API Key</h3>
+  const activeCatMeta = CATEGORIES.find((c) => c.id === activeCategory)!;
+
+  return (
+    <div className="space-y-10">
+      {/* ---- Overview ---- */}
+      <section id="overview" className={sectionAnchor}>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          {[
+            {
+              icon: Shield,
+              label: "Sovereign node",
+              value: vault?.sovereignNode || "ng-west-africa",
+              sub: "NDPC compliant · zero server PDFs",
+            },
+            {
+              icon: Lock,
+              label: "Immutability layer",
+              value: "Base Sepolia L2",
+              sub: "SHA-256 hash verification",
+            },
+            {
+              icon: Key,
+              label: "Active scoped keys",
+              value: `${activeKeys} key${activeKeys === 1 ? "" : "s"}`,
+              sub: `${totalRecords} records in vault`,
+            },
+          ].map((stat, i) => (
+            <div
+              key={stat.label}
+              className="clean-card dash-card-in flex items-center gap-3.5 rounded-2xl p-4"
+              style={{ animationDelay: `${i * 70}ms` }}
+            >
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+                <stat.icon className="h-5 w-5" />
+              </span>
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">
+                  {stat.label}
+                </p>
+                <p className="truncate text-sm font-extrabold text-slate-900">{stat.value}</p>
+                <p className="text-[11px] text-slate-500">{stat.sub}</p>
               </div>
-              <span className="text-[10px] uppercase font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">
-                Zero PDF Sharing
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ---- Document intake ---- */}
+      <section id="documents" className={`${sectionAnchor} dash-card-in`} style={{ animationDelay: "140ms" }}>
+        <DocumentIntake
+          onSynced={(cat) => {
+            setActiveCategory(cat);
+            loadVaultData();
+          }}
+        />
+      </section>
+
+      {/* ---- Vault ---- */}
+      <section id="vault" className={`${sectionAnchor} dash-card-in`} style={{ animationDelay: "200ms" }}>
+        <div className="clean-card rounded-2xl p-6">
+          <div className="flex flex-col justify-between gap-3 border-b border-slate-100 pb-4 sm:flex-row sm:items-center">
+            <div>
+              <h2 className="flex items-center gap-2 font-heading text-base font-bold text-slate-900">
+                <Database className="h-4 w-4 text-emerald-600" />
+                Sovereign credential vault
+              </h2>
+              <p className="mt-1 text-xs text-slate-500">
+                Six standardized categories. Structured JSON only; raw files never leave your device cloud.
+              </p>
+            </div>
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white transition-all duration-200 hover:bg-emerald-700 active:scale-[0.98]"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Add manually
+            </button>
+          </div>
+
+          {/* Category tabs */}
+          <div className="mt-4 flex gap-1.5 overflow-x-auto pb-1 no-scrollbar" role="tablist" aria-label="Vault categories">
+            {CATEGORIES.map((cat) => {
+              const isActive = activeCategory === cat.id;
+              const count = getCategoryCount(cat.id);
+              return (
+                <button
+                  key={cat.id}
+                  role="tab"
+                  aria-selected={isActive}
+                  onClick={() => setActiveCategory(cat.id)}
+                  className={`flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold capitalize transition-all duration-200 ${
+                    isActive
+                      ? "bg-slate-900 text-white"
+                      : "bg-slate-50 text-slate-500 ring-1 ring-slate-200 hover:bg-slate-100 hover:text-slate-800"
+                  }`}
+                >
+                  <cat.icon className="h-3.5 w-3.5" />
+                  {cat.label}
+                  <span
+                    className={`rounded-full px-1.5 py-px text-[9px] font-bold ${
+                      isActive ? "bg-white/15 text-white" : "bg-white text-slate-500 ring-1 ring-slate-200"
+                    }`}
+                  >
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Category body */}
+          <div className="mt-4 min-h-[160px]">
+            {isLoading ? (
+              <div className="space-y-3">
+                {[0, 1, 2].map((i) => (
+                  <div key={i} className="skeleton h-[74px] rounded-xl" />
+                ))}
+              </div>
+            ) : loadError ? (
+              <div className="flex flex-col items-center justify-center rounded-xl border border-red-200 bg-red-50 px-6 py-10 text-center">
+                <AlertTriangle className="h-5 w-5 text-red-400" />
+                <p className="mt-2 text-sm font-semibold text-red-700">{loadError}</p>
+                <button
+                  onClick={loadVaultData}
+                  className="mt-3 flex items-center gap-1.5 rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-bold text-red-600 transition-colors hover:bg-red-100"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                  Retry
+                </button>
+              </div>
+            ) : getCategoryCount(activeCategory) === 0 && activeCategory !== "portfolio" ? (
+              <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50/50 px-6 py-10 text-center">
+                <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white text-slate-300 ring-1 ring-slate-200">
+                  <activeCatMeta.icon className="h-5 w-5" />
+                </span>
+                <p className="mt-3 text-sm font-bold text-slate-700">
+                  No {activeCatMeta.label.toLowerCase()} records yet
+                </p>
+                <p className="mt-1 max-w-xs text-xs leading-relaxed text-slate-500">
+                  Upload a document above and it will be hashed, anchored, and structured into this
+                  category automatically.
+                </p>
+                <a
+                  href="#documents"
+                  className="mt-4 flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white transition-all duration-200 hover:bg-emerald-700 active:scale-[0.98]"
+                >
+                  <FileUp className="h-3.5 w-3.5" />
+                  Add a document
+                </a>
+              </div>
+            ) : (
+              renderCategoryBody()
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* ---- Scoped keys ---- */}
+      <section id="keys" className={sectionAnchor}>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+          {/* Mint panel */}
+          <div className="clean-card dash-card-in rounded-2xl p-6 lg:col-span-5" style={{ animationDelay: "80ms" }}>
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 className="flex items-center gap-2 font-heading text-sm font-bold text-slate-900">
+                <Key className="h-4 w-4 text-emerald-600" />
+                Mint scoped API key
+              </h3>
+              <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-700">
+                Zero PDF sharing
               </span>
             </div>
 
-            <div className="space-y-4 text-xs">
+            <div className="mt-4 space-y-4 text-xs">
               <div>
-                <label className="block text-slate-300 font-semibold mb-1">Purpose / Label:</label>
+                <label htmlFor="key-label" className="mb-1.5 block font-semibold text-slate-700">
+                  Purpose / label
+                </label>
                 <input
+                  id="key-label"
                   type="text"
                   value={keyLabel}
                   onChange={(e) => setKeyLabel(e.target.value)}
                   placeholder="e.g. UK Tech Visa Officer Review"
-                  className="w-full bg-black/60 border border-slate-800 rounded-lg p-2.5 text-slate-200 outline-none focus:border-emerald-500"
+                  className="w-full rounded-lg border border-slate-200 bg-white p-2.5 text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
                 />
               </div>
 
               <div>
-                <label className="block text-slate-300 font-semibold mb-2">
-                  1. Data Redaction (Allowed Scopes):
-                </label>
+                <span className="mb-2 block font-semibold text-slate-700">
+                  1. Data redaction (allowed scopes)
+                </span>
                 <div className="grid grid-cols-2 gap-2">
-                  {(
-                    [
-                      "academics",
-                      "finance",
-                      "experience",
-                      "certifications",
-                      "portfolio",
-                      "achievements",
-                    ] as VaultCategory[]
-                  ).map((cat) => (
-                    <button
-                      key={cat}
-                      onClick={() => toggleScope(cat)}
-                      className={`px-3 py-2 rounded-lg border text-left font-medium capitalize transition-all ${
-                        selectedScopes.includes(cat)
-                          ? "bg-emerald-500/20 border-emerald-500 text-emerald-300 shadow-sm shadow-emerald-500/20"
-                          : "bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700"
-                      }`}
-                    >
-                      {selectedScopes.includes(cat) ? "✓ " : "+ "}
-                      {cat}
-                    </button>
-                  ))}
+                  {CATEGORIES.map((cat) => {
+                    const selected = selectedScopes.includes(cat.id);
+                    return (
+                      <button
+                        key={cat.id}
+                        type="button"
+                        onClick={() => toggleScope(cat.id)}
+                        aria-pressed={selected}
+                        className={`rounded-lg border px-3 py-2 text-left font-medium capitalize transition-all duration-200 active:scale-[0.98] ${
+                          selected
+                            ? "border-emerald-500 bg-emerald-50 text-emerald-700"
+                            : "border-slate-200 bg-white text-slate-500 hover:border-slate-300"
+                        }`}
+                      >
+                        {selected ? "\u2713 " : "+ "}
+                        {cat.label}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-slate-300 font-semibold mb-1">2. Expiration (TTL):</label>
+                  <label htmlFor="key-ttl" className="mb-1.5 block font-semibold text-slate-700">
+                    2. Expiration
+                  </label>
                   <select
+                    id="key-ttl"
                     value={keyTtlDays}
                     onChange={(e) => setKeyTtlDays(Number(e.target.value))}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-slate-200"
+                    className="w-full rounded-lg border border-slate-200 bg-white p-2.5 text-slate-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
                   >
-                    <option value={1}>24 Hours</option>
-                    <option value={7}>7 Days</option>
-                    <option value={14}>14 Days</option>
-                    <option value={30}>30 Days</option>
+                    <option value={1}>24 hours</option>
+                    <option value={7}>7 days</option>
+                    <option value={14}>14 days</option>
+                    <option value={30}>30 days</option>
                   </select>
                 </div>
-
                 <div>
-                  <label className="block text-slate-300 font-semibold mb-1">3. Query Quota:</label>
+                  <label htmlFor="key-quota" className="mb-1.5 block font-semibold text-slate-700">
+                    3. Query quota
+                  </label>
                   <select
+                    id="key-quota"
                     value={maxQueries}
                     onChange={(e) => setMaxQueries(Number(e.target.value))}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-slate-200"
+                    className="w-full rounded-lg border border-slate-200 bg-white p-2.5 text-slate-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
                   >
-                    <option value={1}>1 (Single Use)</option>
-                    <option value={5}>5 Queries</option>
-                    <option value={10}>10 Queries</option>
-                    <option value={20}>20 Queries</option>
+                    <option value={1}>1 (single use)</option>
+                    <option value={5}>5 queries</option>
+                    <option value={10}>10 queries</option>
+                    <option value={20}>20 queries</option>
                   </select>
                 </div>
               </div>
 
+              {mintError && (
+                <div className="rounded-lg border border-red-200 bg-red-50 p-2.5 font-medium text-red-700">
+                  {mintError}
+                </div>
+              )}
+
               <button
                 onClick={handleMintKey}
                 disabled={isMinting || selectedScopes.length === 0}
-                className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 disabled:opacity-50 text-black font-extrabold text-sm shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 transition-all"
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3 text-sm font-bold text-white transition-all duration-200 hover:bg-emerald-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {isMinting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Key className="w-4 h-4" />}
-                Mint Cryptographic Scoped Key
+                {isMinting ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Key className="h-4 w-4" />}
+                Mint cryptographic scoped key
               </button>
             </div>
           </div>
 
-          {/* Active Scoped Keys Management Table */}
-          <div className="border border-slate-800 bg-[#0c1220] rounded-2xl p-6 shadow-xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                <Lock className="w-4 h-4 text-purple-400" />
-                Active Scoped Keys ({keysList.length})
+          {/* Active keys */}
+          <div className="clean-card dash-card-in rounded-2xl p-6 lg:col-span-7" style={{ animationDelay: "140ms" }}>
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 className="flex items-center gap-2 font-heading text-sm font-bold text-slate-900">
+                <Lock className="h-4 w-4 text-emerald-600" />
+                Scoped keys ({keysList.length})
               </h3>
-              <span className="text-[10px] text-slate-400">One-Click Revocation</span>
+              <span className="text-[10px] font-semibold text-slate-400">One-click revocation</span>
             </div>
 
-            <div className="space-y-3 max-h-[360px] overflow-y-auto pr-1">
+            <div className="mt-4 max-h-[380px] space-y-3 overflow-y-auto pr-1">
+              {keysList.length === 0 && (
+                <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50/50 px-6 py-10 text-center">
+                  <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white text-slate-300 ring-1 ring-slate-200">
+                    <Key className="h-5 w-5" />
+                  </span>
+                  <p className="mt-3 text-sm font-bold text-slate-700">No keys minted yet</p>
+                  <p className="mt-1 max-w-xs text-xs leading-relaxed text-slate-500">
+                    Mint a scoped key to let an employer, embassy, or school query exactly the
+                    categories you choose. Nothing else.
+                  </p>
+                </div>
+              )}
+
               {keysList.map((key) => {
                 const isRevoked = key.status === "REVOKED";
                 const isExpired = key.status === "EXPIRED";
                 return (
                   <div
                     key={key.keyId}
-                    className={`p-3.5 rounded-xl border transition-all space-y-2.5 ${
+                    className={`space-y-2.5 rounded-xl border p-3.5 transition-all duration-200 ${
                       isRevoked
-                        ? "bg-red-950/20 border-red-900/40 opacity-70"
+                        ? "border-red-200 bg-red-50/40 opacity-70"
                         : isExpired
-                        ? "bg-amber-950/20 border-amber-900/40"
-                        : "bg-slate-900/60 border-slate-800 hover:border-slate-700"
+                        ? "border-amber-200 bg-amber-50/40"
+                        : "border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm"
                     }`}
                   >
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-white text-xs truncate max-w-[200px]">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="max-w-[220px] truncate text-xs font-bold text-slate-900">
                         {key.label || key.keyId}
                       </span>
                       <span
-                        className={`text-[10px] font-extrabold px-2 py-0.5 rounded ${
+                        className={`rounded px-2 py-0.5 text-[10px] font-extrabold ${
                           isRevoked
-                            ? "bg-red-500/20 text-red-400 border border-red-500/30"
+                            ? "bg-red-100 text-red-600"
                             : isExpired
-                            ? "bg-amber-500/20 text-amber-400 border border-amber-500/30"
-                            : "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                            ? "bg-amber-100 text-amber-700"
+                            : "bg-emerald-100 text-emerald-700"
                         }`}
                       >
                         {key.status}
                       </span>
                     </div>
 
-                    <div className="flex items-center justify-between text-[11px] text-slate-400">
+                    <div className="flex items-center justify-between text-[11px] text-slate-500">
                       <span>
                         Queries: {key.remainingQueries}/{key.maxQueries} left
                       </span>
-                      <span>
-                        Expires: {new Date(key.expiresAt * 1000).toLocaleDateString()}
-                      </span>
+                      <span>Expires: {new Date(key.expiresAt * 1000).toLocaleDateString()}</span>
                     </div>
 
-                    <div className="p-2 bg-black/60 rounded-lg font-mono text-[10px] text-emerald-300 truncate select-all flex items-center justify-between">
-                      <span className="truncate">{key.rawKey}</span>
-                      <button
-                        onClick={() => handleCopyKey(key.rawKey, key.keyId)}
-                        className="text-slate-400 hover:text-white shrink-0 ml-2"
-                        title="Copy Key"
-                      >
-                        {copiedKeyId === key.keyId ? (
-                          <Check className="w-3.5 h-3.5 text-emerald-400" />
-                        ) : (
-                          <Copy className="w-3.5 h-3.5" />
-                        )}
-                      </button>
-                    </div>
+                    {key.rawKey ? (
+                      <div className="flex items-center justify-between rounded-lg bg-slate-900 p-2 font-mono text-[10px] text-emerald-300">
+                        <span className="truncate select-all">{key.rawKey}</span>
+                        <button
+                          onClick={() => handleCopyKey(key.rawKey, key.keyId)}
+                          className="ml-2 shrink-0 text-slate-400 transition-colors hover:text-white"
+                          title="Copy key"
+                          aria-label="Copy key"
+                        >
+                          {copiedKeyId === key.keyId ? (
+                            <Check className="h-3.5 w-3.5 text-emerald-400" />
+                          ) : (
+                            <Copy className="h-3.5 w-3.5" />
+                          )}
+                        </button>
+                      </div>
+                    ) : (
+                      <p className="rounded-lg bg-slate-50 p-2 font-mono text-[10px] text-slate-400 ring-1 ring-slate-200">
+                        {key.keyId} · secret shown only once at creation
+                      </p>
+                    )}
 
-                    <div className="flex items-center justify-between pt-1">
+                    <div className="flex items-center justify-between pt-0.5">
                       <div className="flex flex-wrap gap-1">
                         {key.allowedScopes?.map((s: string) => (
                           <span
                             key={s}
-                            className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-slate-800 text-slate-300"
+                            className="rounded bg-slate-100 px-1.5 py-0.5 text-[9px] font-semibold text-slate-600"
                           >
                             {s}
                           </span>
                         ))}
                       </div>
-
                       {!isRevoked && (
                         <button
                           onClick={() => handleRevokeKey(key.keyId)}
-                          className="text-[10px] font-bold text-red-400 hover:text-red-300 hover:underline"
+                          className="text-[10px] font-bold text-red-500 transition-colors hover:text-red-700 hover:underline"
                         >
-                          Revoke Key
+                          Revoke key
                         </button>
                       )}
                     </div>
@@ -891,71 +848,162 @@ export function CitizenVaultView({ onMintKeyForDemo }: CitizenVaultViewProps) {
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Manual Add Credential Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="border border-slate-800 bg-[#0c1220] rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <h3 className="font-bold text-base text-white">Add Entry to {activeCategory}</h3>
-              <button
-                onClick={() => setShowAddModal(false)}
-                className="text-slate-400 hover:text-white text-xs font-bold"
+      {/* ---- Audit trail ---- */}
+      <section id="audit" className={sectionAnchor}>
+        <div className="clean-card dash-card-in rounded-2xl p-6" style={{ animationDelay: "80ms" }}>
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <h3 className="flex items-center gap-2 font-heading text-sm font-bold text-slate-900">
+              <History className="h-4 w-4 text-emerald-600" />
+              Privacy and transparency ledger
+            </h3>
+            <span className="rounded bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-500">
+              Real-time access audit
+            </span>
+          </div>
+          <p className="mt-3 text-xs leading-relaxed text-slate-500">
+            Every time an enterprise, embassy, or AI agent evaluates your credentials via an API key,
+            it is cryptographically logged here. Zero dark surveillance.
+          </p>
+
+          <div className="mt-4 max-h-[260px] space-y-2.5 overflow-y-auto pr-1">
+            {auditLogs.length === 0 && (
+              <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50/50 px-6 py-8 text-center">
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-slate-300 ring-1 ring-slate-200">
+                  <History className="h-4 w-4" />
+                </span>
+                <p className="mt-3 text-xs font-semibold text-slate-500">No access events yet</p>
+                <p className="mt-1 max-w-xs text-[11px] leading-relaxed text-slate-400">
+                  When a verifier queries your vault with a scoped key, the event appears here instantly.
+                </p>
+              </div>
+            )}
+
+            {auditLogs.map((log) => (
+              <div
+                key={log.id}
+                className="flex flex-col justify-between gap-2 rounded-xl border border-slate-200 bg-white p-3 text-xs transition-all duration-200 hover:border-slate-300 sm:flex-row sm:items-center"
               >
-                ✕
-              </button>
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-slate-900">{log.requestingOrg}</span>
+                    <span className="rounded bg-slate-100 px-1.5 py-px text-[10px] font-semibold text-slate-600">
+                      {log.orgType}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500">{log.purpose}</p>
+                  <span className="font-mono text-[10px] text-slate-400">
+                    Scopes: {log.accessedScopes?.join(", ")}
+                  </span>
+                </div>
+
+                <div className="shrink-0 space-y-0.5 text-left sm:text-right">
+                  <div className="inline-flex items-center gap-1 rounded bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                    <Check className="h-3 w-3" />
+                    Tamper-free verified
+                  </div>
+                  <div className="text-[10px] text-slate-400">
+                    {new Date(log.timestamp).toLocaleDateString()} ·{" "}
+                    {new Date(log.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ---- Manual add modal ---- */}
+      {showAddModal && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-slate-900/50 backdrop-blur-[2px]"
+            onClick={() => setShowAddModal(false)}
+            aria-hidden="true"
+          />
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Add record manually"
+            className="relative w-full max-w-md space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl"
+            style={{ animation: "dashCardIn 0.3s cubic-bezier(0.16,1,0.3,1) both" }}
+          >
+            <button
+              type="button"
+              onClick={() => setShowAddModal(false)}
+              aria-label="Close"
+              className="absolute right-4 top-4 rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+            >
+              <X className="h-4 w-4" />
+            </button>
+
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+                <Link2 className="h-4 w-4" />
+              </span>
+              <div>
+                <h3 className="font-heading text-base font-bold text-slate-900">
+                  Add {activeCatMeta.label.toLowerCase()} record
+                </h3>
+                <p className="text-xs text-slate-500">Manually structured entry, Tier 1 hashed</p>
+              </div>
             </div>
 
             <div className="space-y-3 text-xs">
               <div>
-                <label className="block text-slate-300 font-semibold mb-1">Title / Degree / Position:</label>
+                <label htmlFor="manual-title" className="mb-1.5 block font-semibold text-slate-700">
+                  Title
+                </label>
                 <input
+                  id="manual-title"
                   type="text"
                   value={newItemTitle}
                   onChange={(e) => setNewItemTitle(e.target.value)}
-                  placeholder="e.g. Master of Science in Data Engineering"
-                  className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-slate-200 outline-none focus:border-emerald-500"
+                  placeholder="e.g. BSc Computer Science"
+                  className="w-full rounded-lg border border-slate-200 bg-white p-2.5 text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
                 />
               </div>
-
               <div>
-                <label className="block text-slate-300 font-semibold mb-1">
-                  Institution / Employer / Issuing Body:
+                <label htmlFor="manual-institution" className="mb-1.5 block font-semibold text-slate-700">
+                  Institution / issuer
                 </label>
                 <input
+                  id="manual-institution"
                   type="text"
                   value={newItemInstitution}
                   onChange={(e) => setNewItemInstitution(e.target.value)}
-                  placeholder="e.g. University of Edinburgh"
-                  className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-slate-200 outline-none focus:border-emerald-500"
+                  placeholder="e.g. University of Lagos"
+                  className="w-full rounded-lg border border-slate-200 bg-white p-2.5 text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
                 />
               </div>
-
               <div>
-                <label className="block text-slate-300 font-semibold mb-1">Details / Responsibilities:</label>
+                <label htmlFor="manual-detail" className="mb-1.5 block font-semibold text-slate-700">
+                  Detail (optional)
+                </label>
                 <textarea
+                  id="manual-detail"
                   value={newItemDetail}
                   onChange={(e) => setNewItemDetail(e.target.value)}
-                  placeholder="e.g. Specialization in distributed consensus algorithms..."
                   rows={3}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-slate-200 outline-none focus:border-emerald-500"
+                  placeholder="Short supporting detail"
+                  className="w-full resize-none rounded-lg border border-slate-200 bg-white p-2.5 text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
                 />
               </div>
-            </div>
 
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
-              <button
-                onClick={() => setShowAddModal(false)}
-                className="px-4 py-2 rounded-xl text-slate-400 hover:text-white text-xs font-semibold"
-              >
-                Cancel
-              </button>
+              {addError && (
+                <div className="rounded-lg border border-red-200 bg-red-50 p-2.5 font-medium text-red-700">
+                  {addError}
+                </div>
+              )}
+
               <button
                 onClick={handleAddManualCredential}
-                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all"
+                disabled={!newItemTitle || isAdding}
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 py-2.5 text-sm font-bold text-white transition-all duration-200 hover:bg-emerald-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Anchor Record
+                {isAdding ? <RefreshCw className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                Add to vault
               </button>
             </div>
           </div>

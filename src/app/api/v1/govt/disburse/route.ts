@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { globalGovtStore } from "@/core/government/govt_store";
+import { authorizeRoles } from "@/lib/auth/auth_guard";
 
 export async function POST(req: NextRequest) {
   try {
+    const authCheck = await authorizeRoles(req, ["govt_auditor", "super_admin"]);
+    if (!authCheck.authorized) {
+      return authCheck.response!;
+    }
+
     const body = await req.json();
     const { nodeId } = body;
 
@@ -25,3 +31,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
+
+

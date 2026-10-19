@@ -1,0 +1,265 @@
+"use client";
+
+import React, { useEffect, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import {
+  LayoutDashboard,
+  Vault,
+  FileUp,
+  KeyRound,
+  ScrollText,
+  Sliders,
+  ScanSearch,
+  Building2,
+  Landmark,
+  LogOut,
+  Menu,
+  X,
+  ShieldCheck,
+  Users,
+  Settings2,
+} from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
+
+export interface ShellNavItem {
+  id: string;
+  label: string;
+}
+
+interface DashboardShellProps {
+  role: string;
+  email: string;
+  orgName?: string;
+  navItems: ShellNavItem[];
+  children: React.ReactNode;
+}
+
+const NAV_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+  overview: LayoutDashboard,
+  vault: Vault,
+  documents: FileUp,
+  keys: KeyRound,
+  audit: ScrollText,
+  rubrics: Sliders,
+  screening: ScanSearch,
+  organization: Building2,
+  nodes: Landmark,
+  users: Users,
+  organizations: Building2,
+  config: Settings2,
+  ledger: Landmark,
+  fraud: ShieldCheck,
+};
+
+function roleLabel(role: string): string {
+  return role
+    .split("_")
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+}
+
+/**
+ * Enterprise dashboard shell: fixed sidebar with scroll-spy navigation,
+ * user identity card, sign-out, and a subtle ambient background simulation
+ * (drifting brand glows over a hairline grid). Ambient motion is CSS-only,
+ * composited transforms, and neutralized by the global reduced-motion rule.
+ */
+export function DashboardShell({ role, email, orgName, navItems, children }: DashboardShellProps) {
+  const router = useRouter();
+  const [activeId, setActiveId] = useState<string>(navItems[0]?.id ?? "overview");
+  const [mobileOpen, setMobileOpen] = useState<boolean>(false);
+
+  // Scroll-spy via IntersectionObserver (no scroll listeners).
+  useEffect(() => {
+    const sections = navItems
+      .map((item) => document.getElementById(item.id))
+      .filter((el): el is HTMLElement => el !== null);
+    if (sections.length === 0) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) setActiveId(entry.target.id);
+        }
+      },
+      { rootMargin: "-30% 0px -60% 0px", threshold: 0 }
+    );
+    sections.forEach((s) => observer.observe(s));
+    return () => observer.disconnect();
+  }, [navItems]);
+
+  const signOut = async () => {
+    const { error } = await createClient().auth.signOut();
+    if (error) {
+      console.error("[Auth] Sign out failed.", error);
+      return;
+    }
+    router.replace("/login");
+    router.refresh();
+  };
+
+  const sidebar = (
+    <div className="flex h-full flex-col">
+      {/* Brand */}
+      <div className="flex items-center gap-3 border-b border-slate-200 px-5 py-5">
+        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-600 text-white">
+          <ShieldCheck className="h-5 w-5" />
+        </span>
+        <div>
+          <p className="font-heading text-sm font-bold tracking-wide text-slate-900">SABI VAULT</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-700">
+            {roleLabel(role)}
+          </p>
+        </div>
+      </div>
+
+      {/* Nav */}
+      <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4" aria-label="Workspace sections">
+        {navItems.map((item) => {
+          const Icon = NAV_ICONS[item.id] ?? LayoutDashboard;
+          const isActive = activeId === item.id;
+          return (
+            <a
+              key={item.id}
+              href={`#${item.id}`}
+              onClick={() => setMobileOpen(false)}
+              className={`group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition-all duration-200 ${
+                isActive
+                  ? "bg-emerald-50 text-emerald-700"
+                  : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+              }`}
+            >
+              <span
+                className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors duration-200 ${
+                  isActive
+                    ? "bg-emerald-600 text-white"
+                    : "bg-slate-100 text-slate-400 group-hover:bg-slate-200 group-hover:text-slate-600"
+                }`}
+              >
+                <Icon className="h-4 w-4" />
+              </span>
+              {item.label}
+              {isActive && (
+                <span className="ml-auto h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden="true" />
+              )}
+            </a>
+          );
+        })}
+      </nav>
+
+      {/* User card */}
+      <div className="border-t border-slate-200 p-4">
+        <div className="rounded-xl bg-slate-50 p-3">
+          <div className="flex items-center gap-3">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-900 text-xs font-bold text-white">
+              {email.charAt(0).toUpperCase()}
+            </span>
+            <div className="min-w-0">
+              <p className="truncate text-xs font-bold text-slate-900">{orgName || email}</p>
+              {orgName && <p className="truncate text-[11px] text-slate-500">{email}</p>}
+              {!orgName && (
+                <p className="text-[11px] font-medium text-emerald-700">{roleLabel(role)}</p>
+              )}
+            </div>
+          </div>
+          <div className="mt-3 flex items-center gap-2">
+            <button
+              type="button"
+              onClick={signOut}
+              className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 transition-all duration-200 hover:border-slate-300 hover:text-slate-900 active:scale-[0.98]"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+              Sign out
+            </button>
+            <Link
+              href="/"
+              className="flex items-center justify-center rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 transition-all duration-200 hover:border-slate-300 hover:text-slate-900 active:scale-[0.98]"
+            >
+              Site
+            </Link>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen bg-[#fafbfc] text-slate-900">
+      {/* Ambient background simulation: drifting brand glows over a hairline grid */}
+      <div aria-hidden="true" className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
+        <div
+          className="absolute inset-0 opacity-[0.35]"
+          style={{
+            backgroundImage:
+              "linear-gradient(to right, rgba(15,23,42,0.045) 1px, transparent 1px), linear-gradient(to bottom, rgba(15,23,42,0.045) 1px, transparent 1px)",
+            backgroundSize: "44px 44px",
+            maskImage: "radial-gradient(ellipse 90% 70% at 60% 0%, black 30%, transparent 75%)",
+            WebkitMaskImage: "radial-gradient(ellipse 90% 70% at 60% 0%, black 30%, transparent 75%)",
+          }}
+        />
+        <div
+          className="absolute -top-32 right-[-10%] h-[420px] w-[560px] rounded-full"
+          style={{
+            background: "radial-gradient(closest-side, rgba(5,150,105,0.09), transparent)",
+            animation: "ambientDriftA 16s ease-in-out infinite",
+          }}
+        />
+        <div
+          className="absolute bottom-[-20%] left-[8%] h-[380px] w-[520px] rounded-full"
+          style={{
+            background: "radial-gradient(closest-side, rgba(15,23,42,0.05), transparent)",
+            animation: "ambientDriftB 20s ease-in-out infinite",
+          }}
+        />
+      </div>
+
+      {/* Desktop sidebar */}
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-[260px] border-r border-slate-200 bg-white lg:block">
+        {sidebar}
+      </aside>
+
+      {/* Mobile topbar */}
+      <div className="sticky top-0 z-40 flex items-center justify-between border-b border-slate-200 bg-white/90 px-4 py-3 backdrop-blur lg:hidden">
+        <div className="flex items-center gap-2.5">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-600 text-white">
+            <ShieldCheck className="h-4 w-4" />
+          </span>
+          <div>
+            <p className="font-heading text-sm font-bold text-slate-900">SABI VAULT</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-700">
+              {roleLabel(role)}
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => setMobileOpen((v) => !v)}
+          aria-label={mobileOpen ? "Close navigation" : "Open navigation"}
+          className="rounded-lg border border-slate-200 p-2 text-slate-600 transition-colors hover:bg-slate-50"
+        >
+          {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+        </button>
+      </div>
+
+      {/* Mobile drawer */}
+      {mobileOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <div
+            className="absolute inset-0 bg-slate-900/40"
+            onClick={() => setMobileOpen(false)}
+            aria-hidden="true"
+          />
+          <aside className="absolute inset-y-0 left-0 w-[280px] border-r border-slate-200 bg-white shadow-2xl">
+            {sidebar}
+          </aside>
+        </div>
+      )}
+
+      {/* Content */}
+      <main className="relative z-10 lg:pl-[260px]">
+        <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</div>
+      </main>
+    </div>
+  );
+}

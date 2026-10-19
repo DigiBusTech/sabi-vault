@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { globalCriteriaStore } from "@/core/enterprise/criteria_store";
+import { authorizeRoles } from "@/lib/auth/auth_guard";
 
 export async function POST(req: NextRequest) {
   try {
+    const auth = await authorizeRoles(req, ["enterprise_admin", "super_admin"]);
+    if (!auth.authorized) {
+      return auth.response!;
+    }
+
     const body = await req.json();
     const { keys, rubricId, requestingOrg = "Enterprise Recruiter" } = body;
 
@@ -20,7 +26,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const batchResult = globalCriteriaStore.screenBatch(keys, rubricId, requestingOrg);
+    const batchResult = await globalCriteriaStore.screenBatch(keys, rubricId, requestingOrg);
 
     return NextResponse.json({
       success: true,
@@ -30,3 +36,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
+

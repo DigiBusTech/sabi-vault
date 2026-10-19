@@ -28,12 +28,12 @@ export interface TransparencyAuditLog {
 }
 
 class UserVaultMasterStore {
-  private vault: FullUserVault;
-  private keys: Map<string, ScopedKeyRecord> = new Map();
-  private auditLogs: TransparencyAuditLog[] = [];
+  private vaults: Map<string, FullUserVault> = new Map();
+  private keys: Map<string, ScopedKeyRecord & { vaultId?: string }> = new Map();
+  private auditLogs: (TransparencyAuditLog & { targetVaultId?: string })[] = [];
 
   constructor() {
-    this.vault = {
+    const defaultVault: FullUserVault = {
       userId: "usr_chinwe_okafor_7721",
       sovereignNode: "ng-west-africa-node-01 (Lagos / Abuja)",
       residenceCountry: "Nigeria",
@@ -145,17 +145,26 @@ class UserVaultMasterStore {
       },
     };
 
+    this.vaults.set("usr_chinwe_okafor_7721", defaultVault);
+
+
     // Seed default active scoped key
     const defaultPayload = {
       keyId: "key_primary_visa_2026",
-      vaultId: this.vault.userId,
+      vaultId: defaultVault.userId,
       allowedScopes: ["finance", "academics", "experience"] as VaultCategory[],
       issuedAt: Math.floor(Date.now() / 1000) - 86400,
       expiresAt: Math.floor(Date.now() / 1000) + 29 * 86400,
       maxQueries: 10,
       sovereignNode: "ng-west-africa",
     };
-    const defaultRaw = generateScopedApiKey(defaultPayload);
+
+    let defaultRaw = "";
+    try {
+      defaultRaw = generateScopedApiKey(defaultPayload);
+    } catch {
+      // Signing secret not configured in local environment during build collection
+    }
     this.keys.set("key_primary_visa_2026", {
       keyId: "key_primary_visa_2026",
       rawKey: defaultRaw,
@@ -166,6 +175,7 @@ class UserVaultMasterStore {
       remainingQueries: 8,
       status: "ACTIVE",
       label: "UK Tech Visa Application (Finance + Academics + Experience)",
+      vaultId: defaultVault.userId,
     });
 
     // Seed initial citizen transparency audit logs
@@ -196,71 +206,97 @@ class UserVaultMasterStore {
   }
 
   // --- VAULT READ / SYNC ---
-  public getVault(): FullUserVault {
-    return { ...this.vault };
+  public getVault(userId: string = "usr_chinwe_okafor_7721"): FullUserVault {
+    let userVault = this.vaults.get(userId);
+    if (!userVault) {
+      userVault = {
+        userId,
+        sovereignNode: "ng-west-africa",
+        residenceCountry: "NG",
+        lastSyncedAt: new Date().toISOString(),
+      };
+      this.vaults.set(userId, userVault);
+    }
+    return { ...userVault };
+  }
+
+  public findVault(userId: string): FullUserVault | undefined {
+    const vault = this.vaults.get(userId);
+    return vault ? { ...vault } : undefined;
   }
 
   // --- CREDENTIAL CRUD ---
-  public addCredential(category: VaultCategory, itemData: any): { success: boolean; hash: string; item: any } {
+  public addCredential(
+    category: VaultCategory,
+    itemData: any,
+    userId: string = "usr_chinwe_okafor_7721"
+  ): { success: boolean; hash: string; item: any } {
+    const userVault = this.getVault(userId);
     const id = `item_${randomBytes(4).toString("hex")}`;
     const hash = computeSha256(itemData);
     const enrichedItem = { ...itemData, id, hashRef: hash };
 
     if (category === "academics") {
-      this.vault.academics = this.vault.academics || { userId: this.vault.userId, degrees: [] };
-      this.vault.academics.degrees.push(enrichedItem);
+      userVault.academics = userVault.academics || { userId, degrees: [] };
+      userVault.academics.degrees.push(enrichedItem);
     } else if (category === "finance") {
-      this.vault.finance = this.vault.finance || { userId: this.vault.userId, bankRecords: [] };
-      this.vault.finance.bankRecords.push(enrichedItem);
+      userVault.finance = userVault.finance || { userId, bankRecords: [] };
+      userVault.finance.bankRecords.push(enrichedItem);
     } else if (category === "experience") {
-      this.vault.experience = this.vault.experience || { userId: this.vault.userId, experiences: [] };
-      this.vault.experience.experiences.push(enrichedItem);
+      userVault.experience = userVault.experience || { userId, experiences: [] };
+      userVault.experience.experiences.push(enrichedItem);
     } else if (category === "certifications") {
-      this.vault.certifications = this.vault.certifications || { userId: this.vault.userId, certifications: [] };
-      this.vault.certifications.certifications.push(enrichedItem);
+      userVault.certifications = userVault.certifications || { userId, certifications: [] };
+      userVault.certifications.certifications.push(enrichedItem);
     } else if (category === "achievements") {
-      this.vault.achievements = this.vault.achievements || { userId: this.vault.userId, achievements: [] };
-      this.vault.achievements.achievements.push(enrichedItem);
+      userVault.achievements = userVault.achievements || { userId, achievements: [] };
+      userVault.achievements.achievements.push(enrichedItem);
     } else if (category === "portfolio") {
-      this.vault.portfolio = {
-        userId: this.vault.userId,
-        headline: itemData.headline || this.vault.portfolio?.headline || "",
-        bio: itemData.bio || this.vault.portfolio?.bio || "",
-        publicLinks: itemData.publicLinks || this.vault.portfolio?.publicLinks || [],
-        personalStatement: itemData.personalStatement || this.vault.portfolio?.personalStatement,
+      userVault.portfolio = {
+        userId,
+        headline: itemData.headline || userVault.portfolio?.headline || "",
+        bio: itemData.bio || userVault.portfolio?.bio || "",
+        publicLinks: itemData.publicLinks || userVault.portfolio?.publicLinks || [],
+        personalStatement: itemData.personalStatement || userVault.portfolio?.personalStatement,
       };
     }
 
-    this.vault.lastSyncedAt = new Date().toISOString();
+    userVault.lastSyncedAt = new Date().toISOString();
+    this.vaults.set(userId, userVault);
     return { success: true, hash, item: enrichedItem };
   }
 
-  public deleteCredential(category: VaultCategory, itemId: string): boolean {
-    if (category === "academics" && this.vault.academics) {
-      this.vault.academics.degrees = this.vault.academics.degrees.filter((d) => d.id !== itemId);
-    } else if (category === "finance" && this.vault.finance) {
-      this.vault.finance.bankRecords = this.vault.finance.bankRecords.filter((b) => (b as any).hashRef !== itemId && (b as any).institutionName !== itemId);
-    } else if (category === "experience" && this.vault.experience) {
-      this.vault.experience.experiences = this.vault.experience.experiences.filter((e) => e.id !== itemId);
-    } else if (category === "certifications" && this.vault.certifications) {
-      this.vault.certifications.certifications = this.vault.certifications.certifications.filter((c) => c.id !== itemId);
-    } else if (category === "achievements" && this.vault.achievements) {
-      this.vault.achievements.achievements = this.vault.achievements.achievements.filter((a) => a.id !== itemId);
+  public deleteCredential(category: VaultCategory, itemId: string, userId: string = "usr_chinwe_okafor_7721"): boolean {
+    const userVault = this.getVault(userId);
+    if (category === "academics" && userVault.academics) {
+      userVault.academics.degrees = userVault.academics.degrees.filter((d) => d.id !== itemId);
+    } else if (category === "finance" && userVault.finance) {
+      userVault.finance.bankRecords = userVault.finance.bankRecords.filter((b) => (b as any).hashRef !== itemId && (b as any).institutionName !== itemId);
+    } else if (category === "experience" && userVault.experience) {
+      userVault.experience.experiences = userVault.experience.experiences.filter((e) => e.id !== itemId);
+    } else if (category === "certifications" && userVault.certifications) {
+      userVault.certifications.certifications = userVault.certifications.certifications.filter((c) => c.id !== itemId);
+    } else if (category === "achievements" && userVault.achievements) {
+      userVault.achievements.achievements = userVault.achievements.achievements.filter((a) => a.id !== itemId);
     }
-    this.vault.lastSyncedAt = new Date().toISOString();
+    userVault.lastSyncedAt = new Date().toISOString();
+    this.vaults.set(userId, userVault);
     return true;
   }
 
+
   // --- SCOPED KEYS MANAGEMENT ---
-  public listKeys(): ScopedKeyRecord[] {
+  public listKeys(userId?: string): ScopedKeyRecord[] {
     const now = Math.floor(Date.now() / 1000);
-    return Array.from(this.keys.values()).map((key) => {
-      let status = key.status;
-      if (status === "ACTIVE" && (key.expiresAt < now || key.remainingQueries <= 0)) {
-        status = "EXPIRED";
-      }
-      return { ...key, status };
-    });
+    return Array.from(this.keys.values())
+      .filter((k) => !userId || k.vaultId === userId || !k.vaultId)
+      .map((key) => {
+        let status = key.status;
+        if (status === "ACTIVE" && (key.expiresAt < now || key.remainingQueries <= 0)) {
+          status = "EXPIRED";
+        }
+        return { ...key, status };
+      });
   }
 
   public mintKey(params: {
@@ -268,14 +304,16 @@ class UserVaultMasterStore {
     ttlDays: number;
     maxQueries: number;
     label?: string;
+    userId?: string;
   }): ScopedKeyRecord {
+    const targetUserId = params.userId || "usr_chinwe_okafor_7721";
     const keyId = `key_${randomBytes(4).toString("hex")}`;
     const issuedAt = Math.floor(Date.now() / 1000);
     const expiresAt = issuedAt + params.ttlDays * 86400;
 
     const rawKey = generateScopedApiKey({
       keyId,
-      vaultId: this.vault.userId,
+      vaultId: targetUserId,
       allowedScopes: params.allowedScopes,
       issuedAt,
       expiresAt,
@@ -283,7 +321,7 @@ class UserVaultMasterStore {
       sovereignNode: "ng-west-africa",
     });
 
-    const record: ScopedKeyRecord = {
+    const record: ScopedKeyRecord & { vaultId?: string } = {
       keyId,
       rawKey,
       allowedScopes: params.allowedScopes,
@@ -293,15 +331,20 @@ class UserVaultMasterStore {
       remainingQueries: params.maxQueries,
       status: "ACTIVE",
       label: params.label || `Scoped Key (${params.allowedScopes.join(", ")})`,
+      vaultId: targetUserId,
     };
 
     this.keys.set(keyId, record);
     return record;
   }
 
-  public revokeKey(keyId: string): boolean {
+  public getKeyOwner(keyId: string): string | undefined {
+    return this.keys.get(keyId)?.vaultId;
+  }
+
+  public revokeKey(keyId: string, ownerUserId?: string): boolean {
     const key = this.keys.get(keyId);
-    if (!key) return false;
+    if (!key || (ownerUserId && key.vaultId !== ownerUserId)) return false;
     key.status = "REVOKED";
     this.keys.set(keyId, key);
     return true;
@@ -319,24 +362,33 @@ class UserVaultMasterStore {
   }
 
   // --- PRIVACY AUDIT LEDGER ---
-  public getAuditLogs(): TransparencyAuditLog[] {
-    return [...this.auditLogs].sort(
-      (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-    );
+  public getAuditLogs(userId?: string): TransparencyAuditLog[] {
+    return this.auditLogs
+      .filter((l) => !userId || l.targetVaultId === userId)
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   }
 
-  public recordAuditEntry(entry: Omit<TransparencyAuditLog, "id" | "timestamp">): TransparencyAuditLog {
-    const newEntry: TransparencyAuditLog = {
+  public recordAuditEntry(
+    entry: Omit<TransparencyAuditLog, "id" | "timestamp"> & { targetVaultId?: string }
+  ): TransparencyAuditLog {
+    const newEntry: TransparencyAuditLog & { targetVaultId?: string } = {
       ...entry,
       id: `log_${randomBytes(4).toString("hex")}`,
       timestamp: new Date().toISOString(),
+      targetVaultId: entry.targetVaultId || "usr_chinwe_okafor_7721",
     };
     this.auditLogs.unshift(newEntry);
     return newEntry;
   }
 
+
   // --- SIMULATED ZERO-RAW CLOUD SYNC ---
-  public simulateCloudSync(fileName: string, category: VaultCategory, provider: "google_drive" | "dropbox" = "google_drive"): {
+  public simulateCloudSync(
+    fileName: string,
+    category: VaultCategory,
+    provider: "google_drive" | "dropbox" = "google_drive",
+    userId: string = "usr_chinwe_okafor_7721"
+  ): {
     success: boolean;
     category: VaultCategory;
     hashRef: string;
@@ -382,7 +434,7 @@ class UserVaultMasterStore {
       };
     }
 
-    const { hash, item } = this.addCredential(category, sampleData);
+    const { hash, item } = this.addCredential(category, sampleData, userId);
 
     return {
       success: true,
@@ -395,3 +447,4 @@ class UserVaultMasterStore {
 }
 
 export const globalUserStore = new UserVaultMasterStore();
+

@@ -139,7 +139,20 @@ class AdminMasterStore {
     return newOrg;
   }
 
+  getOrganization(orgId: string): ManagedOrganization | undefined {
+    return this.organizations.get(orgId);
+  }
+
+  updateOrganization(orgId: string, updates: Partial<ManagedOrganization>): ManagedOrganization | null {
+    const org = this.organizations.get(orgId);
+    if (!org) return null;
+    const updated = { ...org, ...updates };
+    this.organizations.set(orgId, updated);
+    return updated;
+  }
+
   verifyOrgApiKey(apiKey: string): { isValid: boolean; org?: ManagedOrganization } {
+
     const orgId = this.orgKeyIndex.get(apiKey);
     if (!orgId) return { isValid: false };
     const org = this.organizations.get(orgId);
