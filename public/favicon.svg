@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="sabiGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#059669"/>
+      <stop offset="100%" stop-color="#047857"/>
+    </linearGradient>
+    <filter id="shieldShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="16" stdDeviation="24" flood-color="#059669" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+
+  <!-- Background Base -->
+  <rect width="512" height="512" rx="128" fill="#ffffff"/>
+
+  <!-- Outer Protective Halo Ring -->
+  <rect x="16" y="16" width="480" height="480" rx="112" stroke="#f1f5f9" stroke-width="8"/>
+
+  <!-- Shield Shape -->
+  <path d="M256 64L392 124V252C392 344.4 334.4 429.2 256 452C177.6 429.2 120 344.4 120 252V124L256 64Z"
+        fill="url(#sabiGradient)"
+        filter="url(#shieldShadow)"/>
+
+  <!-- Internal Sovereign Ring / Keyhole Cutout -->
+  <circle cx="256" cy="220" r="44" fill="#ffffff"/>
+
+  <!-- Keyhole Lower Stem -->
+  <path d="M240 236H272L282 320H230L240 236Z" fill="#ffffff"/>
+
+  <!-- Cryptographic Check Accent -->
+  <circle cx="256" cy="220" r="20" fill="#047857"/>
+</svg>

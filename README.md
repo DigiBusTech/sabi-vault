@@ -435,3 +435,4 @@ or decompilation of this software is strictly prohibited under international cop
 <div align="center">
   <sub>Engineered with precision for the future of sovereign identity and decentralized verification.</sub>
 </div>
+

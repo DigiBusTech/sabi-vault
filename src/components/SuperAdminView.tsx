@@ -9,6 +9,7 @@ import {
   Copy,
   Eye,
   EyeOff,
+  Globe2,
   KeyRound,
   Landmark,
   Pencil,
@@ -55,7 +56,7 @@ interface ConfigEntry {
   key: string;
   label: string;
   description: string;
-  category: "security" | "blockchain" | "ai" | "integrations" | "billing" | "nodes";
+  category: "security" | "blockchain" | "ai" | "integrations" | "billing" | "nodes" | "seo";
   sensitive: boolean;
   maskedValue: string;
   source: "dashboard" | "environment" | "default" | "unset";
@@ -72,6 +73,7 @@ const CATEGORY_META: Record<string, { label: string; icon: React.ComponentType<{
   integrations: { label: "Cloud integrations", icon: Building2 },
   billing: { label: "Billing and fees", icon: KeyRound },
   nodes: { label: "Sovereign nodes", icon: GlobeIcon },
+  seo: { label: "SEO, OpenGraph & Favicon", icon: Globe2 },
 };
 
 function GlobeIcon({ className }: { className?: string }) {
@@ -340,7 +342,7 @@ export function SuperAdminView() {
   };
 
   const sectionAnchor = "scroll-mt-24 lg:scroll-mt-8";
-  const configCategories = ["security", "blockchain", "ai", "integrations", "billing", "nodes"];
+  const configCategories = ["security", "blockchain", "ai", "integrations", "billing", "nodes", "seo"];
   const summary = telemetry?.telemetry || {};
   const revenue = telemetry?.revenueModel || {};
 

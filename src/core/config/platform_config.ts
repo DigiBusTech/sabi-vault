@@ -18,7 +18,7 @@ import { createAdminSupabaseClient } from "@/lib/supabase/admin";
  * secret ever needs to live outside the dashboard.
  */
 
-export type ConfigCategory = "security" | "blockchain" | "ai" | "integrations" | "billing" | "nodes";
+export type ConfigCategory = "security" | "blockchain" | "ai" | "integrations" | "billing" | "nodes" | "seo";
 
 export interface ConfigKeyMeta {
   key: string;
@@ -103,7 +103,6 @@ export const CONFIG_REGISTRY: ConfigKeyMeta[] = [
     sensitive: false,
     envVar: "SABI_BLOCKCHAIN_SIMULATION",
     defaultValue: "true",
-
   },
 
   // --- AI gateways ---
@@ -235,6 +234,70 @@ export const CONFIG_REGISTRY: ConfigKeyMeta[] = [
     sensitive: false,
     envVar: "SOVEREIGN_NODE_NA_URL",
     defaultValue: "https://na-node.sabi-vault.internal",
+  },
+
+  // --- SEO, Metadata & OpenGraph ---
+  {
+    key: "seo.meta_title",
+    label: "Default Meta Title",
+    description: "Primary browser tab title and OpenGraph title tag across all public and marketing routes.",
+    category: "seo",
+    sensitive: false,
+    envVar: "NEXT_PUBLIC_META_TITLE",
+    defaultValue: "Sabi Vault | Sovereign Data Infrastructure & Decentralized Identity",
+  },
+  {
+    key: "seo.meta_description",
+    label: "Meta Description",
+    description: "Primary search engine synopsis and OpenGraph / Twitter Card summary description.",
+    category: "seo",
+    sensitive: false,
+    envVar: "NEXT_PUBLIC_META_DESCRIPTION",
+    defaultValue: "Replacing static PDFs with programmable, tamper-proof cryptographic API keys and multi-agent AI verification pipelines. Powered by Sabi AI Technologies Ltd.",
+  },
+  {
+    key: "seo.meta_keywords",
+    label: "SEO Meta Keywords",
+    description: "Comma-delimited keywords indexed by search crawlers, directories, and GovTech catalogers.",
+    category: "seo",
+    sensitive: false,
+    envVar: "NEXT_PUBLIC_META_KEYWORDS",
+    defaultValue: "sovereign data infrastructure, decentralized identity, verifiable credentials, NDPC compliance, GDPR data residency, zero raw document storage, Base Sepolia blockchain, Sabi AI Technologies, cryptographic API keys",
+  },
+  {
+    key: "seo.og_image_url",
+    label: "OpenGraph / Social Image URL",
+    description: "Absolute or relative path to the 1200x630 social preview graphic displayed on Twitter, LinkedIn, and messaging apps.",
+    category: "seo",
+    sensitive: false,
+    envVar: "NEXT_PUBLIC_OG_IMAGE_URL",
+    defaultValue: "/og-image.svg",
+  },
+  {
+    key: "seo.favicon_url",
+    label: "Favicon / Brand Icon URL",
+    description: "Relative or absolute URL to the SVG/ICO favicon displayed in browser tabs and bookmark bars.",
+    category: "seo",
+    sensitive: false,
+    envVar: "NEXT_PUBLIC_FAVICON_URL",
+    defaultValue: "/favicon.svg",
+  },
+  {
+    key: "seo.site_url",
+    label: "Canonical Site URL",
+    description: "Canonical origin URL used for absolute OpenGraph links, sitemaps, and search engines.",
+    category: "seo",
+    sensitive: false,
+    envVar: "NEXT_PUBLIC_SITE_URL",
+    defaultValue: "https://sabivault.org",
+  },
+  {
+    key: "seo.twitter_handle",
+    label: "Twitter / X Creator Handle",
+    description: "Twitter card creator and publisher handle (@sabivault or corporate handle).",
+    category: "seo",
+    sensitive: false,
+    defaultValue: "@SabiVault",
   },
 ];
 

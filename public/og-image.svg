@@ -1,0 +1,115 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <!-- Background Gradients -->
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0a101f"/>
+      <stop offset="40%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#052e16"/>
+    </linearGradient>
+
+    <!-- Emerald Glow -->
+    <radialGradient id="glow" cx="85%" cy="30%" r="50%">
+      <stop offset="0%" stop-color="#059669" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#059669" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Card Background -->
+    <linearGradient id="cardGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.08"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0.02"/>
+    </linearGradient>
+
+    <linearGradient id="shieldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#10b981"/>
+      <stop offset="100%" stop-color="#059669"/>
+    </linearGradient>
+  </defs>
+
+  <style>
+    .title { font-family: 'Poppins', system-ui, -apple-system, sans-serif; font-weight: 800; font-size: 58px; fill: #ffffff; letter-spacing: -0.02em; }
+    .subtitle { font-family: 'Montserrat', system-ui, -apple-system, sans-serif; font-weight: 500; font-size: 24px; fill: #94a3b8; }
+    .badge { font-family: 'Montserrat', system-ui, -apple-system, sans-serif; font-weight: 700; font-size: 14px; fill: #10b981; letter-spacing: 0.12em; text-transform: uppercase; }
+    .tag { font-family: 'Montserrat', system-ui, -apple-system, sans-serif; font-weight: 600; font-size: 16px; fill: #cbd5e1; }
+    .company { font-family: 'Montserrat', system-ui, -apple-system, sans-serif; font-weight: 600; font-size: 16px; fill: #64748b; }
+  </style>
+
+  <!-- Background Canvas -->
+  <rect width="1200" height="630" fill="url(#bgGradient)"/>
+  <rect width="1200" height="630" fill="url(#glow)"/>
+
+  <!-- Subtle Blueprint Grid Lines -->
+  <g stroke="#ffffff" stroke-opacity="0.04" stroke-width="1">
+    <line x1="80" y1="0" x2="80" y2="630"/>
+    <line x1="280" y1="0" x2="280" y2="630"/>
+    <line x1="480" y1="0" x2="480" y2="630"/>
+    <line x1="680" y1="0" x2="680" y2="630"/>
+    <line x1="880" y1="0" x2="880" y2="630"/>
+    <line x1="1080" y1="0" x2="1080" y2="630"/>
+    <line x1="0" y1="120" x2="1200" y2="120"/>
+    <line x1="0" y1="240" x2="1200" y2="240"/>
+    <line x1="0" y1="360" x2="1200" y2="360"/>
+    <line x1="0" y1="480" x2="1200" y2="480"/>
+  </g>
+
+  <!-- Decorative Sovereign Shield on Right Side -->
+  <g transform="translate(820, 165)">
+    <!-- Outer Shield Ambient -->
+    <path d="M150 20L270 75V190C270 274 218 351 150 372C82 351 30 274 30 190V75L150 20Z"
+          fill="none" stroke="#10b981" stroke-width="2" stroke-dasharray="8 6" opacity="0.4"/>
+    
+    <!-- Core Glass Shield -->
+    <path d="M150 35L255 83V185C255 260 209 328 150 348C91 328 45 260 45 185V83L150 35Z"
+          fill="url(#shieldGrad)" opacity="0.95"/>
+    
+    <!-- Inner Cryptographic Vault Notch -->
+    <circle cx="150" cy="155" r="38" fill="#ffffff" opacity="0.95"/>
+    <path d="M136 168H164L173 240H127L136 168Z" fill="#ffffff" opacity="0.95"/>
+    <circle cx="150" cy="155" r="16" fill="#047857"/>
+
+    <!-- Subtle Node Dots Around Shield -->
+    <circle cx="150" cy="8" r="5" fill="#34d399"/>
+    <circle cx="285" cy="75" r="5" fill="#34d399"/>
+    <circle cx="15" cy="75" r="5" fill="#34d399"/>
+    <circle cx="150" cy="385" r="5" fill="#34d399"/>
+  </g>
+
+  <!-- Main Left Content Block -->
+  <g transform="translate(90, 110)">
+    <!-- Brand Pill Badge -->
+    <g>
+      <rect width="320" height="38" rx="19" fill="#059669" fill-opacity="0.2" stroke="#059669" stroke-opacity="0.4" stroke-width="1"/>
+      <circle cx="20" cy="19" r="6" fill="#10b981"/>
+      <text x="36" y="24" class="badge">Sovereign Data Infrastructure</text>
+    </g>
+
+    <!-- Main Title Lines -->
+    <text x="0" y="115" class="title">SABI VAULT</text>
+    <text x="0" y="178" class="title" fill="#34d399" style="fill: #34d399;">Decentralized Identity</text>
+
+    <!-- Description Paragraph -->
+    <text x="0" y="240" class="subtitle">Zero Raw File Centralization • Multi-Agent AI Screening</text>
+    <text x="0" y="278" class="subtitle">Programmable Scoped Keys • Blockchain Verification Layer</text>
+
+    <!-- Feature Pillars Badges -->
+    <g transform="translate(0, 335)">
+      <!-- Tag 1 -->
+      <g>
+        <rect width="190" height="42" rx="12" fill="url(#cardGrad)" stroke="#334155" stroke-width="1"/>
+        <text x="20" y="27" class="tag">🛡️ NDPC &amp; GDPR</text>
+      </g>
+      <!-- Tag 2 -->
+      <g transform="translate(205, 0)">
+        <rect width="210" height="42" rx="12" fill="url(#cardGrad)" stroke="#334155" stroke-width="1"/>
+        <text x="20" y="27" class="tag">⚡ Base Sepolia Ledger</text>
+      </g>
+      <!-- Tag 3 -->
+      <g transform="translate(430, 0)">
+        <rect width="220" height="42" rx="12" fill="url(#cardGrad)" stroke="#334155" stroke-width="1"/>
+        <text x="20" y="27" class="tag">🤖 Gemini / Groq RAG</text>
+      </g>
+    </g>
+
+    <!-- Footer Meta -->
+    <text x="0" y="445" class="company">Sabi AI Technologies Ltd • Official Enterprise Release</text>
+  </g>
+</svg>
