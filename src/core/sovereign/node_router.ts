@@ -1,5 +1,5 @@
-/**
- * Sabi Vault Sovereign Regional Node Router
+﻿/**
+ * SabiProfile Sovereign Regional Node Router
  *
  * Implements the "Sovereign Node Isolation" invariant:
  * Routes structured candidate records to regional database nodes partitioned
@@ -39,7 +39,7 @@ export class SovereignNodeRouter {
         regionName: "West Africa Sovereign Hub (Lagos / Abuja)",
         jurisdiction: "Nigeria / ECOWAS",
         complianceFramework: "NDPC",
-        endpointUrl: this.nodeEndpoint("ng-west-africa", "https://ng-node.sabi-vault.internal"),
+        endpointUrl: this.nodeEndpoint("ng-west-africa", "https://ng-node.sabiprofile.internal"),
         payoutAddress: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e", // Sovereign Regional Host payout
         isHealthy: true,
       },
@@ -48,7 +48,7 @@ export class SovereignNodeRouter {
         regionName: "EU Central Sovereign Hub (Frankfurt / Dublin)",
         jurisdiction: "European Union",
         complianceFramework: "GDPR",
-        endpointUrl: this.nodeEndpoint("eu-central", "https://eu-node.sabi-vault.internal"),
+        endpointUrl: this.nodeEndpoint("eu-central", "https://eu-node.sabiprofile.internal"),
         payoutAddress: "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC",
         isHealthy: true,
       },
@@ -57,7 +57,7 @@ export class SovereignNodeRouter {
         regionName: "North America Sovereign Hub (N. Virginia)",
         jurisdiction: "United States / Canada",
         complianceFramework: "US_PRIVACY",
-        endpointUrl: this.nodeEndpoint("na-east", "https://na-node.sabi-vault.internal"),
+        endpointUrl: this.nodeEndpoint("na-east", "https://na-node.sabiprofile.internal"),
         payoutAddress: "0x90F79bf6EB2c4f870365E785982E1f101E93b906",
         isHealthy: true,
       },

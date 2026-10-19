@@ -1,4 +1,4 @@
-import { computeSha256 } from "@/core/crypto/hasher";
+﻿import { computeSha256 } from "@/core/crypto/hasher";
 import { VerificationTier } from "@/types/vault";
 import { BlockchainLedgerClient } from "@/core/blockchain/ledger_client";
 
@@ -16,7 +16,7 @@ export interface IntegrityCheckResult {
 }
 
 /**
- * Sabi Vault Integrity & Verification Agent
+ * SabiProfile Integrity & Verification Agent
  *
  * Mathematically validates that structured candidate data has not been altered or
  * modified in the database by computing the current canonical SHA-256 hash
@@ -31,7 +31,7 @@ export class IntegrityAgent {
 
   /**
    * Verifies a candidate's structured JSON data against their on-chain recorded hash.
-   * In a live production setting, this queries SabiVaultRegistry.sol on Base/Polygon.
+   * In a live production setting, this queries SabiProfileRegistry.sol on Base/Polygon.
    */
   async verifyCategoryIntegrity(
     vaultId: string,

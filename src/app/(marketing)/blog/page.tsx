@@ -1,13 +1,13 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRightAnimated } from "@/components/ui/animated-icons";
 import { Reveal } from "@/components/marketing/Reveal";
 import { posts } from "./posts";
 
 export const metadata: Metadata = {
-  title: "Blog | Sabi Vault",
+  title: "Blog | SabiProfile",
   description:
-    "Writing on sovereign identity, cryptographic verification, and the design decisions behind Sabi Vault.",
+    "Writing on sovereign identity, cryptographic verification, and the design decisions behind SabiProfile.",
 };
 
 function formatDate(iso: string): string {

@@ -1,9 +1,9 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy | Sabi Vault",
+  title: "Privacy Policy | SabiProfile",
   description:
-    "How Sabi Vault handles personal data: zero raw document storage, regional data residency, and consent-based sharing.",
+    "How SabiProfile handles personal data: zero raw document storage, regional data residency, and consent-based sharing.",
 };
 
 const sections = [
@@ -18,7 +18,7 @@ const sections = [
   {
     title: "2. What we never collect",
     body: [
-      "Your raw documents. Files remain in your own cloud storage (Google Drive, Dropbox) and are read over OAuth, parsed in memory, and the memory buffer is wiped. Sabi Vault servers do not retain document files.",
+      "Your raw documents. Files remain in your own cloud storage (Google Drive, Dropbox) and are read over OAuth, parsed in memory, and the memory buffer is wiped. SabiProfile servers do not retain document files.",
     ],
   },
   {
@@ -59,7 +59,7 @@ export default function PrivacyPage() {
         <p className="mt-3 text-sm text-slate-500">Last updated: October 2026</p>
 
         <p className="mt-8 text-sm leading-relaxed text-slate-600">
-          This policy describes how Sabi Vault handles personal data. It is a working draft for
+          This policy describes how SabiProfile handles personal data. It is a working draft for
           the pre-production period and will be finalized with counsel before public launch.
         </p>
 

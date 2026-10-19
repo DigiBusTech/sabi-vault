@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useEffect, useState, useCallback } from "react";
 
@@ -6,7 +6,7 @@ const DISPLAY_MS = 1350;
 const EXIT_MS = 400;
 
 /**
- * Sabi Vault site preloader.
+ * SabiProfile site preloader.
  * High-performance, luxury 2D brand assembly with liquid glass accents.
  * Unlocks scroll immediately upon exit; click to skip enabled.
  */
@@ -44,12 +44,12 @@ export function Preloader() {
 
   if (phase === "hidden") return null;
 
-  const letters = "SABI VAULT".split("");
+  const letters = "SabiProfile".split("");
 
   return (
     <div
       role="status"
-      aria-label="Loading Sabi Vault"
+      aria-label="Loading SabiProfile"
       onClick={dismiss}
       className={`fixed inset-0 z-[100] flex cursor-pointer select-none flex-col items-center justify-center bg-white/95 backdrop-blur-2xl transition-all duration-400 ease-out ${
         phase === "exiting" ? "opacity-0 scale-[1.02] pointer-events-none" : "opacity-100 scale-100"

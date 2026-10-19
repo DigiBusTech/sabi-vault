@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { authenticateUser } from "@/lib/auth/auth_guard";
 import { getConfigValue } from "@/core/config/platform_config";
 
@@ -12,7 +12,7 @@ const PROVIDERS: CloudProvider[] = ["google_drive", "dropbox"];
  * Initiates the OAuth consent flow for linking a citizen's private cloud
  * storage (Google Drive / Dropbox) to the ephemeral sync pipeline.
  *
- * Per the Zero Raw Document Centralization invariant, Sabi Vault only ever
+ * Per the Zero Raw Document Centralization invariant, SabiProfile only ever
  * requests read-only file access; documents stream through memory, are
  * hashed, and the buffer is zeroed. Nothing is persisted server-side.
  *

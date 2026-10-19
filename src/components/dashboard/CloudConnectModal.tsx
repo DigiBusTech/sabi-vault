@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useEffect, useState } from "react";
 import { Check, ExternalLink, Loader2, Lock, Settings2, X } from "lucide-react";
@@ -19,12 +19,12 @@ const PROVIDER_META = {
   google_drive: {
     name: "Google Drive",
     logo: "https://cdn.simpleicons.org/googledrive",
-    scopeCopy: "Read-only access to files you explicitly pick. Nothing is uploaded to Sabi Vault servers.",
+    scopeCopy: "Read-only access to files you explicitly pick. Nothing is uploaded to SabiProfile servers.",
   },
   dropbox: {
     name: "Dropbox",
     logo: "https://cdn.simpleicons.org/dropbox",
-    scopeCopy: "Read-only access to files you explicitly pick. Nothing is uploaded to Sabi Vault servers.",
+    scopeCopy: "Read-only access to files you explicitly pick. Nothing is uploaded to SabiProfile servers.",
   },
 } as const;
 

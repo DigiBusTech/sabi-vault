@@ -1,4 +1,4 @@
-import { MultiLLMGateway } from "./gateway/llm_gateway";
+﻿import { MultiLLMGateway } from "./gateway/llm_gateway";
 import { EvaluationCriteriaRubric } from "./criteria_agent";
 import { FullUserVault } from "@/types/vault";
 import { z } from "zod";
@@ -42,7 +42,7 @@ export interface CandidateEvaluationDossier {
 }
 
 /**
- * Sabi Vault Strict RAG Evaluator Agent
+ * SabiProfile Strict RAG Evaluator Agent
  *
  * Guarantees zero hallucinations by treating the LLM strictly as an objective evaluator
  * over verified candidate JSON data against the criteria rubric.
@@ -60,7 +60,7 @@ export class StrictRAGEvaluationAgent {
     rubric: EvaluationCriteriaRubric
   ): Promise<CandidateEvaluationDossier> {
     const prompt = `
-You are the Sabi Vault Strict RAG Evaluator Agent.
+You are the SabiProfile Strict RAG Evaluator Agent.
 Your job is to objectively score this candidate's verified structured data against the evaluation rubric.
 
 INVARIANTS:

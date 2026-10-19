@@ -1,4 +1,4 @@
-import { computeSha256 } from "@/core/crypto/hasher";
+﻿import { computeSha256 } from "@/core/crypto/hasher";
 import { VaultCategory, VerificationTier } from "@/types/vault";
 import { MultiLLMGateway } from "@/agents/gateway/llm_gateway";
 
@@ -13,7 +13,7 @@ export interface ParsedDocumentOutput {
 }
 
 /**
- * Sabi Vault Ephemeral Parser
+ * SabiProfile Ephemeral Parser
  *
  * Implements the Zero Raw Document Centralization invariant:
  * 1. Takes an ephemeral in-memory binary buffer.
@@ -107,7 +107,7 @@ export class EphemeralDocumentParser {
     fileName: string
   ): Promise<Record<string, any>> {
     const prompt = `
-You are the Sabi Vault Document Structuring Engine.
+You are the SabiProfile Document Structuring Engine.
 Convert this extracted document text for category '${category}' into a clean structured JSON object.
 
 Extracted Document Text (${fileName}):
@@ -120,7 +120,7 @@ Return strictly valid JSON.
 
     const response = await this.gateway.complete({
       messages: [
-        { role: "system", content: "You extract structured JSON for Sabi Vault credentials." },
+        { role: "system", content: "You extract structured JSON for SabiProfile credentials." },
         { role: "user", content: prompt },
       ],
       jsonSchema: true,

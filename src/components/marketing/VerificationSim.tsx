@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import {
@@ -39,7 +39,7 @@ function stageToNode(stageIndex: number): number {
 }
 
 /**
- * Looping simulation of the Sabi Vault verification pipeline:
+ * Looping simulation of the SabiProfile verification pipeline:
  * scan a document, extract structured fields, hash it, anchor on-chain,
  * then answer a consented enterprise query. Transform/opacity only;
  * collapses to the final verified state under prefers-reduced-motion.

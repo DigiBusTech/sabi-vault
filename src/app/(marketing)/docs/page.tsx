@@ -1,13 +1,13 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import { KeyRound, TerminalSquare } from "lucide-react";
 import { ShieldCheckAnimated } from "@/components/ui/animated-icons";
 import { LiquidGlassCard } from "@/components/ui/LiquidGlass";
 import { Reveal } from "@/components/marketing/Reveal";
 
 export const metadata: Metadata = {
-  title: "Documentation | Sabi Vault",
+  title: "Documentation | SabiProfile",
   description:
-    "Authentication model, API surface, and verification guarantees for the Sabi Vault developer API.",
+    "Authentication model, API surface, and verification guarantees for the SabiProfile developer API.",
 };
 
 const authMethods = [
@@ -93,7 +93,7 @@ export default function DocsPage() {
             Documentation
           </p>
           <h1 className="mt-4 max-w-3xl font-poppins text-4xl font-extrabold leading-[1.08] tracking-tight md:text-5xl">
-            The Sabi Vault API, end to end.
+            The SabiProfile API, end to end.
           </h1>
           <p className="mt-6 max-w-[62ch] text-base leading-relaxed text-slate-600">
             Everything an integrator needs: how authentication works, which routes exist, and

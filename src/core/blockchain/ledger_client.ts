@@ -1,4 +1,4 @@
-import { ethers } from "ethers";
+﻿import { ethers } from "ethers";
 import { VerificationTier } from "@/types/vault";
 import { getConfigValueSync } from "@/core/config/platform_config";
 
@@ -12,7 +12,7 @@ export interface OnChainVerificationResponse {
 }
 
 
-// Minimal ABI definitions for Sabi Vault smart contracts
+// Minimal ABI definitions for SabiProfile smart contracts
 export const REGISTRY_ABI = [
   "function commitTier1Hash(string vaultId, string category, bytes32 categoryHash) external returns (bytes32)",
   "function commitTier2NotarizedHash(string vaultId, string category, bytes32 categoryHash, bytes notarySealSignature) external returns (bytes32)",
@@ -27,7 +27,7 @@ export const SPLITTER_ABI = [
 ];
 
 /**
- * Sabi Vault Blockchain Ledger Client
+ * SabiProfile Blockchain Ledger Client
  *
  * Interfaces with Base Sepolia / Polygon L2 smart contracts.
  * Enables decentralized immutability checks and 60/40 fee split execution.

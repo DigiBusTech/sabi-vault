@@ -1,6 +1,6 @@
-#!/usr/bin/env node
+﻿#!/usr/bin/env node
 /**
- * Sabi Vault: Super Admin bootstrap
+ * SabiProfile: Super Admin bootstrap
  *
  * Promotes an existing Supabase Auth account to the super_admin role so it
  * can open the control plane at /dashboard. Uses only the Supabase keys

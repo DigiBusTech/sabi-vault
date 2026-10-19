@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Client-Side Robust Device Fingerprinting Utility
  * Combines User-Agent, Screen Specs, Canvas 2D Hash, WebGL Renderer, and Persistent Device ID.
  */
@@ -38,9 +38,9 @@ function getCanvasFingerprint(): string {
     ctx.fillStyle = "#059669";
     ctx.fillRect(125, 1, 62, 20);
     ctx.fillStyle = "#0f172a";
-    ctx.fillText("SabiVault Security 2026! @#$", 2, 15);
+    ctx.fillText("SabiProfile Security 2026! @#$", 2, 15);
     ctx.fillStyle = "rgba(102, 204, 0, 0.7)";
-    ctx.fillText("SabiVault Security 2026! @#$", 4, 17);
+    ctx.fillText("SabiProfile Security 2026! @#$", 4, 17);
 
     return canvas.toDataURL();
   } catch {

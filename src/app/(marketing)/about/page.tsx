@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import Link from "next/link";
 import {
   ArrowRightAnimated,
@@ -15,9 +15,9 @@ import { Reveal } from "@/components/marketing/Reveal";
 import { AppDownloadButtons } from "@/components/marketing/AppDownloadButtons";
 
 export const metadata: Metadata = {
-  title: "About Us | Sabi Vault",
+  title: "About Us | SabiProfile",
   description:
-    "Sabi Vault is sovereign data infrastructure for immigration, education, and labour: citizen-owned credentials verified on-chain with zero raw documents stored.",
+    "SabiProfile is sovereign data infrastructure for immigration, education, and labour: citizen-owned credentials verified on-chain with zero raw documents stored.",
 };
 
 const sectors = [
@@ -88,7 +88,7 @@ export default function AboutPage() {
           </h1>
 
           <p className="mt-6 max-w-3xl font-montserrat text-base leading-relaxed text-slate-600 md:text-lg">
-            Sabi Vault is a sovereign data infrastructure engineered for the three systems that decide
+            SabiProfile is a sovereign data infrastructure engineered for the three systems that decide
             where people may live, study, and work. We replace static, forgeable PDFs with programmable,
             tamper-proof credentials that citizens own, manage, and share strictly by consent.
           </p>
@@ -142,7 +142,7 @@ export default function AboutPage() {
             </h2>
             <p className="mt-3 text-sm leading-relaxed text-slate-600">
               The world economy loses over $50B annually to credential fraud, manual notarizations, and border delays.
-              Sabi Vault unites citizens, institutions, and border authorities onto one mathematical verification engine.
+              SabiProfile unites citizens, institutions, and border authorities onto one mathematical verification engine.
             </p>
           </div>
         </Reveal>
@@ -231,7 +231,7 @@ export default function AboutPage() {
                 </h2>
                 <p className="mt-4 text-sm leading-relaxed text-slate-600">
                   Unlike traditional Silicon Valley SaaS models that extract value from regional data without compensation,
-                  Sabi Vault encodes a 60/40 smart contract revenue split directly into our EVM settlement ledger:
+                  SabiProfile encodes a 60/40 smart contract revenue split directly into our EVM settlement ledger:
                 </p>
                 <div className="mt-6 space-y-3">
                   <div className="flex items-center gap-3 text-sm text-slate-700">

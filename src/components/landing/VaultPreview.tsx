@@ -1,4 +1,4 @@
-import { ArrowUpRight, Check, FileBadge2, Fingerprint, LockKeyhole } from "lucide-react";
+﻿import { ArrowUpRight, Check, FileBadge2, Fingerprint, LockKeyhole } from "lucide-react";
 
 const previewRecords = [
   { icon: FileBadge2, category: "Education", title: "BSc Computer Engineering", issuer: "University of Lagos" },
@@ -7,7 +7,7 @@ const previewRecords = [
 
 export function VaultPreview() {
   return (
-    <div className="preview-scene" aria-label="Sample Sabi Vault product preview">
+    <div className="preview-scene" aria-label="Sample SabiProfile product preview">
       <div className="preview-orbit preview-orbit-one" />
       <div className="preview-orbit preview-orbit-two" />
       <section className="preview-card">

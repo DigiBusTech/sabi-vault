@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { BlockchainLedgerClient } from "@/core/blockchain/ledger_client";
 import { authorizeRoles } from "@/lib/auth/auth_guard";
 
@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Commit Tier-2 attestation on-chain via SabiVaultRegistry.sol
+    // Commit Tier-2 attestation on-chain via SabiProfileRegistry.sol
     const ledgerClient = new BlockchainLedgerClient();
     const commitResult = await ledgerClient.commitTier2NotarizedHash(
       vaultId,

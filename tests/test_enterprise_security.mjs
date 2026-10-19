@@ -1,4 +1,4 @@
-import assert from "assert";
+﻿import assert from "assert";
 import { createHmac, createHash, randomBytes, timingSafeEqual } from "crypto";
 
 // ====================================================================
@@ -6,7 +6,7 @@ import { createHmac, createHash, randomBytes, timingSafeEqual } from "crypto";
 // ====================================================================
 
 console.log("\n=======================================================");
-console.log("SABI VAULT: ENTERPRISE SECURITY SUITE VERIFICATION");
+console.log("SabiProfile: ENTERPRISE SECURITY SUITE VERIFICATION");
 console.log("=======================================================\n");
 
 // --- 1. PROGRESSIVE LOCKOUT STRATEGY (Tier 1 to Tier 4) ---

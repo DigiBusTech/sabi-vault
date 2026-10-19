@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import {
   checkLockout,
   recordFailedAttempt,
@@ -128,8 +128,8 @@ export async function POST(req: NextRequest) {
       const sandboxUser = globalAdminStore.getUser("usr_chinwe_okafor_7721");
       if (
         (sandboxUser && identifier === sandboxUser.email.toLowerCase()) ||
-        identifier.endsWith("@sabivault.org") ||
-        identifier === "test@sabivault.org"
+        identifier.endsWith("@SabiProfile.org") ||
+        identifier === "test@SabiProfile.org"
       ) {
         authenticatedUser = {
           id: sandboxUser?.id || "usr_chinwe_okafor_7721",

@@ -1,4 +1,4 @@
-import { MultiLLMGateway } from "./gateway/llm_gateway";
+﻿import { MultiLLMGateway } from "./gateway/llm_gateway";
 
 export interface EvaluationCriteriaRubric {
   vertical: "immigration" | "education" | "labour" | "enterprise";
@@ -22,7 +22,7 @@ export interface EvaluationCriteriaRubric {
 }
 
 /**
- * Sabi Vault Criteria Ingestion Agent
+ * SabiProfile Criteria Ingestion Agent
  *
  * Ingests unstructured requirement documents (job descriptions, visa eligibility policies,
  * or university admissions guidelines) and translates them into an objective, deterministic
@@ -40,7 +40,7 @@ export class CriteriaAgent {
     vertical: "immigration" | "education" | "labour" | "enterprise"
   ): Promise<EvaluationCriteriaRubric> {
     const prompt = `
-You are the Sabi Vault Criteria Ingestion Agent.
+You are the SabiProfile Criteria Ingestion Agent.
 Analyze the following unstructured requirements text for the vertical '${vertical}' and extract a strictly structured evaluation rubric JSON.
 
 Rules:
@@ -75,7 +75,7 @@ ${rawText}
 
     const response = await this.gateway.complete({
       messages: [
-        { role: "system", content: "You extract structured criteria rubrics for Sabi Vault screening." },
+        { role: "system", content: "You extract structured criteria rubrics for SabiProfile screening." },
         { role: "user", content: prompt },
       ],
       jsonSchema: true,

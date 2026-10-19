@@ -1,9 +1,9 @@
-import { AlertTriangle, FileText, Hash, Link2, Pencil } from "lucide-react";
+﻿import { AlertTriangle, FileText, Hash, Link2, Pencil } from "lucide-react";
 import { CheckCircle2Animated } from "@/components/ui/animated-icons";
 
 /**
  * Problem-section visual: contrasts a static PDF (editable after issue, unverifiable)
- * with a Sabi Vault record (hash-anchored, verifiable in real time). CSS-only motion,
+ * with a SabiProfile record (hash-anchored, verifiable in real time). CSS-only motion,
  * neutralized globally under prefers-reduced-motion.
  */
 export function TamperVisual() {
@@ -11,7 +11,7 @@ export function TamperVisual() {
     <div
       className="relative mx-auto w-full max-w-lg space-y-4"
       role="img"
-      aria-label="Comparison: a static PDF can be edited after issue with no way to detect it, while a Sabi Vault record is hash-anchored and verified in real time"
+      aria-label="Comparison: a static PDF can be edited after issue with no way to detect it, while a SabiProfile record is hash-anchored and verified in real time"
     >
       {/* The paper way */}
       <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_12px_30px_-18px_rgba(15,23,42,0.18)]">
@@ -51,7 +51,7 @@ export function TamperVisual() {
         <div className="h-px flex-1 bg-slate-200" />
       </div>
 
-      {/* The Sabi Vault way */}
+      {/* The SabiProfile way */}
       <div className="liquid-glass-card rounded-2xl border-brand-green/30 bg-emerald-50/70 p-5 shadow-[0_12px_30px_-18px_rgba(5,150,105,0.25)]">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-3">

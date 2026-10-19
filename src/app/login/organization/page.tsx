@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { FormEvent, useEffect, useRef, useState } from "react";
 import Link from "next/link";
@@ -122,7 +122,7 @@ export default function OrganizationLoginPage() {
           <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-green text-white">
             <ShieldCheck size={17} strokeWidth={2} />
           </span>
-          <span className="font-poppins text-sm font-extrabold tracking-tight">SABI VAULT</span>
+          <span className="font-poppins text-sm font-extrabold tracking-tight">SabiProfile</span>
         </Link>
 
         <div>
@@ -155,7 +155,7 @@ export default function OrganizationLoginPage() {
               <ShieldCheck size={17} strokeWidth={2} />
             </span>
             <span className="font-poppins text-sm font-extrabold tracking-tight text-brand-dark">
-              SABI VAULT
+              SabiProfile
             </span>
           </Link>
 

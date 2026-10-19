@@ -1,4 +1,4 @@
-import { FullUserVault, VerificationTier } from "@/types/vault";
+﻿import { FullUserVault, VerificationTier } from "@/types/vault";
 
 export interface FraudAuditItem {
   severity: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
@@ -16,7 +16,7 @@ export interface FraudAuditReport {
 }
 
 /**
- * Sabi Vault Automated Fraud Detection Agent
+ * SabiProfile Automated Fraud Detection Agent
  *
  * Scans candidate structured records for chronological anomalies, forged graduation timelines,
  * un-notarized Tier 2 legal certificates, and suspicious balance surges.

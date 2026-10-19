@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -47,7 +47,7 @@ export function CookieConsent() {
           <Cookie size={17} />
         </span>
         <div>
-          <h2 className="font-poppins text-sm font-bold text-brand-dark">Cookies on Sabi Vault</h2>
+          <h2 className="font-poppins text-sm font-bold text-brand-dark">Cookies on SabiProfile</h2>
           <p className="mt-1.5 text-xs leading-relaxed text-slate-600">
             We use essential cookies to keep you signed in. With your consent, we also use
             privacy-respecting analytics to improve the product. Read our{" "}

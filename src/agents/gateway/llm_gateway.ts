@@ -1,5 +1,5 @@
-/**
- * Sabi Vault Multi-LLM Failover Gateway Router
+﻿/**
+ * SabiProfile Multi-LLM Failover Gateway Router
  *
  * Provides enterprise high availability across multiple LLM backends:
  * 1. Google Gemini 1.5 Flash (Primary - high speed, huge context, lowest cost)
@@ -188,7 +188,7 @@ export class MultiLLMGateway {
       });
     }
 
-    return "Evaluation completed via Sabi Vault deterministic evaluation engine.";
+    return "Evaluation completed via SabiProfile deterministic evaluation engine.";
   }
 }
 

@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { ShieldCheckAnimated } from "@/components/ui/animated-icons";
 import { AppDownloadButtons } from "@/components/marketing/AppDownloadButtons";
 
@@ -43,7 +43,7 @@ export function MarketingFooter() {
                 <ShieldCheckAnimated size={17} strokeWidth={2} />
               </span>
               <span className="font-poppins text-sm font-extrabold tracking-tight text-brand-dark">
-                SABI VAULT
+                SabiProfile
               </span>
             </div>
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-slate-600">
@@ -81,7 +81,7 @@ export function MarketingFooter() {
         </div>
 
         <div className="mt-12 flex flex-col gap-3 border-t border-slate-100 pt-6 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
-          <p>{year} Sabi Vault. All rights reserved.</p>
+          <p>{year} SabiProfile. All rights reserved.</p>
           <p>Architected for NDPC and GDPR compliance. Raw documents never leave your storage.</p>
         </div>
       </div>

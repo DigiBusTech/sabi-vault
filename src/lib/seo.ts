@@ -1,4 +1,4 @@
-import { getConfigValue, primeConfigCache } from "@/core/config/platform_config";
+﻿import { getConfigValue, primeConfigCache } from "@/core/config/platform_config";
 
 export interface ResolvedSEO {
   metaTitle: string;
@@ -38,7 +38,7 @@ export async function getDynamicSEO(): Promise<ResolvedSEO> {
     ]);
 
     return {
-      metaTitle: metaTitle || "Sabi Vault | Sovereign Data Infrastructure & Decentralized Identity",
+      metaTitle: metaTitle || "SabiProfile | Sovereign Data Infrastructure & Decentralized Identity",
       metaDescription:
         metaDescription ||
         "Replacing static PDFs and manual verification with programmable, tamper-proof cryptographic API keys and multi-agent AI verification pipelines. Powered by Sabi AI Technologies Ltd.",
@@ -47,21 +47,22 @@ export async function getDynamicSEO(): Promise<ResolvedSEO> {
         "sovereign data infrastructure, decentralized identity, verifiable credentials, NDPC compliance, GDPR data residency, Base Sepolia blockchain, Sabi AI Technologies",
       ogImageUrl: ogImageUrl || "/og-image.svg",
       faviconUrl: faviconUrl || "/favicon.svg",
-      siteUrl: siteUrl || "https://sabivault.org",
-      twitterHandle: twitterHandle || "@SabiVault",
+      siteUrl: siteUrl || "https://SabiProfile.org",
+      twitterHandle: twitterHandle || "@SabiProfile",
     };
   } catch (error) {
     console.warn("[SEO] Failed to resolve dynamic platform SEO config, using fallback defaults:", error);
     return {
-      metaTitle: "Sabi Vault | Sovereign Data Infrastructure & Decentralized Identity",
+      metaTitle: "SabiProfile | Sovereign Data Infrastructure & Decentralized Identity",
       metaDescription:
         "Replacing static PDFs and manual verification with programmable, tamper-proof cryptographic API keys and multi-agent AI verification pipelines. Powered by Sabi AI Technologies Ltd.",
       metaKeywords:
         "sovereign data infrastructure, decentralized identity, verifiable credentials, NDPC compliance, GDPR data residency, Base Sepolia blockchain, Sabi AI Technologies",
       ogImageUrl: "/og-image.svg",
       faviconUrl: "/favicon.svg",
-      siteUrl: "https://sabivault.org",
-      twitterHandle: "@SabiVault",
+      siteUrl: "https://SabiProfile.org",
+      twitterHandle: "@SabiProfile",
     };
   }
 }
+

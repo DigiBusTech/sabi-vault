@@ -1,4 +1,4 @@
-> **Status:** Pre-production; Complete Enterprise-Grade Security Suite active with Dynamic SEO & OpenGraph Management (Entry #037). SEO meta title, description, keywords, OpenGraph 1200x630 social card (`/og-image.svg`), and SVG/ICO/Apple touch favicon (`/favicon.svg`) are dynamically configured and hot-reloaded from the Super Admin dashboard via `platform_config`. Critical security fixes active: GAP-1 role regression solved, GAP-2 JWT startup secret guard, GAP-3 64-char hex cookie validation, GAP-4 RLS policies, GAP-5 device fingerprint preservation, GAP-6 FK cascade, GAP-8 30-day absolute session cap. Single-Session Enforcement [1 active device/browser], 4-Tier Progressive Account Lockout, Dual-Token Architecture with HttpOnly SameSite=Strict cookies + short-lived in-memory Access Tokens, Silent Token Refresh, Multi-factor Device Fingerprinting & New Device Alerts, Bot Traps & AI Scraper Interceptors, Strict Security Headers. All 48 Next.js routes compiled, 0 errors (100% Passed Test Suites). Enforces pure white background, strict 3-color palette (Pure White #ffffff, Slate Dark #0f172a, Sabi Emerald #059669), Poppins & Montserrat fonts. Dev server: http://localhost:3000.
+﻿> **Status:** Pre-production; Complete Enterprise-Grade Security Suite active with Dynamic SEO & OpenGraph Management (Entry #037). SEO meta title, description, keywords, OpenGraph 1200x630 social card (`/og-image.svg`), and SVG/ICO/Apple touch favicon (`/favicon.svg`) are dynamically configured and hot-reloaded from the Super Admin dashboard via `platform_config`. Critical security fixes active: GAP-1 role regression solved, GAP-2 JWT startup secret guard, GAP-3 64-char hex cookie validation, GAP-4 RLS policies, GAP-5 device fingerprint preservation, GAP-6 FK cascade, GAP-8 30-day absolute session cap. Single-Session Enforcement [1 active device/browser], 4-Tier Progressive Account Lockout, Dual-Token Architecture with HttpOnly SameSite=Strict cookies + short-lived in-memory Access Tokens, Silent Token Refresh, Multi-factor Device Fingerprinting & New Device Alerts, Bot Traps & AI Scraper Interceptors, Strict Security Headers. All 48 Next.js routes compiled, 0 errors (100% Passed Test Suites). Enforces pure white background, strict 3-color palette (Pure White #ffffff, Slate Dark #0f172a, Sabi Emerald #059669), Poppins & Montserrat fonts. Dev server: http://localhost:3000.
 
 
 > **Rule:** This file MUST be read at the beginning of any session by any AI agent, developer, or IDE before inspecting or modifying code. It MUST be updated during every commit or major milestone.
@@ -10,12 +10,12 @@
 ---
 
 ## 1. Executive Summary & Global Vision
-**Sabi Vault** is a sovereign data infrastructure and decentralized identity platform engineered to disrupt three fundamental pillars of the global economy:
+**SabiProfile** is a sovereign data infrastructure and decentralized identity platform engineered to disrupt three fundamental pillars of the global economy:
 1. **Immigration & Border Security** (Visa verification, proof of funds, authenticated legal documents).
 2. **Education** (Instant credential attestation, tamper-proof transcript verification, admissions screening).
 3. **Labour & Enterprise Hiring** (Fraud-proof employment history, programmable candidate screening, real-time qualification audits).
 
-Traditional systems rely on static PDF resumes, forged paperwork, fragmented portals, and high-friction manual legalizations. Sabi Vault fundamentally shifts data sovereignty back to individuals and sovereign nations by replacing static documents with **programmable, tamper-proof, scoped cryptographic API keys** evaluated by **multi-agent AI screening pipelines** verified against an **immutable blockchain ledger**.
+Traditional systems rely on static PDF resumes, forged paperwork, fragmented portals, and high-friction manual legalizations. SabiProfile fundamentally shifts data sovereignty back to individuals and sovereign nations by replacing static documents with **programmable, tamper-proof, scoped cryptographic API keys** evaluated by **multi-agent AI screening pipelines** verified against an **immutable blockchain ledger**.
 
 ---
 
@@ -24,7 +24,7 @@ Traditional systems rely on static PDF resumes, forged paperwork, fragmented por
 ### A. Three-Tier Storage Model
 1. **Cloud Storage Tier (User-Controlled / Zero Raw Central Storage):**
    - Physical documents (PDFs, scans, bank statements, certificates) remain strictly inside the user's private cloud drive (Google Drive, Dropbox, OneDrive) or local device via OAuth 2.0.
-   - Sabi Vault servers **never** centrally store raw user documents.
+   - SabiProfile servers **never** centrally store raw user documents.
 2. **Structured Data Tier (Sovereign Regional Nodes):**
    - Textual and tabular data extracted from synced documents is normalized into standardized, validated JSON schemas.
    - Hosted on country-specific sovereign database nodes (PostgreSQL / Supabase instances) partitioned by regional jurisdiction to ensure strict adherence to local data protection laws (e.g., **NDPC** in Nigeria/ECOWAS, **GDPR** in the EU).
@@ -56,7 +56,7 @@ Every citizen vault organizes extracted structured data into 6 schema-validated 
   - **Recipient Binding:** Optional restriction to designated organization IDs.
 
 ### E. Multi-Agent & Multi-LLM Enterprise Screening Engine (B2B)
-Evaluators (recruiters, visa officers, admissions deans) upload requirement criteria documents. Sabi Vault executes a multi-stage verification pipeline:
+Evaluators (recruiters, visa officers, admissions deans) upload requirement criteria documents. SabiProfile executes a multi-stage verification pipeline:
 1. **Integrity Agent:** Computes live SHA-256 hashes of fetched structured candidate data and cross-checks them against the blockchain ledger.
 2. **Criteria Ingestion Agent:** Deconstructs unstructured requirement docs into a strict scoring matrix (minimum GPA, valid liquid balance, specific certifications, verified tenure).
 3. **Strict RAG Evaluator Agent:** Evaluates candidate JSON strictly against the rubric with zero hallucination guarantee.
@@ -74,7 +74,7 @@ Evaluators (recruiters, visa officers, admissions deans) upload requirement crit
    - Pay-per-query micro-transactions for bulk and single candidate API verification requests.
 3. **GovTech Revenue Split (Smart Contract Enforced):**
    - For queries routed through sovereign regional nodes:
-     - **60% to Sabi Vault Platform:** Powers infrastructure, AI gateway, and global core network.
+     - **60% to SabiProfile Platform:** Powers infrastructure, AI gateway, and global core network.
      - **40% to Sovereign Node Host (Government/Regional Hub):** Monetizes regulatory compliance for host nations, funding local cloud hosting and creating a direct financial incentive for state-level adoption.
 
 ---
@@ -86,7 +86,7 @@ Built specifically to achieve enterprise security with near-zero initial infrast
 | :--- | :--- | :--- |
 | **Frontend & API** | **Next.js 14/15 (App Router, TypeScript, Tailwind CSS, shadcn/ui)** | Full-stack simplicity, high performance, deployable free on Vercel/Cloudflare. |
 | **Database & Auth** | **Supabase (PostgreSQL 16 + Row Level Security + Vault)** | Generous free tier, built-in Auth, instant RLS policies, native country node replication capability. |
-| **Cloud Sync** | **Google Drive API (OAuth 2.0 restricted scope)** | Direct read of user PDFs without server storage; zero cloud storage bill for Sabi Vault. |
+| **Cloud Sync** | **Google Drive API (OAuth 2.0 restricted scope)** | Direct read of user PDFs without server storage; zero cloud storage bill for SabiProfile. |
 | **Document Parser** | **PDF-Parse + Tesseract / OCR + Gemini Flash parser** | Extremely low cost / free tier extraction of text into strict JSON schemas. |
 | **Blockchain** | **Base Sepolia / Polygon Amoy (EVM L2) + Solidity Contracts** | Sub-cent gas fees, rock-solid security, instant transaction finality, EVM standard. |
 | **LLM Gateway** | **Multi-LLM Gateway Router (Gemini 1.5 Flash + Groq LLaMA 3 + OpenAI mini)** | Extremely high throughput, sub-second latency, near-zero inference cost per query. |
@@ -96,14 +96,14 @@ Built specifically to achieve enterprise security with near-zero initial infrast
 
 ## 5. Directory & Module Blueprint
 ```
-sabi-vault/
+sabiprofile/
 ├── .cursorrules                       # Cross-IDE rule enforcer
 ├── AGENTS.md                          # Mandatory agent instructions
 ├── PROJECT_CONTEXT.md                 # THIS FILE (Master Project Context)
 ├── PROMPT_EXPERIENCE_LOG.md           # Prompt history, experiences, bug fixes, decisions
 ├── IMPLEMENTATION_PLAN.md             # Detailed engineering roadmap
 ├── contracts/                         # Solidity Smart Contracts (Registry, Revenue Split)
-│   ├── SabiVaultRegistry.sol          # Hash notary & verification ledger
+│   ├── SabiProfileRegistry.sol          # Hash notary & verification ledger
 │   └── SabiRevenueSplitter.sol        # 60/40 fee split smart contract
 ├── src/
 │   ├── app/                           # Next.js App Router (User Vault, Enterprise Portal)

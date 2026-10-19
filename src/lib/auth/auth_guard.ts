@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { globalAdminStore } from "@/core/admin/admin_store";
 import { findOrganizationByApiKey } from "@/core/enterprise/org_repository";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
@@ -149,7 +149,7 @@ export async function authenticateUser(req: NextRequest): Promise<AuthCheckResul
     return {
       isAuthenticated: true,
       status: 200,
-      user: { userId: "usr_super_admin_root", email: "admin@sabivault.org", role: "super_admin" },
+      user: { userId: "usr_super_admin_root", email: "admin@SabiProfile.org", role: "super_admin" },
     };
   }
 
@@ -236,7 +236,7 @@ export async function authenticateUser(req: NextRequest): Promise<AuthCheckResul
       status: 200,
       user: {
         userId: devUserId,
-        email: userRecord?.email || `${devUserId}@sabivault.org`,
+        email: userRecord?.email || `${devUserId}@SabiProfile.org`,
         role: devRole,
         sovereignNode: userRecord?.sovereignNode || "ng-west-africa",
       },

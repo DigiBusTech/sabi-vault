@@ -1,4 +1,4 @@
-import assert from "assert";
+﻿import assert from "assert";
 import { createHash, createHmac, timingSafeEqual } from "crypto";
 
 function computeSha256(data) {
@@ -217,7 +217,7 @@ const globalCriteriaStore = new TestCriteriaStore();
 
 async function runTestSuite() {
   console.log("\n=======================================================");
-  console.log("SABI VAULT: MASTER INTEGRATION TEST SUITE");
+  console.log("SabiProfile: MASTER INTEGRATION TEST SUITE");
   console.log("=======================================================\n");
 
   // TEST 1: Citizen Vault Credential CRUD & Ephemeral Cloud Sync

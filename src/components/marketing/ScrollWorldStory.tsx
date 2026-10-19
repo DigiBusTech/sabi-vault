@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState } from "react";
 import { CheckCircle2Animated, SparklesAnimated, ArrowRightAnimated } from "@/components/ui/animated-icons";
@@ -51,7 +51,7 @@ export function ScrollWorldStory() {
             <span>Cryptographic Architecture</span>
           </div>
           <h2 className="mt-3 font-poppins text-3xl font-extrabold text-[#0f172a] sm:text-4xl">
-            How Sabi Vault Protects Data
+            How SabiProfile Protects Data
           </h2>
           <p className="mt-2 text-sm text-slate-600">
             From your private cloud drive to on-chain verification, personal data is protected by mathematical invariants.

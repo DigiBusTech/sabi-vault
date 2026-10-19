@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
@@ -107,7 +107,7 @@ export function DashboardShell({ role, email, orgName, navItems, children }: Das
           <ShieldCheck className="h-5 w-5" />
         </span>
         <div>
-          <p className="font-heading text-sm font-bold tracking-wide text-slate-900">SABI VAULT</p>
+          <p className="font-heading text-sm font-bold tracking-wide text-slate-900">SabiProfile</p>
           <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-700">
             {roleLabel(role)}
           </p>
@@ -226,7 +226,7 @@ export function DashboardShell({ role, email, orgName, navItems, children }: Das
             <ShieldCheck className="h-4 w-4" />
           </span>
           <div>
-            <p className="font-heading text-sm font-bold text-slate-900">SABI VAULT</p>
+            <p className="font-heading text-sm font-bold text-slate-900">SabiProfile</p>
             <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-700">
               {roleLabel(role)}
             </p>

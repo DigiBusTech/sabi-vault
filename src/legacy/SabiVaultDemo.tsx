@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect } from "react";
 import {
@@ -151,7 +151,7 @@ const INITIAL_VAULT: FullUserVault = {
   },
 };
 
-export default function SabiVaultDemo() {
+export default function SabiProfileDemo() {
   const [activeTab, setActiveTab] = useState<"b2c" | "b2b" | "govt" | "notary" | "admin" | "api_docs">("b2c");
 
   // B2C Key Generator State
@@ -454,7 +454,7 @@ export default function SabiVaultDemo() {
           <div>
             <div className="flex items-center gap-2">
               <span className="text-xl font-black tracking-tight bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400 bg-clip-text text-transparent">
-                SABI VAULT
+                SabiProfile
               </span>
               <span className="text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                 Sovereign Infra
@@ -586,7 +586,7 @@ export default function SabiVaultDemo() {
                 ? "Accredited notaries inspect submitted diplomas, transcripts, and affidavits, affixing their cryptographic seal directly onto the Base Sepolia ledger."
                 : activeTab === "admin"
                 ? "Master control plane: manage all user CRUD, register government agencies & enterprise licenses, monitor global 60/40 micro-transaction financials, and hot-reload runtime secrets."
-                : "Integrate autonomous AI agents, enterprise ATS systems (Workday, Greenhouse), and border control applications directly with Sabi Vault via programmatic Dual-Key REST endpoints."}
+                : "Integrate autonomous AI agents, enterprise ATS systems (Workday, Greenhouse), and border control applications directly with SabiProfile via programmatic Dual-Key REST endpoints."}
             </p>
           </div>
         </div>
@@ -1059,14 +1059,14 @@ export default function SabiVaultDemo() {
 
                   <div className="relative">
                     <pre className="p-4 bg-black/80 border border-slate-800 rounded-xl font-mono text-[11px] text-cyan-300 overflow-x-auto leading-relaxed">
-                      {selectedLanguage === "curl" && `curl -X POST https://api.sabivault.io/api/v1/m2m/query \\
+                      {selectedLanguage === "curl" && `curl -X POST https://api.SabiProfile.io/api/v1/m2m/query \\
   -H "Content-Type: application/json" \\
   -H "X-Sabi-Org-Key: ${m2mOrgKey}" \\
   -H "Authorization: Bearer ${m2mCandidateKey || "sbk_live_v1_..."}"`}
 
                       {selectedLanguage === "python" && `import requests
 
-url = "https://api.sabivault.io/api/v1/m2m/query"
+url = "https://api.SabiProfile.io/api/v1/m2m/query"
 headers = {
     "X-Sabi-Org-Key": "${m2mOrgKey}",
     "Authorization": "Bearer ${m2mCandidateKey || "sbk_live_v1_..."}",
@@ -1082,7 +1082,7 @@ print("Tamper Status:", payload["blockchainProof"]["tamperStatus"])`}
 
                       {selectedLanguage === "typescript" && `import fetch from "node-fetch";
 
-const res = await fetch("https://api.sabivault.io/api/v1/m2m/query", {
+const res = await fetch("https://api.SabiProfile.io/api/v1/m2m/query", {
   method: "POST",
   headers: {
     "Content-Type": "application/json",
@@ -1099,7 +1099,7 @@ console.log("Verified Candidate Records:", verifiedData);`}
                       onClick={() =>
                         handleCopyKey(
                           selectedLanguage === "curl"
-                            ? `curl -X POST https://api.sabivault.io/api/v1/m2m/query -H "X-Sabi-Org-Key: ${m2mOrgKey}" -H "Authorization: Bearer ${m2mCandidateKey || "sbk_live_v1_..."}"`
+                            ? `curl -X POST https://api.SabiProfile.io/api/v1/m2m/query -H "X-Sabi-Org-Key: ${m2mOrgKey}" -H "Authorization: Bearer ${m2mCandidateKey || "sbk_live_v1_..."}"`
                             : "See snippet"
                         )
                       }
@@ -1135,7 +1135,7 @@ console.log("Verified Candidate Records:", verifiedData);`}
               <div className="p-3 bg-slate-900/60 rounded-xl border border-slate-800">
                 <span className="font-bold text-emerald-400">0:00 - 0:30 (The Hook & Problem):</span>
                 <p className="mt-1 text-slate-300 italic">
-                  &quot;Every year, organizations spend thousands of hours manually reviewing PDF resumes, while governments and universities lose millions to forged documents. Candidates are forced to re-upload the same credentials to hundreds of portals. We built Sabi Vault—a sovereign data infrastructure and decentralized identity platform that replaces static PDFs with programmable, tamper-proof API keys.&quot;
+                  &quot;Every year, organizations spend thousands of hours manually reviewing PDF resumes, while governments and universities lose millions to forged documents. Candidates are forced to re-upload the same credentials to hundreds of portals. We built SabiProfile—a sovereign data infrastructure and decentralized identity platform that replaces static PDFs with programmable, tamper-proof API keys.&quot;
                 </p>
               </div>
 
@@ -1151,7 +1151,7 @@ console.log("Verified Candidate Records:", verifiedData);`}
               <div className="p-3 bg-slate-900/60 rounded-xl border border-slate-800">
                 <span className="font-bold text-purple-400">1:15 - 1:45 (The Architecture & GovTech Model):</span>
                 <p className="mt-1 text-slate-300 italic">
-                  &quot;Sabi Vault uses a three-tier model: physical files stay in the user&apos;s cloud, structured text sits on country-specific database nodes for strict GDPR/NDPC compliance, and cryptographic hashes live on-chain. When organizations pay micro-transactions to query keys, smart contracts split the fee 60/40 between our platform and the sovereign government hosting the node.&quot;
+                  &quot;SabiProfile uses a three-tier model: physical files stay in the user&apos;s cloud, structured text sits on country-specific database nodes for strict GDPR/NDPC compliance, and cryptographic hashes live on-chain. When organizations pay micro-transactions to query keys, smart contracts split the fee 60/40 between our platform and the sovereign government hosting the node.&quot;
                 </p>
               </div>
 
@@ -1242,7 +1242,7 @@ console.log("Verified Candidate Records:", verifiedData);`}
 
       {/* Footer */}
       <footer className="border-t border-slate-800/80 py-6 px-6 text-center text-xs text-slate-500">
-        Sabi Vault Platform • Sovereign Data Infrastructure • NDPC & GDPR Compliant • Powered by Base L2 & Multi-Agent RAG
+        SabiProfile Platform • Sovereign Data Infrastructure • NDPC & GDPR Compliant • Powered by Base L2 & Multi-Agent RAG
       </footer>
     </div>
   );

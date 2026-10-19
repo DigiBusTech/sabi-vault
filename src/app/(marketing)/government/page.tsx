@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import Link from "next/link";
 import { Coins, Radar } from "lucide-react";
 import {
@@ -13,7 +13,7 @@ import { GovTechCalculator } from "@/components/marketing/GovTechCalculator";
 import { AppDownloadButtons } from "@/components/marketing/AppDownloadButtons";
 
 export const metadata: Metadata = {
-  title: "For Governments | Sabi Vault",
+  title: "For Governments | SabiProfile",
   description:
     "Sovereign regional data nodes, NDPC and GDPR residency, national verification telemetry, and a smart-contract revenue share for host states.",
 };
@@ -36,7 +36,7 @@ export default function GovernmentPage() {
             Sovereign verification, on infrastructure your state controls.
           </h1>
           <p className="mt-6 max-w-[62ch] text-base leading-relaxed text-slate-600 md:text-lg">
-            Sabi Vault hosts structured citizen records on regional database nodes inside your
+            SabiProfile hosts structured citizen records on regional database nodes inside your
             jurisdiction, anchors cryptographic proofs to Base Sepolia, and distributes 40% of query
             revenue directly to the host sovereign nation via smart contract.
           </p>

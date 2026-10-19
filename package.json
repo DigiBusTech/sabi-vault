@@ -1,8 +1,9 @@
 {
-  "name": "sabi-vault",
+  "name": "sabiprofile",
   "version": "0.1.0",
   "private": true,
-  "description": "Sabi Vault - Sovereign Data Infrastructure & Decentralized Identity Platform",
+  "description": "SabiProfile - Sovereign Career & Identity Profile Infrastructure, Programmable Credential Attestation & Decentralized Identity Platform",
+
   "scripts": {
     "dev": "next dev",
     "build": "next build",

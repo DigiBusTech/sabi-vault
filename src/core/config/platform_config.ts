@@ -1,8 +1,8 @@
-import { createCipheriv, createDecipheriv, createHash, randomBytes } from "crypto";
+﻿import { createCipheriv, createDecipheriv, createHash, randomBytes } from "crypto";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 
 /**
- * Sabi Vault Dynamic Platform Configuration
+ * SabiProfile Dynamic Platform Configuration
  *
  * Single source of truth for runtime configuration, managed from the
  * Super Admin dashboard instead of environment variables.
@@ -72,7 +72,7 @@ export const CONFIG_REGISTRY: ConfigKeyMeta[] = [
   {
     key: "blockchain.registry_contract_address",
     label: "Registry Contract Address",
-    description: "Deployed SabiVaultRegistry.sol address. The placeholder address keeps the ledger in local-simulation mode.",
+    description: "Deployed SabiProfileRegistry.sol address. The placeholder address keeps the ledger in local-simulation mode.",
     category: "blockchain",
     sensitive: false,
     envVar: "REGISTRY_CONTRACT_ADDRESS",
@@ -215,7 +215,7 @@ export const CONFIG_REGISTRY: ConfigKeyMeta[] = [
     category: "nodes",
     sensitive: false,
     envVar: "SOVEREIGN_NODE_NG_URL",
-    defaultValue: "https://ng-node.sabi-vault.internal",
+    defaultValue: "https://ng-node.sabiprofile.internal",
   },
   {
     key: "nodes.eu_central_url",
@@ -224,7 +224,7 @@ export const CONFIG_REGISTRY: ConfigKeyMeta[] = [
     category: "nodes",
     sensitive: false,
     envVar: "SOVEREIGN_NODE_EU_URL",
-    defaultValue: "https://eu-node.sabi-vault.internal",
+    defaultValue: "https://eu-node.sabiprofile.internal",
   },
   {
     key: "nodes.na_east_url",
@@ -233,7 +233,7 @@ export const CONFIG_REGISTRY: ConfigKeyMeta[] = [
     category: "nodes",
     sensitive: false,
     envVar: "SOVEREIGN_NODE_NA_URL",
-    defaultValue: "https://na-node.sabi-vault.internal",
+    defaultValue: "https://na-node.sabiprofile.internal",
   },
 
   // --- SEO, Metadata & OpenGraph ---
@@ -244,7 +244,7 @@ export const CONFIG_REGISTRY: ConfigKeyMeta[] = [
     category: "seo",
     sensitive: false,
     envVar: "NEXT_PUBLIC_META_TITLE",
-    defaultValue: "Sabi Vault | Sovereign Data Infrastructure & Decentralized Identity",
+    defaultValue: "SabiProfile | Sovereign Data Infrastructure & Decentralized Identity",
   },
   {
     key: "seo.meta_description",
@@ -289,15 +289,15 @@ export const CONFIG_REGISTRY: ConfigKeyMeta[] = [
     category: "seo",
     sensitive: false,
     envVar: "NEXT_PUBLIC_SITE_URL",
-    defaultValue: "https://sabivault.org",
+    defaultValue: "https://SabiProfile.org",
   },
   {
     key: "seo.twitter_handle",
     label: "Twitter / X Creator Handle",
-    description: "Twitter card creator and publisher handle (@sabivault or corporate handle).",
+    description: "Twitter card creator and publisher handle (@SabiProfile or corporate handle).",
     category: "seo",
     sensitive: false,
-    defaultValue: "@SabiVault",
+    defaultValue: "@SabiProfile",
   },
 ];
 

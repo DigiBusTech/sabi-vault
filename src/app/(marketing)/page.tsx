@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import {
   ArrowRightAnimated,
   FingerprintAnimated,
@@ -44,7 +44,7 @@ export default function HomePage() {
               </h1>
 
               <p className="mt-5 max-w-[54ch] text-base leading-relaxed text-slate-600 sm:text-lg">
-                Sabi Vault turns physical passports, bank statements, degrees, and employment records into tamper-proof, schema-validated cryptographic credentials. Physical documents stay in your private cloud; only mathematical proofs cross borders.
+                SabiProfile turns physical passports, bank statements, degrees, and employment records into tamper-proof, schema-validated cryptographic credentials. Physical documents stay in your private cloud; only mathematical proofs cross borders.
               </p>
 
               {/* Action Button Pills */}
@@ -211,7 +211,7 @@ export default function HomePage() {
                 Global visas, admissions, and enterprise hiring still depend on vulnerable PDFs, forged paperwork, and weeks of manual embassy legalization. Every recipient re-verifies the same documents from scratch, and nobody can mathematically prove the file was not altered post-issuance.
               </p>
               <p className="mt-4 text-sm leading-relaxed text-slate-600 sm:text-base">
-                Sabi Vault eliminates this paradigm by replacing documents with <strong>cryptographic mathematical proofs</strong>: a SHA-256 hash committed to the blockchain, verified in real-time on every query.
+                SabiProfile eliminates this paradigm by replacing documents with <strong>cryptographic mathematical proofs</strong>: a SHA-256 hash committed to the blockchain, verified in real-time on every query.
               </p>
 
               <dl className="mt-8 grid grid-cols-2 gap-6 border-t border-slate-100 pt-6">
@@ -225,7 +225,7 @@ export default function HomePage() {
                 </div>
                 <div>
                   <dt className="text-[11px] font-bold uppercase tracking-wider text-[#059669]">
-                    Sabi Vault Real-Time Hash Check
+                    SabiProfile Real-Time Hash Check
                   </dt>
                   <dd className="mt-1 font-poppins text-2xl font-bold text-[#0f172a]">
                     4 Milliseconds
@@ -412,7 +412,7 @@ export default function HomePage() {
             <div className="space-y-3.5">
               {[
                 {
-                  q: "Do you store physical user documents or PDFs on Sabi Vault servers?",
+                  q: "Do you store physical user documents or PDFs on SabiProfile servers?",
                   a: "Never. Raw files reside exclusively in the citizen's private Google Drive or Dropbox accessed via read-only OAuth 2.0. We extract structured schema facts in memory, calculate the SHA-256 hash, and immediately wipe in-memory buffers (buffer.fill(0)).",
                 },
                 {

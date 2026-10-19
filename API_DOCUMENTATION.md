@@ -1,4 +1,4 @@
-# SABI VAULT: DEVELOPER & MACHINE-TO-MACHINE (M2M) API SPECIFICATION
+﻿# SabiProfile: DEVELOPER & MACHINE-TO-MACHINE (M2M) API SPECIFICATION
 > **Enterprise & Government Integration Protocol for Autonomous AI Agents, Border Systems, and University Portals**  
 > *Target:* Enable external automated systems to query, ground, and verify citizen credentials directly via API without relying on manual web portals.
 
@@ -12,7 +12,7 @@ To ensure **institutional accountability** alongside **citizen data sovereignty*
 
 ```
 +-----------------------------------+       +------------------------------------+
-| External System / AI Agent        |       | Sabi Vault M2M Gateway             |
+| External System / AI Agent        |       | SabiProfile M2M Gateway             |
 | (Workday, Visa Border API, CrewAI)|       |                                    |
 +-----------------+-----------------+       +-----------------+------------------+
                   |                                           |
@@ -112,7 +112,7 @@ Authorization: Bearer sbk_live_v1_eyJrZXlJZCI6ImtleV8wMSIs...
 ---
 
 ### 2.2 Custom Grounding & Screening Engine (`POST /api/v1/m2m/evaluate`)
-For organizations that want Sabi Vault's multi-agent engine to evaluate candidates against their private requirement document or custom scoring rubric.
+For organizations that want SabiProfile's multi-agent engine to evaluate candidates against their private requirement document or custom scoring rubric.
 
 **Request Body:**
 ```json
@@ -185,7 +185,7 @@ import os
 import requests
 
 def verify_and_ground_candidate(candidate_key: str):
-    url = "https://api.sabivault.io/api/v1/m2m/query"
+    url = "https://api.SabiProfile.io/api/v1/m2m/query"
     headers = {
         "X-Sabi-Org-Key": os.getenv("SABI_ORG_API_KEY"),
         "Authorization": f"Bearer {candidate_key}",

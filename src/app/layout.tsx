@@ -1,4 +1,4 @@
-import type { Metadata, Viewport } from "next";
+﻿import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Preloader } from "@/components/Preloader";
 import { getDynamicSEO } from "@/lib/seo";
@@ -16,12 +16,12 @@ export async function generateMetadata(): Promise<Metadata> {
     metadataBase: new URL(seo.siteUrl),
     title: {
       default: seo.metaTitle,
-      template: "%s | Sabi Vault",
+      template: "%s | SabiProfile",
     },
     description: seo.metaDescription,
     keywords: seo.metaKeywords.split(",").map((k) => k.trim()),
     authors: [
-      { name: "Sabi AI Technologies Ltd", url: "https://sabivault.org" },
+      { name: "Sabi AI Technologies Ltd", url: "https://SabiProfile.org" },
     ],
     creator: "Sabi AI Technologies Ltd",
     publisher: "Sabi AI Technologies Ltd",
@@ -52,13 +52,13 @@ export async function generateMetadata(): Promise<Metadata> {
       url: seo.siteUrl,
       title: seo.metaTitle,
       description: seo.metaDescription,
-      siteName: "Sabi Vault",
+      siteName: "SabiProfile",
       images: [
         {
           url: seo.ogImageUrl,
           width: 1200,
           height: 630,
-          alt: "Sabi Vault - Sovereign Data Infrastructure & Decentralized Identity",
+          alt: "SabiProfile - Sovereign Data Infrastructure & Decentralized Identity",
           type: "image/svg+xml",
         },
       ],

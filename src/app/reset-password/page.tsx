@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { FormEvent, useState } from "react";
 import Link from "next/link";
@@ -47,7 +47,7 @@ export default function ResetPasswordPage() {
           <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-green text-white">
             <ShieldCheck size={17} strokeWidth={2} />
           </span>
-          <span className="font-poppins text-sm font-extrabold tracking-tight">SABI VAULT</span>
+          <span className="font-poppins text-sm font-extrabold tracking-tight">SabiProfile</span>
         </Link>
 
         <h1 className="mt-8 font-poppins text-2xl font-extrabold tracking-tight">

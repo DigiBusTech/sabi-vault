@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import Link from "next/link";
 import {
   FileUp,
@@ -20,7 +20,7 @@ import { InteractiveStudio } from "@/components/marketing/InteractiveStudio";
 import { AppDownloadButtons } from "@/components/marketing/AppDownloadButtons";
 
 export const metadata: Metadata = {
-  title: "For Enterprises and Institutions | Sabi Vault",
+  title: "For Enterprises and Institutions | SabiProfile",
   description:
     "Screen candidates for recruitment, admissions, and immigration against cryptographically verified records, with consent enforced by scoped keys.",
 };

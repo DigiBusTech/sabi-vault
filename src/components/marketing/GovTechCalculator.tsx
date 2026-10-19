@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState } from "react";
 import {
@@ -32,7 +32,7 @@ export function GovTechCalculator() {
               GovTech 60/40 Smart Contract Revenue Engine
             </h2>
             <p className="mt-4 text-base leading-relaxed text-slate-600 sm:text-lg">
-              Sabi Vault aligns sovereign nation state incentives. For every enterprise query verifying citizen credentials, 40% of the query fee is atomically routed to the sovereign host government’s digital identity hub.
+              SabiProfile aligns sovereign nation state incentives. For every enterprise query verifying citizen credentials, 40% of the query fee is atomically routed to the sovereign host government’s digital identity hub.
             </p>
           </div>
         </Reveal>

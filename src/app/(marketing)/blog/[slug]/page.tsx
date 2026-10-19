@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
@@ -10,8 +10,8 @@ export function generateStaticParams() {
 
 export function generateMetadata({ params }: { params: { slug: string } }): Metadata {
   const post = getPost(params.slug);
-  if (!post) return { title: "Post not found | Sabi Vault" };
-  return { title: `${post.title} | Sabi Vault`, description: post.excerpt };
+  if (!post) return { title: "Post not found | SabiProfile" };
+  return { title: `${post.title} | SabiProfile`, description: post.excerpt };
 }
 
 export default function BlogPostPage({ params }: { params: { slug: string } }) {

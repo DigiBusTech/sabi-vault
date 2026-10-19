@@ -1,11 +1,11 @@
-# Sabi Vault: Sovereign Data Infrastructure & Decentralized Identity Platform
+﻿# SabiProfile: Sovereign Data Infrastructure & Decentralized Identity Platform
 
 <div align="center">
 
-![Sabi Vault Banner](https://img.shields.io/badge/Sabi%20Vault-Enterprise%20Edition-059669?style=for-the-badge&logo=shield&logoColor=white)
+![SabiProfile Banner](https://img.shields.io/badge/Sabi%20Vault-Enterprise%20Edition-059669?style=for-the-badge&logo=shield&logoColor=white)
 [![License: Proprietary](https://img.shields.io/badge/License-Proprietary-0f172a?style=for-the-badge)](LICENSE)
 [![Framework: Next.js 14](https://img.shields.io/badge/Framework-Next.js%2014-black?style=for-the-badge&logo=next.js)](https://nextjs.org)
-[![Security: Enterprise Grade](https://img.shields.io/badge/Security-Enterprise%20Grade-059669?style=for-the-badge&logo=security)](https://sabivault.org)
+[![Security: Enterprise Grade](https://img.shields.io/badge/Security-Enterprise%20Grade-059669?style=for-the-badge&logo=security)](https://SabiProfile.org)
 [![Compliance: NDPC & GDPR](https://img.shields.io/badge/Compliance-NDPC%20%7C%20GDPR-blue?style=for-the-badge)](https://ndpc.gov.ng)
 
 **Developed and Maintained by Sabi AI Technologies Ltd**  
@@ -19,13 +19,13 @@
 
 ## 🌐 Overview
 
-**Sabi Vault** is a mission-critical sovereign data infrastructure, programmable credential attestation engine, and decentralized identity platform engineered to solve the multi-billion-dollar trust deficit across three foundational pillars of the global economy:
+**SabiProfile** is a mission-critical sovereign data infrastructure, programmable credential attestation engine, and decentralized identity platform engineered to solve the multi-billion-dollar trust deficit across three foundational pillars of the global economy:
 
 1. **Immigration & Border Security:** Visa verification, proof of funds attestation, and authenticated cross-border legal records without physical document handling.
 2. **Education & Academic Mobility:** Instant academic credential verification, tamper-proof transcript evaluations, and fraud-free global student screening.
 3. **Labour & Enterprise Hiring:** Real-time qualification audits, authenticated employment histories, and programmable candidate screening without resume manipulation.
 
-Traditional verification workflows rely on vulnerable physical PDFs, forged credentials, siloed government portals, and manual notarization pipelines. **Sabi Vault fundamentally re-architects this model**: physical documents remain under user sovereignty in private cloud storage, structured data resides in sovereign regional database nodes, and immutable cryptographic hashes are committed to decentralized blockchain ledgers. 
+Traditional verification workflows rely on vulnerable physical PDFs, forged credentials, siloed government portals, and manual notarization pipelines. **SabiProfile fundamentally re-architects this model**: physical documents remain under user sovereignty in private cloud storage, structured data resides in sovereign regional database nodes, and immutable cryptographic hashes are committed to decentralized blockchain ledgers. 
 
 Multi-agent AI screening pipelines evaluate cryptographically scoped API keys against enterprise criteria without ever accessing or centralizing physical documents.
 
@@ -33,13 +33,13 @@ Multi-agent AI screening pipelines evaluate cryptographically scoped API keys ag
 
 ## 🏛️ Core Architectural Invariants
 
-Every subsystem in Sabi Vault adheres strictly to four non-negotiable architectural mandates:
+Every subsystem in SabiProfile adheres strictly to four non-negotiable architectural mandates:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                        SABI VAULT INVARIANT LEDGER                          │
+│                        SabiProfile INVARIANT LEDGER                          │
 ├───────────────────────────────┬─────────────────────────────────────────────┤
-│ 1. Zero Raw Document          │ Physical documents NEVER touch Sabi Vault   │
+│ 1. Zero Raw Document          │ Physical documents NEVER touch SabiProfile   │
 │    Centralization             │ servers. Files stay in user Google Drive /  │
 │                               │ Dropbox / OneDrive via secure OAuth 2.0.    │
 ├───────────────────────────────┼─────────────────────────────────────────────┤
@@ -230,7 +230,7 @@ sequenceDiagram
 ## 📁 Project File Structure
 
 ```
-sabi-vault/
+sabiprofile/
 ├── .agents/                        # Specialized agent capabilities and skills
 ├── .windsurf/                      # IDE rules, conventions, and agent memories
 ├── public/                         # Static assets (favicons, icons, vectors)
@@ -244,7 +244,7 @@ sabi-vault/
 │   │       └── llm_gateway.ts      # Resilient Gemini / Groq router with fallback
 │   ├── app/                        # Next.js 14 App Router
 │   │   ├── (marketing)/            # Public marketing routes
-│   │   │   ├── about/              # About Sabi Vault & Corporate mission
+│   │   │   ├── about/              # About SabiProfile & Corporate mission
 │   │   │   ├── blog/               # Architectural & engineering articles
 │   │   │   ├── contact/            # Enterprise inquiry form
 │   │   │   ├── docs/               # Developer documentation & API quickstart
@@ -326,8 +326,8 @@ sabi-vault/
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/DigiBusTech/sabi-vault.git
-cd sabi-vault
+git clone https://github.com/DigiBusTech/sabiprofile.git
+cd sabiprofile
 ```
 
 ### 2. Install Dependencies
@@ -394,7 +394,7 @@ npm run build
 
 ## 🔒 Security & Compliance Suite
 
-Sabi Vault is architected from first principles to satisfy strict regulatory and security frameworks:
+SabiProfile is architected from first principles to satisfy strict regulatory and security frameworks:
 
 ### Compliance Matrix
 
@@ -406,25 +406,25 @@ Sabi Vault is architected from first principles to satisfy strict regulatory and
 | **ISO/IEC 27001 Access Control** | **Compliant** | Single-session enforcement, role preservation across silent refresh cycles, immutable audit trail. |
 
 ### Vulnerability Reporting
-For security audits, vulnerability disclosures, or penetration testing queries, contact the Sabi AI Technologies Security Response Team at: **`security@sabivault.org`**.
+For security audits, vulnerability disclosures, or penetration testing queries, contact the Sabi AI Technologies Security Response Team at: **`security@SabiProfile.org`**.
 
 ---
 
 ## 🏢 Corporate Governance & Sabi AI Technologies Ltd
 
-**Sabi Vault** is a proprietary intellectual property engineered and owned by:
+**SabiProfile** is a proprietary intellectual property engineered and owned by:
 
 **Sabi AI Technologies Ltd**  
 *Corporate Headquarters: Lagos, Nigeria*  
 *International Operations: United Kingdom & West Africa*  
-*Official Web Presence: [https://sabivault.org](https://sabivault.org)*  
-*Enterprise Inquiries: [partnerships@sabivault.org](mailto:partnerships@sabivault.org)*  
+*Official Web Presence: [https://SabiProfile.org](https://SabiProfile.org)*  
+*Enterprise Inquiries: [partnerships@SabiProfile.org](mailto:partnerships@SabiProfile.org)*  
 
 ### Intellectual Property & Copyright Notice
 ```
 Copyright © 2026 Sabi AI Technologies Ltd. All Rights Reserved.
 
-Sabi Vault, the Sabi Vault logo, Scoped Cryptographic Keys, and associated 
+SabiProfile, the SabiProfile logo, Scoped Cryptographic Keys, and associated 
 proprietary algorithms are registered trademarks or intellectual property of 
 Sabi AI Technologies Ltd. Unauthorized reproduction, distribution, reverse-engineering, 
 or decompilation of this software is strictly prohibited under international copyright laws.

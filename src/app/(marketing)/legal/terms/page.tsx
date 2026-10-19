@@ -1,16 +1,16 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Terms of Service | Sabi Vault",
-  description: "Terms governing the use of the Sabi Vault platform and developer API.",
+  title: "Terms of Service | SabiProfile",
+  description: "Terms governing the use of the SabiProfile platform and developer API.",
 };
 
 const sections = [
   {
     title: "1. The service",
     body: [
-      "Sabi Vault provides a platform for storing structured, cryptographically verified representations of personal and professional records, and for sharing controlled access to those records with third parties through scoped API keys.",
-      "Physical documents remain in the user's own cloud storage. Sabi Vault does not take custody of raw documents and is not a document archive.",
+      "SabiProfile provides a platform for storing structured, cryptographically verified representations of personal and professional records, and for sharing controlled access to those records with third parties through scoped API keys.",
+      "Physical documents remain in the user's own cloud storage. SabiProfile does not take custody of raw documents and is not a document archive.",
     ],
   },
   {
@@ -25,7 +25,7 @@ const sections = [
     title: "3. Verification tiers",
     body: [
       "Tier 1 records are hashed on sync and prove existence and integrity at a point in time. They do not prove that the underlying document is genuine.",
-      "Tier 2 records additionally carry an attestation from an accredited notary or issuing institution. Sabi Vault verifies the cryptographic seal; the legal weight of the attestation remains with the attesting party.",
+      "Tier 2 records additionally carry an attestation from an accredited notary or issuing institution. SabiProfile verifies the cryptographic seal; the legal weight of the attestation remains with the attesting party.",
     ],
   },
   {
@@ -44,7 +44,7 @@ const sections = [
   {
     title: "6. Liability and changes",
     body: [
-      "The service is provided with reasonable skill and care. To the extent permitted by law, Sabi Vault is not liable for decisions made by third parties using verification output.",
+      "The service is provided with reasonable skill and care. To the extent permitted by law, SabiProfile is not liable for decisions made by third parties using verification output.",
       "We may update these terms with notice. Continued use after the effective date constitutes acceptance.",
     ],
   },
@@ -59,7 +59,7 @@ export default function TermsPage() {
         <p className="mt-3 text-sm text-slate-500">Last updated: October 2026</p>
 
         <p className="mt-8 text-sm leading-relaxed text-slate-600">
-          These terms govern access to the Sabi Vault platform and developer API. They are a
+          These terms govern access to the SabiProfile platform and developer API. They are a
           working draft for the pre-production period and will be finalized with counsel before
           public launch.
         </p>

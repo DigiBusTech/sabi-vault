@@ -1,5 +1,5 @@
-/**
- * Sabi Vault - Google Drive OAuth Connector
+﻿/**
+ * SabiProfile - Google Drive OAuth Connector
  *
  * Implements the "Zero Raw Document Centralization" invariant:
  * - Interacts with Google Drive API v3 via OAuth 2.0 access token.
