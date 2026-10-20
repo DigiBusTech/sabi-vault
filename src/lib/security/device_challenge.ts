@@ -1,5 +1,6 @@
-import { randomBytes } from "crypto";
+import { randomBytes, randomUUID } from "crypto";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
+import { toValidUuid } from "@/lib/security/session";
 
 export interface DeviceChallenge {
   id: string;
@@ -16,7 +17,9 @@ export interface DeviceChallenge {
   expiresAt: Date;
 }
 
-const memoryChallenges = new Map<string, DeviceChallenge>();
+const memoryChallenges: Map<string, DeviceChallenge> =
+  (globalThis as any).__sabi_memory_challenges || new Map<string, DeviceChallenge>();
+(globalThis as any).__sabi_memory_challenges = memoryChallenges;
 
 function generate6DigitCode(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
@@ -37,9 +40,10 @@ export async function createDeviceChallenge(params: {
   const ttl = params.ttlMinutes || 10;
   const now = new Date();
   const expiresAt = new Date(now.getTime() + ttl * 60 * 1000);
+  const validUuid = toValidUuid(params.userId);
 
   memoryChallenges.forEach((ch) => {
-    if (ch.userId === params.userId && ch.status === "pending") {
+    if ((ch.userId === params.userId || ch.userId === validUuid) && ch.status === "pending") {
       ch.status = "expired";
     }
   });
@@ -63,21 +67,20 @@ export async function createDeviceChallenge(params: {
 
   try {
     const supabase = createAdminSupabaseClient();
-    await supabase
-      .from("device_verification_challenges")
-      .update({ status: "expired" })
-      .eq("user_uuid", params.userId)
-      .eq("status", "pending");
-
-    await supabase.from("device_verification_challenges").insert({
-      id: challengeId,
-      user_uuid: params.userId,
+    await supabase.from("security_audit_events").insert({
+      id: randomUUID(),
+      user_uuid: validUuid,
+      identifier: params.userEmail || null,
+      event_type: "DEVICE_VERIFICATION_CHALLENGE",
       device_fingerprint: params.deviceFingerprint,
-      verification_code: verificationCode,
-      ip_address: params.ipAddress,
-      user_agent: params.userAgent,
-      status: "pending",
-      expires_at: expiresAt.toISOString(),
+      ip_address: params.ipAddress || null,
+      user_agent: params.userAgent || null,
+      metadata: {
+        challengeId,
+        verificationCode,
+        status: "pending",
+        expiresAt: expiresAt.toISOString(),
+      },
       created_at: now.toISOString(),
     });
   } catch {
@@ -95,22 +98,27 @@ export async function getDeviceChallenge(challengeId: string): Promise<DeviceCha
     try {
       const supabase = createAdminSupabaseClient();
       const { data } = await supabase
-        .from("device_verification_challenges")
+        .from("security_audit_events")
         .select("*")
-        .eq("id", challengeId)
+        .eq("event_type", "DEVICE_VERIFICATION_CHALLENGE")
+        .contains("metadata", { challengeId })
+        .order("created_at", { ascending: false })
+        .limit(1)
         .maybeSingle();
 
-      if (data) {
+      if (data && data.metadata) {
+        const meta = data.metadata as any;
         challenge = {
-          id: data.id,
+          id: meta.challengeId,
           userId: data.user_uuid,
-          deviceFingerprint: data.device_fingerprint,
-          verificationCode: data.verification_code,
-          ipAddress: data.ip_address,
-          userAgent: data.user_agent,
-          status: data.status,
+          userEmail: data.identifier || undefined,
+          deviceFingerprint: data.device_fingerprint || "",
+          verificationCode: meta.verificationCode,
+          ipAddress: data.ip_address || undefined,
+          userAgent: data.user_agent || undefined,
+          status: meta.status,
           createdAt: new Date(data.created_at),
-          expiresAt: new Date(data.expires_at),
+          expiresAt: new Date(meta.expiresAt),
         };
         memoryChallenges.set(challenge.id, challenge);
       }
@@ -129,10 +137,11 @@ export async function getDeviceChallenge(challengeId: string): Promise<DeviceCha
 
 export async function getPendingChallengeForUser(userId: string): Promise<DeviceChallenge | null> {
   const now = new Date();
+  const validUuid = toValidUuid(userId);
   let found: DeviceChallenge | null = null;
 
   memoryChallenges.forEach((ch) => {
-    if (ch.userId === userId && ch.status === "pending") {
+    if ((ch.userId === userId || ch.userId === validUuid) && ch.status === "pending") {
       if (now > ch.expiresAt) {
         ch.status = "expired";
       } else {
@@ -145,28 +154,32 @@ export async function getPendingChallengeForUser(userId: string): Promise<Device
     try {
       const supabase = createAdminSupabaseClient();
       const { data } = await supabase
-        .from("device_verification_challenges")
+        .from("security_audit_events")
         .select("*")
-        .eq("user_uuid", userId)
-        .eq("status", "pending")
-        .gt("expires_at", now.toISOString())
+        .eq("user_uuid", validUuid)
+        .eq("event_type", "DEVICE_VERIFICATION_CHALLENGE")
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
 
-      if (data) {
-        found = {
-          id: data.id,
-          userId: data.user_uuid,
-          deviceFingerprint: data.device_fingerprint,
-          verificationCode: data.verification_code,
-          ipAddress: data.ip_address,
-          userAgent: data.user_agent,
-          status: data.status,
-          createdAt: new Date(data.created_at),
-          expiresAt: new Date(data.expires_at),
-        };
-        memoryChallenges.set(found.id, found);
+      if (data && data.metadata) {
+        const meta = data.metadata as any;
+        const expiresAt = new Date(meta.expiresAt);
+        if (meta.status === "pending" && now <= expiresAt) {
+          found = {
+            id: meta.challengeId,
+            userId,
+            userEmail: data.identifier || undefined,
+            deviceFingerprint: data.device_fingerprint || "",
+            verificationCode: meta.verificationCode,
+            ipAddress: data.ip_address || undefined,
+            userAgent: data.user_agent || undefined,
+            status: meta.status,
+            createdAt: new Date(data.created_at),
+            expiresAt,
+          };
+          memoryChallenges.set(found.id, found);
+        }
       }
     } catch {
       // Fall through
@@ -178,7 +191,10 @@ export async function getPendingChallengeForUser(userId: string): Promise<Device
 
 export async function approveDeviceChallenge(challengeId: string, approvedByUserId: string): Promise<boolean> {
   const challenge = await getDeviceChallenge(challengeId);
-  if (!challenge || challenge.userId !== approvedByUserId) return false;
+  if (!challenge) return false;
+  const validApprovedUuid = toValidUuid(approvedByUserId);
+  const validChallengeUuid = toValidUuid(challenge.userId);
+  if (challenge.userId !== approvedByUserId && validApprovedUuid !== validChallengeUuid) return false;
   if (challenge.status !== "pending") return false;
 
   challenge.status = "approved";
@@ -186,7 +202,15 @@ export async function approveDeviceChallenge(challengeId: string, approvedByUser
 
   try {
     const supabase = createAdminSupabaseClient();
-    await supabase.from("device_verification_challenges").update({ status: "approved" }).eq("id", challengeId);
+    await supabase.from("security_audit_events").insert({
+      id: randomUUID(),
+      user_uuid: validApprovedUuid,
+      identifier: challenge.userEmail || null,
+      event_type: "DEVICE_VERIFICATION_APPROVED",
+      device_fingerprint: challenge.deviceFingerprint,
+      metadata: { challengeId, status: "approved" },
+      created_at: new Date().toISOString(),
+    });
   } catch {
     // Non-fatal
   }
@@ -196,14 +220,25 @@ export async function approveDeviceChallenge(challengeId: string, approvedByUser
 
 export async function rejectDeviceChallenge(challengeId: string, rejectedByUserId: string): Promise<boolean> {
   const challenge = await getDeviceChallenge(challengeId);
-  if (!challenge || challenge.userId !== rejectedByUserId) return false;
+  if (!challenge) return false;
+  const validRejectedUuid = toValidUuid(rejectedByUserId);
+  const validChallengeUuid = toValidUuid(challenge.userId);
+  if (challenge.userId !== rejectedByUserId && validRejectedUuid !== validChallengeUuid) return false;
 
   challenge.status = "rejected";
   memoryChallenges.set(challengeId, challenge);
 
   try {
     const supabase = createAdminSupabaseClient();
-    await supabase.from("device_verification_challenges").update({ status: "rejected" }).eq("id", challengeId);
+    await supabase.from("security_audit_events").insert({
+      id: randomUUID(),
+      user_uuid: validRejectedUuid,
+      identifier: challenge.userEmail || null,
+      event_type: "DEVICE_VERIFICATION_REJECTED",
+      device_fingerprint: challenge.deviceFingerprint,
+      metadata: { challengeId, status: "rejected" },
+      created_at: new Date().toISOString(),
+    });
   } catch {
     // Non-fatal
   }
@@ -255,7 +290,15 @@ export async function confirmDeviceChallenge(params: {
 
   try {
     const supabase = createAdminSupabaseClient();
-    await supabase.from("device_verification_challenges").update({ status: "completed" }).eq("id", params.challengeId);
+    await supabase.from("security_audit_events").insert({
+      id: randomUUID(),
+      user_uuid: toValidUuid(challenge.userId),
+      identifier: challenge.userEmail || null,
+      event_type: "DEVICE_VERIFICATION_COMPLETED",
+      device_fingerprint: challenge.deviceFingerprint,
+      metadata: { challengeId: params.challengeId, status: "completed" },
+      created_at: new Date().toISOString(),
+    });
   } catch {
     // Non-fatal
   }

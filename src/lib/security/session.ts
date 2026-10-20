@@ -1,6 +1,19 @@
-import { createHash, createHmac, randomBytes, timingSafeEqual } from "crypto";
+import { createHash, createHmac, randomBytes, randomUUID, timingSafeEqual } from "crypto";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { UserRole } from "@/lib/auth/auth_guard";
+
+/**
+ * Ensures any identifier format (custom string or UUID) is mapped to a valid
+ * RFC4122 v4 UUID format for PostgreSQL UUID columns.
+ */
+export function toValidUuid(id: string): string {
+  if (!id) return "00000000-0000-0000-0000-000000000000";
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+    return id;
+  }
+  const hash = createHash("md5").update(id).digest("hex");
+  return `${hash.slice(0, 8)}-${hash.slice(8, 12)}-4${hash.slice(13, 16)}-a${hash.slice(17, 20)}-${hash.slice(20, 32)}`;
+}
 
 export interface UserSessionRecord {
   id: string;
@@ -82,8 +95,10 @@ export function assertSessionSecretConfigured(): void {
   }
 }
 
-// In-memory fallback session store for local development & automated test suites
-const memorySessions = new Map<string, UserSessionRecord>();
+// In-memory fallback session store persisted across Next.js worker threads and HMR reloads
+const memorySessions: Map<string, UserSessionRecord> =
+  (globalThis as any).__sabi_memory_sessions || new Map<string, UserSessionRecord>();
+(globalThis as any).__sabi_memory_sessions = memorySessions;
 const memorySecurityEvents: Array<{
   id: string;
   userUuid?: string;
@@ -180,12 +195,13 @@ export function generateDeviceId(): string {
  * Check if the user has previously logged in with this device fingerprint.
  */
 export async function isRecognizedDevice(userId: string, fingerprint: string): Promise<boolean> {
+  const validUuid = toValidUuid(userId);
   try {
     const supabase = createAdminSupabaseClient();
     const { data, error } = await supabase
       .from("user_sessions")
       .select("id")
-      .eq("user_uuid", userId)
+      .eq("user_uuid", validUuid)
       .eq("device_fingerprint", fingerprint)
       .limit(1);
 
@@ -198,7 +214,7 @@ export async function isRecognizedDevice(userId: string, fingerprint: string): P
 
   let found = false;
   memorySessions.forEach((session) => {
-    if (session.userUuid === userId && session.deviceFingerprint === fingerprint) {
+    if ((session.userUuid === userId || session.userUuid === validUuid) && session.deviceFingerprint === fingerprint) {
       found = true;
     }
   });
@@ -217,8 +233,9 @@ export async function logSecurityEvent(event: {
   userAgent?: string;
   metadata?: Record<string, unknown>;
 }): Promise<void> {
+  const validUuid = event.userUuid ? toValidUuid(event.userUuid) : undefined;
   const item = {
-    id: "sec_" + randomBytes(8).toString("hex"),
+    id: randomUUID(),
     userUuid: event.userUuid,
     identifier: event.identifier,
     eventType: event.eventType,
@@ -234,7 +251,8 @@ export async function logSecurityEvent(event: {
   try {
     const supabase = createAdminSupabaseClient();
     await supabase.from("security_audit_events").insert({
-      user_uuid: event.userUuid || null,
+      id: item.id,
+      user_uuid: validUuid || null,
       identifier: event.identifier || null,
       event_type: event.eventType,
       device_fingerprint: event.deviceFingerprint || null,
@@ -252,10 +270,11 @@ export async function logSecurityEvent(event: {
  * Deactivates all existing active sessions for the user ID.
  */
 export async function enforceSingleSession(userId: string, exceptSessionId?: string): Promise<number> {
+  const validUuid = toValidUuid(userId);
   let deactivatedCount = 0;
 
   memorySessions.forEach((session, id) => {
-    if (session.userUuid === userId && session.isActive && id !== exceptSessionId) {
+    if ((session.userUuid === userId || session.userUuid === validUuid) && session.isActive && id !== exceptSessionId) {
       session.isActive = false;
       deactivatedCount++;
     }
@@ -266,7 +285,7 @@ export async function enforceSingleSession(userId: string, exceptSessionId?: str
     let query = supabase
       .from("user_sessions")
       .update({ is_active: false })
-      .eq("user_uuid", userId)
+      .eq("user_uuid", validUuid)
       .eq("is_active", true);
 
     if (exceptSessionId) {
@@ -302,6 +321,7 @@ export async function registerUserSession(params: {
   isNewDevice: boolean;
 }> {
   const { userId, email, role, orgId, deviceFingerprint, ipAddress, userAgent } = params;
+  const validUuid = toValidUuid(userId);
 
   // 1. Detect if this is an unrecognized device
   const recognized = await isRecognizedDevice(userId, deviceFingerprint);
@@ -333,8 +353,8 @@ export async function registerUserSession(params: {
     });
   }
 
-  // 3. Create new session
-  const sessionId = "ses_" + randomBytes(16).toString("hex");
+  // 3. Create new session with RFC4122 v4 UUID
+  const sessionId = randomUUID();
   const refreshToken = generateSecureRefreshToken();
   const refreshTokenHash = computeSha256(refreshToken);
   const now = new Date();
@@ -357,11 +377,9 @@ export async function registerUserSession(params: {
 
   try {
     const supabase = createAdminSupabaseClient();
-    await supabase.from("user_sessions").insert({
+    const insertRes = await supabase.from("user_sessions").insert({
       id: sessionId,
-      user_uuid: userId,
-      role: role,          // Persisted for rotation
-      org_id: orgId || null,
+      user_uuid: validUuid,
       device_fingerprint: deviceFingerprint,
       refresh_token_hash: refreshTokenHash,
       ip_address: ipAddress || null,
@@ -370,10 +388,12 @@ export async function registerUserSession(params: {
       last_active_at: now.toISOString(),
       created_at: now.toISOString(),
     });
-  } catch {
-    // Non-fatal
+    if (insertRes.error) {
+      console.warn("[Session] DB insert warning:", insertRes.error.message);
+    }
+  } catch (err) {
+    console.warn("[Session] DB insert exception:", err);
   }
-
 
   // 4. Mint access token
   const accessToken = createAccessToken({
@@ -591,42 +611,45 @@ export async function getActiveSession(sessionId: string): Promise<UserSessionRe
  */
 export async function getActiveSessionForUser(userId: string): Promise<UserSessionRecord | null> {
   if (!userId) return null;
+  const validUuid = toValidUuid(userId);
 
   let activeSessionForUser: UserSessionRecord | null = null;
   memorySessions.forEach((s) => {
-    if (s.userUuid === userId && s.isActive) activeSessionForUser = s;
+    if ((s.userUuid === userId || s.userUuid === validUuid) && s.isActive) {
+      activeSessionForUser = s;
+    }
   });
 
-  if (!activeSessionForUser) {
-    try {
-      const supabase = createAdminSupabaseClient();
-      const { data } = await supabase
-        .from("user_sessions")
-        .select("*")
-        .eq("user_uuid", userId)
-        .eq("is_active", true)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+  try {
+    const supabase = createAdminSupabaseClient();
+    const { data, error } = await supabase
+      .from("user_sessions")
+      .select("*")
+      .eq("user_uuid", validUuid)
+      .eq("is_active", true)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
-      if (data) {
-        activeSessionForUser = {
-          id: data.id,
-          userUuid: data.user_uuid,
-          role: data.role as import("@/lib/auth/auth_guard").UserRole,
-          orgId: data.org_id || undefined,
-          deviceFingerprint: data.device_fingerprint,
-          refreshTokenHash: data.refresh_token_hash,
-          ipAddress: data.ip_address,
-          userAgent: data.user_agent,
-          isActive: data.is_active,
-          lastActiveAt: new Date(data.last_active_at),
-          createdAt: new Date(data.created_at),
-        };
-      }
-    } catch {
-      // Fall through
+    if (!error && data) {
+      const dbSession: UserSessionRecord = {
+        id: data.id,
+        userUuid: userId,
+        role: (data.role || "citizen") as import("@/lib/auth/auth_guard").UserRole,
+        orgId: data.org_id || undefined,
+        deviceFingerprint: data.device_fingerprint,
+        refreshTokenHash: data.refresh_token_hash,
+        ipAddress: data.ip_address,
+        userAgent: data.user_agent,
+        isActive: data.is_active,
+        lastActiveAt: new Date(data.last_active_at),
+        createdAt: new Date(data.created_at),
+      };
+      memorySessions.set(dbSession.id, dbSession);
+      return dbSession;
     }
+  } catch {
+    // Fall through
   }
 
   return activeSessionForUser;
@@ -673,7 +696,7 @@ export async function validateActiveUserSession(
           specificSession = {
             id: data.id,
             userUuid: data.user_uuid,
-            role: data.role as import("@/lib/auth/auth_guard").UserRole,
+            role: (data.role || "citizen") as import("@/lib/auth/auth_guard").UserRole,
             orgId: data.org_id || undefined,
             deviceFingerprint: data.device_fingerprint,
             refreshTokenHash: data.refresh_token_hash,
@@ -683,6 +706,7 @@ export async function validateActiveUserSession(
             lastActiveAt: new Date(data.last_active_at),
             createdAt: new Date(data.created_at),
           };
+          memorySessions.set(specificSession.id, specificSession);
         }
       } catch {
         // Fall through

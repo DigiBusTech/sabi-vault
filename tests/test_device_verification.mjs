@@ -111,6 +111,40 @@ async function runTests() {
   assert.strictEqual(validateAAfterHandover.isTerminated, true);
   console.log("  ✓ Device B successfully authorized, registered, and transitioned.");
 
+  // --- Test 6: 3-Browser Concurrency Prevention Test ---
+  console.log("\n[Test 6] 3-Browser Simultaneous Attempt Simulation...");
+  const fpBrowser1 = "fp_chrome_b1_" + randomBytes(4).toString("hex");
+  const fpBrowser2 = "fp_firefox_b2_" + randomBytes(4).toString("hex");
+  const fpBrowser3 = "fp_edge_b3_" + randomBytes(4).toString("hex");
+
+  // Browser 1 logs in
+  const sess1 = await registerUserSession({
+    userId: testUserId,
+    email: testEmail,
+    role: "citizen",
+    deviceFingerprint: fpBrowser1,
+  });
+
+  // Browser 2 attempts login -> must see active session and get challenged
+  const activeForB2 = await getActiveSessionForUser(testUserId);
+  assert(activeForB2, "Active session must exist");
+  assert.strictEqual(activeForB2.deviceFingerprint, fpBrowser1);
+  const isB2Different = activeForB2.deviceFingerprint !== fpBrowser2;
+  assert.strictEqual(isB2Different, true, "Browser 2 must be detected as different device");
+
+  // Browser 3 attempts login -> must also see active session and get challenged
+  const activeForB3 = await getActiveSessionForUser(testUserId);
+  assert(activeForB3, "Active session must exist");
+  assert.strictEqual(activeForB3.deviceFingerprint, fpBrowser1);
+  const isB3Different = activeForB3.deviceFingerprint !== fpBrowser3;
+  assert.strictEqual(isB3Different, true, "Browser 3 must be detected as different device");
+
+  // Verify Browser 1 is still active
+  const checkB1 = await validateActiveUserSession(testUserId, sess1.refreshToken);
+  assert.strictEqual(checkB1.isValid, true);
+  assert.strictEqual(checkB1.isTerminated, false);
+  console.log("  ✓ 3-Browser simultaneous bypass prevented: Browser 2 and Browser 3 are challenged; Browser 1 remains active.");
+
   console.log("\n=======================================================");
   console.log("ALL MULTI-DEVICE VERIFICATION TESTS PASSED (100%)");
   console.log("=======================================================\n");

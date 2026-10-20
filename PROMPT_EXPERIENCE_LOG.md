@@ -1594,3 +1594,28 @@
 
   - `node tests/test_full_suite.mjs`: 100% Passed (all 6 core and expansion suites passed).
 
+
+
+### Entry #047: Resolution of Multi-Browser Concurrent Session Persistence & Cross-Process Synchronization
+- **Date & Timestamp:** 2026-10-20 23:20:00 (UTC)
+- **User Prompt / Intent:**
+  > "there is a problem i used different browers to login to 1 account and the 3 worked with secuirty again. why?"
+- **Root Cause Analysis:**
+  1. **UUID Constraint Violation on `user_sessions.id`:** In `session.ts`, `sessionId` was generated as `"ses_" + randomBytes(16).toString("hex")`. The remote Supabase table `user_sessions` defines `id UUID PRIMARY KEY`. PostgreSQL rejected every session insert with error `code: '22P02', message: 'invalid input syntax for type uuid: "ses_..."'`.
+  2. **Schema Column Mismatch (`role`, `org_id`):** `registerUserSession` attempted to insert `role` and `org_id` columns, which were missing in the remote `user_sessions` schema, causing the insert query to return `PGRST204: Could not find column in schema cache`.
+  3. **Module-Scoped In-Memory Loss:** In Next.js dev server, `memorySessions` and `memoryChallenges` were module-level `Map` instances. Different browser requests handled by separate worker threads or triggered after Fast Refresh did not share state.
+  4. **Missing Remote Challenges Table:** `device_verification_challenges` table had not been applied to the remote schema cache.
+  5. **Resulting Symptom:** Because session records were never written to Supabase and in-memory caches were isolated across workers, `getActiveSessionForUser()` returned `null`. The server presumed no session existed, allowing Browsers 2 and 3 to log in without triggering the multi-device verification challenge, leaving all 3 browsers active.
+- **Architectural Fixes Applied:**
+  1. **RFC4122 v4 UUID Generation:** Replaced custom string session IDs with `randomUUID()`, guaranteeing full compatibility with PostgreSQL `UUID` primary keys.
+  2. **Deterministic UUID Adapter (`toValidUuid`):** Added a helper mapping any custom user identifier format into an RFC4122 v4 UUID for database foreign key constraints.
+  3. **`globalThis` Process-Wide Persistence:** Attached `__sabi_memory_sessions` and `__sabi_memory_challenges` to `globalThis`, ensuring state persists across Next.js worker threads and HMR reloads.
+  4. **Strict Schema Payload Alignment:** Normalized `user_sessions` inserts to only include confirmed schema columns (`id`, `user_uuid`, `device_fingerprint`, `refresh_token_hash`, `ip_address`, `user_agent`, `is_active`, `last_active_at`, `created_at`).
+  5. **Database-Backed Challenges via `security_audit_events`:** Backed `device_challenge.ts` with `security_audit_events` (`event_type: 'DEVICE_VERIFICATION_CHALLENGE'`), ensuring verification challenges and PIN codes persist reliably in the cloud database.
+  6. **Automated 3-Browser Concurrency Suite:** Added Test 6 to `tests/test_device_verification.mjs`, verifying that when Browser 1 is active, simultaneous login attempts by Browser 2 and Browser 3 are properly detected as different devices and challenged.
+- **Validation:**
+  - `npx tsx --env-file=.env.local tests/test_device_verification.mjs`: 100% Passed (all 6 tests passed against live Supabase).
+  - `node tests/test_enterprise_security.mjs`: 100% Passed.
+  - `node tests/test_signup_security.mjs`: 100% Passed.
+  - `node tests/test_full_suite.mjs`: 100% Passed.
+  - `npm run build`: 54/54 routes compiled with 0 errors.
