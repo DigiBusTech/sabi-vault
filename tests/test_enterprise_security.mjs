@@ -119,6 +119,10 @@ assert.strictEqual(refreshSession(tokenB).success, true, "Browser B session must
 
 // Verify Browser A session was TERMINATED by Single-Session Enforcement
 const refreshAAfterB = refreshSession(tokenA2);
+assert.strictEqual(refreshAAfterB.success, false, "Browser A session must be revoked");
+assert.strictEqual(refreshAAfterB.code, "SESSION_TERMINATED_CONCURRENT", "Code must be SESSION_TERMINATED_CONCURRENT");
+console.log("  ✓ Single-session enforcement (1 device/browser) and device recognition verified!");
+
 // --- 3. DUAL-TOKEN ARCHITECTURE & ACCESS TOKEN CRYPTOGRAPHY ---
 console.log("\n[Group 3] Testing Dual-Token HMAC-SHA256 Cryptographic Architecture...");
 

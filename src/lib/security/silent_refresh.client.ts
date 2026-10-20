@@ -55,6 +55,9 @@ export async function silentRefreshToken(): Promise<string | null> {
         if (errorData.code === "SESSION_TERMINATED_CONCURRENT") {
           // Alert user that another device logged in
           console.warn("[Auth] Session terminated: logged in from another device.");
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(new CustomEvent("sabi:session-terminated"));
+          }
         } else if (errorData.code === "SESSION_ABSOLUTE_EXPIRY") {
           // GAP-8: Session exceeded 30-day absolute lifetime — force re-authentication
           console.warn("[Auth] Session expired: absolute lifetime exceeded (30 days). Re-authentication required.");

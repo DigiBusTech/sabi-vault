@@ -1,5 +1,5 @@
 -- ====================================================================
--- SABI VAULT: ENTERPRISE-GRADE SECURITY SUITE MIGRATION
+-- SABIPROFILE: ENTERPRISE-GRADE SECURITY SUITE MIGRATION
 -- Single-Session Enforcement, Device Fingerprinting, Progressive Lockout,
 -- and Security Audit Logging
 -- ====================================================================

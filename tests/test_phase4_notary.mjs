@@ -9,7 +9,7 @@ function computeSha256(data) {
 
 async function runPhase4Tests() {
   console.log("=================================================");
-  console.log("   SABI VAULT: PHASE 4 NOTARY & PITCH VALIDATION ");
+  console.log("   SABIPROFILE: PHASE 4 NOTARY & PITCH VALIDATION");
   console.log("=================================================\n");
 
   // TEST 1: Tier 2 Legalization Flow

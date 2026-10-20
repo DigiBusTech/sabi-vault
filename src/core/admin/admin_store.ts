@@ -113,6 +113,32 @@ class AdminMasterStore {
     this.users.set(userId, user);
     return user;
   }
+  registerUser(userData: {
+    id: string;
+    email: string;
+    name: string;
+    role?: string;
+    sovereignNode?: string;
+    status?: string;
+    createdAt?: string;
+  }): ManagedUser {
+    const newUser: ManagedUser = {
+      id: userData.id,
+      name: userData.name || userData.email.split("@")[0],
+      email: userData.email,
+      residenceCountry: "NG",
+      sovereignNode: userData.sovereignNode || "ng-west-africa",
+      complianceFramework: "NDPC",
+      status: (userData.status?.toUpperCase() as ManagedUser["status"]) || "ACTIVE",
+      totalSyncedCategories: 0,
+      totalActiveKeys: 0,
+      createdAt: userData.createdAt || new Date().toISOString(),
+    };
+    this.users.set(userData.id, newUser);
+    this.telemetry.totalUsersCount = this.users.size;
+    return newUser;
+  }
+
 
   // --- ORGANIZATION & GOVT CRUD ---
   getAllOrganizations(): ManagedOrganization[] {

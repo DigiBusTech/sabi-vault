@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
@@ -19,8 +19,11 @@ import {
   ShieldCheck,
   Users,
   Settings2,
+  AlertTriangle,
+  Lock,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { logoutAndResetSession } from "@/lib/security/silent_refresh.client";
 
 export interface ShellNavItem {
   id: string;
@@ -69,6 +72,55 @@ export function DashboardShell({ role, email, orgName, navItems, children }: Das
   const router = useRouter();
   const [activeId, setActiveId] = useState<string>(navItems[0]?.id ?? "overview");
   const [mobileOpen, setMobileOpen] = useState<boolean>(false);
+  const [sessionTerminated, setSessionTerminated] = useState<boolean>(false);
+
+  // Single-Session Enforcement Heartbeat:
+  // Continuously monitors active session status across devices/browsers
+  useEffect(() => {
+    let isCancelled = false;
+
+    const checkSession = async () => {
+      try {
+        const res = await fetch("/api/auth/session", { credentials: "include" });
+        if (res.status === 401) {
+          const data = await res.json().catch(() => ({}));
+          if (data.terminated || data.code === "SESSION_TERMINATED_CONCURRENT") {
+            if (!isCancelled) {
+              setSessionTerminated(true);
+            }
+          }
+        }
+      } catch {
+        // Network flicker, ignore
+      }
+    };
+
+    // Immediate check on mount
+    checkSession();
+
+    // Check periodically (every 8 seconds)
+    const interval = setInterval(checkSession, 8000);
+
+    // Also check immediately when window gains focus or tab becomes visible
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        checkSession();
+      }
+    };
+    window.addEventListener("visibilitychange", onVisibilityChange);
+    window.addEventListener("focus", checkSession);
+    const onSessionTerminatedEvent = () => setSessionTerminated(true);
+    window.addEventListener("sabi:session-terminated", onSessionTerminatedEvent);
+
+
+    return () => {
+      isCancelled = true;
+      clearInterval(interval);
+      window.removeEventListener("visibilitychange", onVisibilityChange);
+      window.removeEventListener("focus", checkSession);
+      window.removeEventListener("sabi:session-terminated", onSessionTerminatedEvent);
+    };
+  }, []);
 
   // Scroll-spy via IntersectionObserver (no scroll listeners).
   useEffect(() => {
@@ -90,10 +142,11 @@ export function DashboardShell({ role, email, orgName, navItems, children }: Das
   }, [navItems]);
 
   const signOut = async () => {
-    const { error } = await createClient().auth.signOut();
-    if (error) {
-      console.error("[Auth] Sign out failed.", error);
-      return;
+    try {
+      await logoutAndResetSession();
+      await createClient().auth.signOut();
+    } catch (e) {
+      console.error("[Auth] Sign out error", e);
     }
     router.replace("/login");
     router.refresh();
@@ -260,6 +313,53 @@ export function DashboardShell({ role, email, orgName, navItems, children }: Das
       <main className="relative z-10 lg:pl-[260px]">
         <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</div>
       </main>
+      {/* Unclosable Security Lockout Overlay for Concurrent Login */}
+      {sessionTerminated && (
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-950/85 backdrop-blur-md p-4 animate-fadeIn">
+          <div className="max-w-md w-full rounded-3xl border border-rose-500/40 bg-white p-7 text-slate-900 shadow-2xl text-center space-y-4">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-rose-100 text-rose-600 ring-4 ring-rose-50">
+              <AlertTriangle size={28} />
+            </div>
+            <div>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-100 px-3 py-1 text-[11px] font-bold text-rose-800">
+                <Lock size={12} />
+                Single-Session Security Policy
+              </span>
+              <h3 className="mt-2 font-poppins text-xl font-extrabold text-slate-900">
+                Session Terminated
+              </h3>
+              <p className="mt-2 text-xs leading-relaxed text-slate-600">
+                Another browser or device has logged into this account. SabiProfile enforces strict sovereign single-session compliance (1 active device per user). Access on this device has been revoked.
+              </p>
+            </div>
+            <div className="rounded-2xl bg-slate-50 p-3.5 text-left text-[11px] space-y-1.5 text-slate-500 border border-slate-200/70">
+              <div className="flex justify-between">
+                <span>Security Protocol:</span>
+                <strong className="text-slate-800">1 Device / Single-Session</strong>
+              </div>
+              <div className="flex justify-between">
+                <span>Timestamp:</span>
+                <strong className="text-slate-800">{new Date().toLocaleTimeString()}</strong>
+              </div>
+              <div className="flex justify-between">
+                <span>Enforcement:</span>
+                <strong className="text-rose-600">FAIL-CLOSED (Locked)</strong>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={async () => {
+                await logoutAndResetSession();
+                window.location.href = "/login?terminated=concurrent";
+              }}
+              className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 py-3 text-xs font-bold text-white hover:bg-rose-700 transition-colors shadow-md cursor-pointer"
+            >
+              <span>Sign In Again on This Device</span>
+            </button>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

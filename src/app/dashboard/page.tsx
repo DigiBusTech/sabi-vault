@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Building2 } from "lucide-react";
+import { cookies } from "next/headers";
+import { REFRESH_COOKIE_NAME, validateActiveUserSession } from "@/lib/security/session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { UserRole } from "@/lib/auth/auth_guard";
 import { globalAdminStore } from "@/core/admin/admin_store";
@@ -68,6 +70,14 @@ export default async function DashboardPage() {
     error,
   } = await supabase.auth.getUser();
   if (error || !user) redirect("/login");
+  // Single-Session Enforcement (Strict 1 device/browser policy)
+  const cookieStore = cookies();
+  const refreshCookie = cookieStore.get(REFRESH_COOKIE_NAME)?.value;
+  const sessionCheck = await validateActiveUserSession(user.id, refreshCookie);
+  if (sessionCheck.isTerminated) {
+    redirect("/login?terminated=concurrent");
+  }
+
 
   const claimedRole = user.app_metadata?.role;
   const role = roles.includes(claimedRole as UserRole) ? (claimedRole as UserRole) : "citizen";

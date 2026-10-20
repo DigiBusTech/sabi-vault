@@ -30,7 +30,7 @@ export function MobileAppCard() {
               </h2>
 
               <p className="mt-4 text-sm md:text-base leading-relaxed text-slate-600 max-w-xl">
-                The Sabi Mobile Vault brings biometric FaceID encryption, instant NFC tap-to-verify, and offline QR-scoped consent keys to iOS and Android devices.
+                The SabiProfile Mobile App brings biometric FaceID encryption, instant NFC tap-to-verify, and offline QR-scoped consent keys to iOS and Android devices.
               </p>
 
               <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-slate-700">

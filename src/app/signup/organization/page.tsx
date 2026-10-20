@@ -1,6 +1,6 @@
-﻿"use client";
+"use client";
 
-import { FormEvent, Suspense, useEffect, useState } from "react";
+import { FormEvent, Suspense, useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -11,9 +11,11 @@ import {
   Loader2,
   Mail,
   ShieldCheck,
+  X,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { PasswordInput } from "@/components/auth/PasswordInput";
+import { evaluatePasswordComplexity } from "@/lib/security/password";
 
 const inputClasses =
   "mt-1.5 w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition-colors focus:border-brand-green focus:ring-2 focus:ring-brand-green/15";
@@ -55,6 +57,9 @@ function OrganizationSignupForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [registeredOrg, setRegisteredOrg] = useState<RegisteredOrg | null>(null);
   const [copied, setCopied] = useState(false);
+  const passwordComplexity = useMemo(() => evaluatePasswordComplexity(password), [password]);
+  const passwordsMatch = useMemo(() => password.length > 0 && password === confirmPassword, [password, confirmPassword]);
+
 
   useEffect(() => {
     let cancelled = false;
@@ -92,9 +97,16 @@ function OrganizationSignupForm() {
     setError("");
     setNotice("");
 
-    if (phase === "account" && password !== confirmPassword) {
-      setError("Passwords do not match.");
-      return;
+    if (phase === "account") {
+      const passwordCheck = evaluatePasswordComplexity(password);
+      if (!passwordCheck.isValid) {
+        setError(passwordCheck.errors[0]);
+        return;
+      }
+      if (password !== confirmPassword) {
+        setError("Passwords do not match.");
+        return;
+      }
     }
 
     setIsSubmitting(true);
@@ -271,6 +283,42 @@ function OrganizationSignupForm() {
               autoComplete="new-password"
               placeholder="At least 8 characters"
             />
+            {/* Live Password Complexity Checklist */}
+            <div className="mt-2.5 rounded-2xl border border-slate-200/90 bg-slate-50/90 p-3 text-xs space-y-1.5 transition-all">
+              <div className="flex items-center justify-between font-semibold text-slate-700 pb-1 border-b border-slate-200/60">
+                <span className="flex items-center gap-1.5">
+                  <ShieldCheck size={14} className="text-brand-green" />
+                  <span>Password Security Requirements</span>
+                </span>
+                <span className={`text-[11px] font-bold ${passwordComplexity.isValid ? "text-emerald-700" : "text-slate-400"}`}>
+                  {passwordComplexity.isValid ? "All Criteria Satisfied" : "Complexity Required"}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-1">
+                <div className={`flex items-center gap-1.5 ${passwordComplexity.criteria.hasMinLength ? "text-emerald-700 font-semibold" : "text-slate-500"}`}>
+                  {passwordComplexity.criteria.hasMinLength ? <Check size={13} className="text-emerald-600 shrink-0" /> : <div className="h-2 w-2 rounded-full bg-slate-300 shrink-0 ml-0.5 mr-1" />}
+                  <span>At least 8 characters</span>
+                </div>
+                <div className={`flex items-center gap-1.5 ${passwordComplexity.criteria.hasUppercase ? "text-emerald-700 font-semibold" : "text-slate-500"}`}>
+                  {passwordComplexity.criteria.hasUppercase ? <Check size={13} className="text-emerald-600 shrink-0" /> : <div className="h-2 w-2 rounded-full bg-slate-300 shrink-0 ml-0.5 mr-1" />}
+                  <span>Uppercase letter (A-Z)</span>
+                </div>
+                <div className={`flex items-center gap-1.5 ${passwordComplexity.criteria.hasLowercase ? "text-emerald-700 font-semibold" : "text-slate-500"}`}>
+                  {passwordComplexity.criteria.hasLowercase ? <Check size={13} className="text-emerald-600 shrink-0" /> : <div className="h-2 w-2 rounded-full bg-slate-300 shrink-0 ml-0.5 mr-1" />}
+                  <span>Lowercase letter (a-z)</span>
+                </div>
+                <div className={`flex items-center gap-1.5 ${passwordComplexity.criteria.hasNumber ? "text-emerald-700 font-semibold" : "text-slate-500"}`}>
+                  {passwordComplexity.criteria.hasNumber ? <Check size={13} className="text-emerald-600 shrink-0" /> : <div className="h-2 w-2 rounded-full bg-slate-300 shrink-0 ml-0.5 mr-1" />}
+                  <span>At least one number (0-9)</span>
+                </div>
+                <div className={`flex items-center gap-1.5 sm:col-span-2 ${passwordComplexity.criteria.hasSpecial ? "text-emerald-700 font-semibold" : "text-slate-500"}`}>
+                  {passwordComplexity.criteria.hasSpecial ? <Check size={13} className="text-emerald-600 shrink-0" /> : <div className="h-2 w-2 rounded-full bg-slate-300 shrink-0 ml-0.5 mr-1" />}
+                  <span>Special character (!@#$%^&* etc.)</span>
+                </div>
+              </div>
+            </div>
+
             <PasswordInput
               label="Confirm password"
               value={confirmPassword}
@@ -278,6 +326,22 @@ function OrganizationSignupForm() {
               autoComplete="new-password"
               placeholder="Repeat your password"
             />
+            {confirmPassword.length > 0 && (
+              <div className="mt-1.5 flex items-center gap-1.5 text-xs">
+                {passwordsMatch ? (
+                  <span className="flex items-center gap-1 text-emerald-700 font-semibold">
+                    <Check size={13} />
+                    <span>Passwords match</span>
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1 text-rose-600 font-medium">
+                    <X size={13} />
+                    <span>Passwords do not match</span>
+                  </span>
+                )}
+              </div>
+            )}
+
           </>
         )}
 

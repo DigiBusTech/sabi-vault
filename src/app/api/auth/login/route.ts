@@ -1,4 +1,4 @@
-﻿import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import {
   checkLockout,
   recordFailedAttempt,
@@ -161,7 +161,7 @@ export async function POST(req: NextRequest) {
 
       return NextResponse.json(
         {
-          error: "Invalid email or password.",
+          error: "Invalid email or password. If you don't have a vault account yet, please switch to 'Create one now'.",
           failedAttempts: attemptResult.failedAttempts,
           attemptsRemainingBeforeLockout: Math.max(0, 3 - (attemptResult.failedAttempts % 3 || 3)),
         },

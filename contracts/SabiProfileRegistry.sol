@@ -2,11 +2,11 @@
 pragma solidity ^0.8.20;
 
 /**
- * @title SabiVaultRegistry
- * @dev Sovereign On-Chain Cryptographic Registry for Sabi Vault.
+ * @title SabiProfileRegistry
+ * @dev Sovereign On-Chain Cryptographic Registry for SabiProfile.
  * Provides immutable proof of document existence and notary attestations on EVM L2s.
  */
-contract SabiVaultRegistry {
+contract SabiProfileRegistry {
     enum VerificationTier {
         NONE,
         TIER_1_STANDARD_HASHED,

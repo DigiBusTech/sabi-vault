@@ -1,5 +1,5 @@
 -- ====================================================================
--- SABI VAULT: SOVEREIGN DATABASE NODES & PARTITIONING SCHEMA
+-- SABIPROFILE: SOVEREIGN DATABASE NODES & PARTITIONING SCHEMA
 -- Compliant with NDPC (Nigeria) & GDPR (European Union)
 -- ====================================================================
 

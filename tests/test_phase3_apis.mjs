@@ -2,7 +2,7 @@ import { createHash, createHmac } from "crypto";
 
 // --- REPLICATED APIS SIMULATION FOR PHASE 3 TEST SUITE ---
 
-const TEST_SECRET = "sabi_vault_dev_insecure_secret_key_32bytes_min!";
+const TEST_SECRET = "sabi_profile_dev_insecure_secret_key_32bytes_min!";
 
 function computeSha256(data) {
   const hasher = createHash("sha256");
@@ -83,7 +83,7 @@ function handleNotaryAttest(body) {
 
 async function runPhase3Tests() {
   console.log("=================================================");
-  console.log("   SABI VAULT: PHASE 3 MULTI-AGENT & API SUITE   ");
+  console.log("   SABIPROFILE: PHASE 3 MULTI-AGENT & API SUITE  ");
   console.log("=================================================\n");
 
   // TEST 1: Ephemeral Document Sync Endpoint Simulation

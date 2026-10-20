@@ -1,9 +1,14 @@
-﻿import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { globalAdminStore } from "@/core/admin/admin_store";
 import { findOrganizationByApiKey } from "@/core/enterprise/org_repository";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getConfigValue, primeConfigCache } from "@/core/config/platform_config";
-import { verifyAccessToken } from "@/lib/security/session";
+import {
+  verifyAccessToken,
+  REFRESH_COOKIE_NAME,
+  validateActiveUserSession,
+  getActiveSession,
+} from "@/lib/security/session";
 
 export type UserRole = "citizen" | "enterprise_admin" | "notary" | "govt_auditor" | "super_admin";
 
@@ -22,7 +27,7 @@ export interface AuthCheckResult {
   status: number;
 }
 
-const INSECURE_DEFAULT_SECRET = "sabi_vault_super_admin_master_aes_256_key_32b!";
+const INSECURE_DEFAULT_SECRET = "sabi_profile_super_admin_master_aes_256_key_32b!";
 const USER_ROLES: UserRole[] = ["citizen", "enterprise_admin", "notary", "govt_auditor", "super_admin"];
 
 function mapSupabaseUser(user: {
@@ -160,6 +165,14 @@ export async function authenticateUser(req: NextRequest): Promise<AuthCheckResul
     // Check Sabi Cryptographic Access Token first
     const sabiTokenCheck = verifyAccessToken(token);
     if (sabiTokenCheck.isValid && sabiTokenCheck.payload) {
+      const activeCheck = await getActiveSession(sabiTokenCheck.payload.sessionId);
+      if (!activeCheck || !activeCheck.isActive) {
+        return {
+          isAuthenticated: false,
+          status: 401,
+          error: "SESSION_TERMINATED_CONCURRENT: Session terminated by login on another device.",
+        };
+      }
       return {
         isAuthenticated: true,
         status: 200,
@@ -184,6 +197,17 @@ export async function authenticateUser(req: NextRequest): Promise<AuthCheckResul
             error: "Account Frozen: This account has been temporarily restricted by sovereign compliance.",
           };
         }
+
+        const refreshCookie = req.cookies.get(REFRESH_COOKIE_NAME)?.value;
+        const sessionCheck = await validateActiveUserSession(user.id, refreshCookie);
+        if (sessionCheck.isTerminated) {
+          return {
+            isAuthenticated: false,
+            status: 401,
+            error: "SESSION_TERMINATED_CONCURRENT: Session terminated by login on another device.",
+          };
+        }
+
         return {
           isAuthenticated: true,
           status: 200,
@@ -207,6 +231,17 @@ export async function authenticateUser(req: NextRequest): Promise<AuthCheckResul
           error: "Account Frozen: This account has been temporarily restricted by sovereign compliance.",
         };
       }
+
+      const refreshCookie = req.cookies.get(REFRESH_COOKIE_NAME)?.value;
+      const sessionCheck = await validateActiveUserSession(user.id, refreshCookie);
+      if (sessionCheck.isTerminated) {
+        return {
+          isAuthenticated: false,
+          status: 401,
+          error: "SESSION_TERMINATED_CONCURRENT: Session terminated by login on another device.",
+        };
+      }
+
       return {
         isAuthenticated: true,
         status: 200,

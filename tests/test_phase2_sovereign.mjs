@@ -68,7 +68,7 @@ function calculateRevenueSplit(totalFeeWei) {
 // RUN TEST SUITE
 async function runPhase2Tests() {
   console.log("=================================================");
-  console.log("   SABI VAULT: PHASE 2 SOVEREIGN INFRASTRUCTURE  ");
+  console.log("   SABIPROFILE: PHASE 2 SOVEREIGN INFRASTRUCTURE ");
   console.log("=================================================\n");
 
   // TEST 1: Ephemeral Parser Zero-Raw Invariant

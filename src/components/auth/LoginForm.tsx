@@ -1,12 +1,24 @@
 "use client";
 
-import { FormEvent, useEffect, useRef, useState } from "react";
+import { FormEvent, useEffect, useRef, useState, useMemo } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { AlertCircle, AlertTriangle, CheckCircle2, Loader2, Lock, ShieldCheck, Smartphone } from "lucide-react";
+import {
+  AlertCircle,
+  AlertTriangle,
+  CheckCircle2,
+  Check,
+  Loader2,
+  Lock,
+  ShieldCheck,
+  Smartphone,
+  X,
+  Sparkles,
+} from "lucide-react";
 import { PasswordInput } from "@/components/auth/PasswordInput";
 import { getDeviceFingerprint } from "@/lib/security/fingerprint.client";
 import { setStoredAccessToken } from "@/lib/security/silent_refresh.client";
+import { evaluatePasswordComplexity, PasswordValidationResult } from "@/lib/security/password";
 
 const inputClasses =
   "mt-1.5 w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition-colors focus:border-brand-green focus:ring-2 focus:ring-brand-green/15 disabled:bg-slate-50 disabled:text-slate-400";
@@ -25,12 +37,22 @@ export function LoginForm() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [honeypot, setHoneypot] = useState(""); // Invisible bot trap
 
-  const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
+  const [error, setError] = useState(
+    searchParams.get("error") === "confirmation_failed"
+      ? "Email confirmation link was invalid or has expired. Please try signing in or requesting a new confirmation link."
+      : ""
+  );
+  const [notice, setNotice] = useState(
+    searchParams.get("notice") === "password_reset_success"
+      ? "Password updated successfully. Please sign in with your new password."
+      : searchParams.get("notice") === "email_verified"
+      ? "Email confirmed successfully. Please sign in to access your sovereign vault."
+      : ""
+  );
   const [securityAlert, setSecurityAlert] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Progressive lockout countdown state
+  // Progressive lockout countdown state (strictly for sign-in mode)
   const [lockoutRemaining, setLockoutRemaining] = useState<number | null>(null);
   const [isPermanentLock, setIsPermanentLock] = useState(false);
 
@@ -41,8 +63,18 @@ export function LoginForm() {
 
   // Focus tracking for Granular Browser Autofill Control
   const [emailFocused, setEmailFocused] = useState(false);
+  const [passwordFocused, setPasswordFocused] = useState(false);
 
-  // Live timer for progressive lockout
+  // Live Password Complexity Evaluation
+  const passwordComplexity: PasswordValidationResult = useMemo(() => {
+    return evaluatePasswordComplexity(password);
+  }, [password]);
+
+  const passwordsMatch = useMemo(() => {
+    return password.length > 0 && password === confirmPassword;
+  }, [password, confirmPassword]);
+
+  // Live timer for progressive lockout (sign-in only)
   useEffect(() => {
     if (lockoutRemaining === null || lockoutRemaining <= 0) return;
     const timer = setInterval(() => {
@@ -71,26 +103,42 @@ export function LoginForm() {
     setNotice("");
     setSecurityAlert(null);
     setConfirmPassword("");
+    // If user is switching to signup, clear any sign-in lockout state
+    if (next === "signup") {
+      setLockoutRemaining(null);
+      setIsPermanentLock(false);
+    }
   };
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError("");
     setNotice("");
     setSecurityAlert(null);
 
-    // Stop premature submission if locked
-    if (lockoutRemaining && lockoutRemaining > 0) {
-      setError(`Account temporarily locked. Please wait ${lockoutRemaining} seconds.`);
-      return;
-    }
-    if (isPermanentLock) {
-      setError("Account permanently locked due to excessive failed attempts. Please contact support.");
-      return;
+    // Stop premature submission if locked (applies strictly to signin)
+    if (mode === "signin") {
+      if (lockoutRemaining && lockoutRemaining > 0) {
+        setError(`Account temporarily locked. Please wait ${lockoutRemaining} seconds.`);
+        return;
+      }
+      if (isPermanentLock) {
+        setError("Account permanently locked due to excessive failed attempts. Please contact support.");
+        return;
+      }
     }
 
-    if (mode === "signup" && password !== confirmPassword) {
-      setError("Passwords do not match.");
-      return;
+    // Strict validation for Signup Mode
+    if (mode === "signup") {
+      if (!passwordComplexity.isValid) {
+        setError(passwordComplexity.errors[0] || "Password does not meet complexity requirements.");
+        return;
+      }
+
+      if (password !== confirmPassword) {
+        setError("Passwords do not match.");
+        return;
+      }
     }
 
     setIsSubmitting(true);
@@ -100,8 +148,11 @@ export function LoginForm() {
       // 1. Gather device fingerprint
       const { fingerprintHash } = await getDeviceFingerprint();
 
-      // 2. Execute secure authentication
-      const response = await fetch("/api/auth/login", {
+      // 2. Select appropriate endpoint
+      const targetEndpoint = mode === "signup" ? "/api/auth/signup" : "/api/auth/login";
+
+      // 3. Execute secure request
+      const response = await fetch(targetEndpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -118,7 +169,7 @@ export function LoginForm() {
       const data = await response.json();
 
       if (!response.ok) {
-        if (response.status === 423) {
+        if (response.status === 423 && mode === "signin") {
           if (data.lockoutLevel === 4) {
             setIsPermanentLock(true);
             setError("Account permanently locked due to excessive failed attempts. Contact support.");
@@ -130,6 +181,17 @@ export function LoginForm() {
         }
 
         setError(data.error || "Authentication failed.");
+        return;
+      }
+
+      // Handle Signup requiring email verification
+      if (mode === "signup" && data.requiresEmailConfirmation) {
+        setNotice(
+          data.message ||
+            "Vault account created! We have sent a confirmation link to your email. Please click it to activate your sovereign vault."
+        );
+        setPassword("");
+        setConfirmPassword("");
         return;
       }
 
@@ -174,6 +236,19 @@ export function LoginForm() {
       </h1>
       <p className="mt-2 text-sm leading-relaxed text-slate-600">{subtitles[mode]}</p>
 
+      {/* Concurrent Login Termination Notice */}
+      {searchParams.get("terminated") === "concurrent" && (
+        <div className="mt-4 flex items-start gap-2.5 rounded-xl border border-rose-300 bg-rose-50 p-3.5 text-xs font-semibold text-rose-900 shadow-xs">
+          <AlertTriangle size={18} className="mt-0.5 shrink-0 text-rose-600" />
+          <div>
+            <p className="font-bold">Single-Session Security Policy Triggered</p>
+            <p className="mt-0.5 font-normal text-rose-800">
+              Your previous session was automatically terminated because your account was logged in from another device or browser. SabiProfile strictly restricts active dashboard sessions to one device at a time.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Security alert: Unrecognized device */}
       {securityAlert && (
         <div className="mt-4 flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 p-3.5 text-xs font-medium text-amber-800">
@@ -182,8 +257,8 @@ export function LoginForm() {
         </div>
       )}
 
-      {/* Lockout alert */}
-      {lockoutRemaining !== null && lockoutRemaining > 0 && (
+      {/* Lockout alert - Strictly displayed during signin */}
+      {mode === "signin" && lockoutRemaining !== null && lockoutRemaining > 0 && (
         <div className="mt-4 flex items-start gap-2.5 rounded-xl border border-rose-200 bg-rose-50 p-3.5 text-xs font-semibold text-rose-800">
           <Lock size={16} className="mt-0.5 shrink-0 text-rose-600 animate-pulse" />
           <div>
@@ -195,7 +270,7 @@ export function LoginForm() {
         </div>
       )}
 
-      {error && !lockoutRemaining && (
+      {error && (mode === "signup" || !lockoutRemaining) && (
         <div className="mt-4 flex items-start gap-2.5 rounded-xl border border-rose-200 bg-rose-50 p-3.5 text-xs font-medium text-rose-700">
           <AlertCircle size={16} className="mt-0.5 shrink-0 text-rose-500" />
           <span>{error}</span>
@@ -243,33 +318,96 @@ export function LoginForm() {
             onChange={(event) => setEmail(event.target.value)}
             onFocus={() => setEmailFocused(true)}
             onClick={() => setEmailFocused(true)}
-            disabled={isSubmitting || (lockoutRemaining !== null && lockoutRemaining > 0)}
+            disabled={isSubmitting || (mode === "signin" && lockoutRemaining !== null && lockoutRemaining > 0)}
             className={inputClasses}
             placeholder="you@example.com"
           />
         </label>
+
         {mode !== "forgot" && (
-          <PasswordInput
-            id="auth-password"
-            label="Password"
-            value={password}
-            onChange={setPassword}
-            autoComplete={mode === "signup" ? "new-password" : "current-password"}
-            placeholder={mode === "signup" ? "At least 8 characters" : "Your password"}
-            disabled={isSubmitting || (lockoutRemaining !== null && lockoutRemaining > 0)}
-          />
+          <div>
+            <PasswordInput
+              id="auth-password"
+              label="Password"
+              value={password}
+              onChange={setPassword}
+              autoComplete={mode === "signup" ? "new-password" : "current-password"}
+              placeholder={mode === "signup" ? "Create a complex password" : "Your password"}
+              disabled={isSubmitting || (mode === "signin" && lockoutRemaining !== null && lockoutRemaining > 0)}
+            />
+
+            {/* Live Password Complexity Checklist for Signup */}
+            {mode === "signup" && (
+              <div className="mt-2.5 rounded-2xl border border-slate-200/90 bg-slate-50/90 p-3 text-xs space-y-1.5 transition-all">
+                <div className="flex items-center justify-between font-semibold text-slate-700 pb-1 border-b border-slate-200/60">
+                  <span className="flex items-center gap-1.5">
+                    <ShieldCheck size={14} className="text-brand-green" />
+                    <span>Password Security Requirements</span>
+                  </span>
+                  <span className={`text-[11px] font-bold ${passwordComplexity.isValid ? "text-emerald-700" : "text-slate-400"}`}>
+                    {passwordComplexity.isValid ? "All Criteria Satisfied" : "Complexity Required"}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-1">
+                  <div className={`flex items-center gap-1.5 ${passwordComplexity.criteria.hasMinLength ? "text-emerald-700 font-semibold" : "text-slate-500"}`}>
+                    {passwordComplexity.criteria.hasMinLength ? <Check size={13} className="text-emerald-600 shrink-0" /> : <div className="h-2 w-2 rounded-full bg-slate-300 shrink-0 ml-0.5 mr-1" />}
+                    <span>At least 8 characters</span>
+                  </div>
+
+                  <div className={`flex items-center gap-1.5 ${passwordComplexity.criteria.hasUppercase ? "text-emerald-700 font-semibold" : "text-slate-500"}`}>
+                    {passwordComplexity.criteria.hasUppercase ? <Check size={13} className="text-emerald-600 shrink-0" /> : <div className="h-2 w-2 rounded-full bg-slate-300 shrink-0 ml-0.5 mr-1" />}
+                    <span>Uppercase letter (A-Z)</span>
+                  </div>
+
+                  <div className={`flex items-center gap-1.5 ${passwordComplexity.criteria.hasLowercase ? "text-emerald-700 font-semibold" : "text-slate-500"}`}>
+                    {passwordComplexity.criteria.hasLowercase ? <Check size={13} className="text-emerald-600 shrink-0" /> : <div className="h-2 w-2 rounded-full bg-slate-300 shrink-0 ml-0.5 mr-1" />}
+                    <span>Lowercase letter (a-z)</span>
+                  </div>
+
+                  <div className={`flex items-center gap-1.5 ${passwordComplexity.criteria.hasNumber ? "text-emerald-700 font-semibold" : "text-slate-500"}`}>
+                    {passwordComplexity.criteria.hasNumber ? <Check size={13} className="text-emerald-600 shrink-0" /> : <div className="h-2 w-2 rounded-full bg-slate-300 shrink-0 ml-0.5 mr-1" />}
+                    <span>At least one number (0-9)</span>
+                  </div>
+
+                  <div className={`flex items-center gap-1.5 sm:col-span-2 ${passwordComplexity.criteria.hasSpecial ? "text-emerald-700 font-semibold" : "text-slate-500"}`}>
+                    {passwordComplexity.criteria.hasSpecial ? <Check size={13} className="text-emerald-600 shrink-0" /> : <div className="h-2 w-2 rounded-full bg-slate-300 shrink-0 ml-0.5 mr-1" />}
+                    <span>Special character (!@#$%^&* etc.)</span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         )}
 
         {mode === "signup" && (
-          <PasswordInput
-            id="auth-confirm-password"
-            label="Confirm password"
-            value={confirmPassword}
-            onChange={setConfirmPassword}
-            autoComplete="new-password"
-            placeholder="Repeat your password"
-            disabled={isSubmitting || (lockoutRemaining !== null && lockoutRemaining > 0)}
-          />
+          <div>
+            <PasswordInput
+              id="auth-confirm-password"
+              label="Confirm password"
+              value={confirmPassword}
+              onChange={setConfirmPassword}
+              autoComplete="new-password"
+              placeholder="Repeat your password"
+              disabled={isSubmitting}
+            />
+
+            {confirmPassword.length > 0 && (
+              <div className="mt-1.5 flex items-center gap-1.5 text-xs">
+                {passwordsMatch ? (
+                  <span className="flex items-center gap-1 text-emerald-700 font-semibold">
+                    <Check size={13} />
+                    <span>Passwords match</span>
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1 text-rose-600 font-medium">
+                    <X size={13} />
+                    <span>Passwords do not match</span>
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
         )}
 
         {mode === "signin" && (
@@ -277,7 +415,7 @@ export function LoginForm() {
             <button
               type="button"
               onClick={() => switchMode("forgot")}
-              className="text-xs font-semibold text-brand-green hover:text-brand-green-hover"
+              className="text-xs font-semibold text-brand-green hover:text-brand-green-hover cursor-pointer"
             >
               Forgot password?
             </button>
@@ -286,11 +424,15 @@ export function LoginForm() {
 
         <button
           type="submit"
-          disabled={isSubmitting || (lockoutRemaining !== null && lockoutRemaining > 0) || isPermanentLock}
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-green px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-green-hover disabled:cursor-not-allowed disabled:opacity-50"
+          disabled={
+            isSubmitting ||
+            (mode === "signin" && ((lockoutRemaining !== null && lockoutRemaining > 0) || isPermanentLock)) ||
+            (mode === "signup" && (!passwordComplexity.isValid || !passwordsMatch))
+          }
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-green px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-green-hover disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
         >
           {isSubmitting && <Loader2 size={16} className="animate-spin" />}
-          {lockoutRemaining && lockoutRemaining > 0
+          {mode === "signin" && lockoutRemaining && lockoutRemaining > 0
             ? `Locked (${lockoutRemaining}s)`
             : mode === "signin"
             ? "Sign in"
@@ -307,7 +449,7 @@ export function LoginForm() {
             <button
               type="button"
               onClick={() => switchMode("signup")}
-              className="font-semibold text-brand-green hover:text-brand-green-hover"
+              className="font-semibold text-brand-green hover:text-brand-green-hover cursor-pointer"
             >
               Create one now
             </button>
@@ -319,7 +461,7 @@ export function LoginForm() {
             <button
               type="button"
               onClick={() => switchMode("signin")}
-              className="font-semibold text-brand-green hover:text-brand-green-hover"
+              className="font-semibold text-brand-green hover:text-brand-green-hover cursor-pointer"
             >
               Sign in
             </button>
@@ -331,7 +473,7 @@ export function LoginForm() {
             <button
               type="button"
               onClick={() => switchMode("signin")}
-              className="font-semibold text-brand-green hover:text-brand-green-hover"
+              className="font-semibold text-brand-green hover:text-brand-green-hover cursor-pointer"
             >
               Back to sign in
             </button>

@@ -4,7 +4,7 @@ pragma solidity ^0.8.20;
 /**
  * @title SabiRevenueSplitter
  * @dev Enforces automated 60/40 micro-transaction revenue split between
- * the Sabi Vault platform (60%) and Sovereign Regional Node Hosts (40%).
+ * the SabiProfile platform (60%) and Sovereign Regional Node Hosts (40%).
  */
 contract SabiRevenueSplitter {
     address public platformTreasury;

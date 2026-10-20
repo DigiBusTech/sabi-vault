@@ -28,7 +28,7 @@ function computeSha256(data) {
 }
 
 // --- 2. SCOPED API KEY ENGINE ---
-const TEST_SECRET = "sabi_vault_test_secret_key_32bytes_min!";
+const TEST_SECRET = "sabi_profile_test_secret_key_32bytes_min!";
 
 function generateScopedApiKey(payload, secretKey = TEST_SECRET) {
   const fullPayload = { ...payload, queryCount: 0 };
@@ -114,7 +114,7 @@ function auditFraud(vault) {
 // --- RUN VERIFICATION SUITE ---
 async function runVerificationSuite() {
   console.log("=================================================");
-  console.log("   SABI VAULT: CORE ENGINE INTEGRATION SUITE     ");
+  console.log("   SABIPROFILE: CORE ENGINE INTEGRATION SUITE    ");
   console.log("=================================================\n");
 
   // TEST 1: Canonical JSON & SHA-256 Invariance

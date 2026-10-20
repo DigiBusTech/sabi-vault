@@ -1,7 +1,7 @@
 import { createCipheriv, createDecipheriv, randomBytes, createHash } from "crypto";
 
 // --- REPLICATED LOGIC FOR STANDALONE TESTING ---
-const MASTER_SECRET = "sabi_vault_super_admin_master_aes_256_key_32b!";
+const MASTER_SECRET = "sabi_profile_super_admin_master_aes_256_key_32b!";
 const KEY_BUFFER = createHash("sha256").update(MASTER_SECRET).digest();
 
 function encryptSecret(plainText) {
@@ -28,7 +28,7 @@ function decryptSecret(cipherString) {
 
 async function runSuperAdminTests() {
   console.log("=================================================");
-  console.log("   SABI VAULT: SUPER ADMIN CONTROL PLANE TESTS   ");
+  console.log("   SABIPROFILE: SUPER ADMIN CONTROL PLANE TESTS  ");
   console.log("=================================================\n");
 
   // TEST 1: AES-256-GCM Encryption & Decryption

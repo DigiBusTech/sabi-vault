@@ -1,8 +1,8 @@
-﻿# SabiProfile: Sovereign Data Infrastructure & Decentralized Identity Platform
+# SabiProfile: Sovereign Data Infrastructure & Decentralized Identity Platform
 
 <div align="center">
 
-![SabiProfile Banner](https://img.shields.io/badge/Sabi%20Vault-Enterprise%20Edition-059669?style=for-the-badge&logo=shield&logoColor=white)
+![SabiProfile Banner](https://img.shields.io/badge/SabiProfile-Enterprise%20Edition-059669?style=for-the-badge&logo=shield&logoColor=white)
 [![License: Proprietary](https://img.shields.io/badge/License-Proprietary-0f172a?style=for-the-badge)](LICENSE)
 [![Framework: Next.js 14](https://img.shields.io/badge/Framework-Next.js%2014-black?style=for-the-badge&logo=next.js)](https://nextjs.org)
 [![Security: Enterprise Grade](https://img.shields.io/badge/Security-Enterprise%20Grade-059669?style=for-the-badge&logo=security)](https://SabiProfile.org)

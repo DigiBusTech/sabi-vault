@@ -26,7 +26,7 @@ const KEY_USAGE_TRACKER = new Map<string, number>();
 function getSecretKey(): string {
   // Dynamic platform config (dashboard-managed) with legacy env fallback.
   const configured = getConfigValueSync("security.api_signing_secret");
-  const isInsecureDefault = configured === "sabi_vault_dev_insecure_secret_key_32bytes_min!";
+  const isInsecureDefault = configured === "sabi_profile_dev_insecure_secret_key_32bytes_min!";
   if (process.env.NODE_ENV === "production") {
     if (!configured || isInsecureDefault) {
       console.error("[SECURITY] Scoped key signing secret must be configured in production (Super Admin dashboard).");
@@ -34,7 +34,7 @@ function getSecretKey(): string {
     }
     return configured;
   }
-  return configured || "sabi_vault_dev_insecure_secret_key_32bytes_min!";
+  return configured || "sabi_profile_dev_insecure_secret_key_32bytes_min!";
 }
 
 export function revokeKeyId(keyId: string): boolean {

@@ -1,9 +1,9 @@
-# Cursor Rules for Sabi Vault
+# Cursor Rules for SabiProfile
 
 Every time you begin a task, respond to a prompt, or modify files in this repository:
 1. First read `PROJECT_CONTEXT.md` to get the up-to-date system state, architectural pillars, and data schemas.
 2. Next read `PROMPT_EXPERIENCE_LOG.md` to see previous user prompts, architectural decisions, and bug fixes.
-3. Strictly adhere to Sabi Vault's architectural invariants:
+3. Strictly adhere to SabiProfile's architectural invariants:
    - Zero raw document storage (user files stay in personal Google Drive/Dropbox via OAuth).
    - Structured JSON records belong to sovereign regional nodes (NDPC/GDPR compliance).
    - Documents are hashed with SHA-256 and verified on-chain via smart contracts.

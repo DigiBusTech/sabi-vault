@@ -1,6 +1,7 @@
-﻿import type { Metadata, Viewport } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Preloader } from "@/components/Preloader";
+import { PwaRegister } from "@/components/pwa/PwaRegister";
 import { getDynamicSEO } from "@/lib/seo";
 
 export const viewport: Viewport = {
@@ -85,9 +86,19 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
+        <meta name="theme-color" content="#059669" />
+        <meta name="msapplication-TileColor" content="#059669" />
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+        <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
+        <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png" />
         <link rel="alternate icon" href="/favicon.ico" />
-        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="application-name" content="SabiProfile" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="SabiProfile" />
+        <meta name="mobile-web-app-capable" content="yes" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
@@ -97,6 +108,7 @@ export default function RootLayout({
       </head>
       <body className="min-h-screen bg-white text-[#0f172a] font-sans antialiased selection:bg-[#059669] selection:text-white">
         <Preloader />
+        <PwaRegister />
         {children}
       </body>
     </html>

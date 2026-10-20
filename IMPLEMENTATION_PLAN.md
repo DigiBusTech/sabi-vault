@@ -1,4 +1,4 @@
-# SABI VAULT: MASTER IMPLEMENTATION & EXECUTION PLAN
+# SABIPROFILE: MASTER IMPLEMENTATION & EXECUTION PLAN
 > **Architectural Blueprint, Multi-Agent Engine, Smart Contract Infrastructure, and Phased Roadmap**  
 > *Target Verticals:* Immigration & Border Agencies, Higher Education & Admissions, Labour & Enterprise Hiring.  
 > *Sovereignty Model:* Zero Raw Central Storage | Regional Database Nodes (NDPC/GDPR) | Low-Cost Blockchain Ledger.
@@ -103,7 +103,7 @@ The payload contains:
   "issuedAt": 1791795200
 }
 ```
-When an enterprise queries the Sabi Vault gateway with this key:
+When an enterprise queries the SabiProfile gateway with this key:
 1. Signature is validated against Sabi's signing key.
 2. Expiration and query count checks run instantly.
 3. Gateway fetches ONLY the allowed category scopes (`academics` and `finance`) from the candidate's sovereign node.
@@ -157,7 +157,7 @@ sequenceDiagram
 
 ## 5. Smart Contract Architecture (EVM L2)
 
-### 5.1 `SabiVaultRegistry.sol`
+### 5.1 `SabiProfileRegistry.sol`
 - **Purpose:** On-chain tamper-proof hash ledger.
 - **Key Functions:**
   - `commitHash(bytes32 vaultId, bytes32 categoryHash, uint8 tier, bytes notarySeal)`: Records the document hash on-chain with block timestamp and verification tier.
@@ -179,7 +179,7 @@ sequenceDiagram
 
 ```mermaid
 gantt
-    title Sabi Vault MVP to Market Roadmap
+    title SabiProfile MVP to Market Roadmap
     dateFormat  YYYY-MM-DD
     section Phase 1: Core Foundation
     Project Scaffold & Next.js Setup        :2026-10-14, 3d
@@ -212,7 +212,7 @@ gantt
   - Google Drive OAuth connector (ephemeral file download -> stream parse -> memory discard).
   - PDF & document text extraction pipeline.
   - Supabase database migration scripts with regional tenant flags and strict Row Level Security.
-  - Deploy `SabiVaultRegistry.sol` and `SabiRevenueSplitter.sol` to Base Sepolia testnet.
+  - Deploy `SabiProfileRegistry.sol` and `SabiRevenueSplitter.sol` to Base Sepolia testnet.
 
 - **Phase 3: Multi-Agent Screening Engine & LLM Gateway (Days 13–18)**
   - Multi-LLM failover router (Gemini 1.5 Flash primary -> Groq LLaMA 3 fallback -> OpenAI mini tertiary).
@@ -237,7 +237,7 @@ gantt
 
 1. **Zero Raw File Storage Guarantee:**
    - Raw binary buffers are processed in-memory only and immediately garbage collected.
-   - Sabi Vault databases store only structured parsed JSON.
+   - SabiProfile databases store only structured parsed JSON.
 2. **Data Residency Compliance (GDPR & NDPC):**
    - User profile metadata includes `residenceCountry` and `citizenship`.
    - Database connection pools dynamically route read/write operations to the corresponding regional PostgreSQL node.

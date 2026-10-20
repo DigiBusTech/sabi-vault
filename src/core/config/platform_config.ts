@@ -1,4 +1,4 @@
-﻿import { createCipheriv, createDecipheriv, createHash, randomBytes } from "crypto";
+import { createCipheriv, createDecipheriv, createHash, randomBytes } from "crypto";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 
 /**
@@ -48,7 +48,7 @@ export const CONFIG_REGISTRY: ConfigKeyMeta[] = [
     category: "security",
     sensitive: true,
     envVar: "SABI_API_SIGNING_SECRET",
-    defaultValue: "sabi_vault_dev_insecure_secret_key_32bytes_min!",
+    defaultValue: "sabi_profile_dev_insecure_secret_key_32bytes_min!",
   },
   {
     key: "security.admin_master_key",

@@ -1,4 +1,4 @@
-﻿import assert from "assert";
+import assert from "assert";
 import { createHash, createHmac, timingSafeEqual } from "crypto";
 
 function computeSha256(data) {
@@ -9,7 +9,7 @@ function computeSha256(data) {
   return hasher.digest("hex");
 }
 
-const DEFAULT_SECRET = "sabi_vault_test_secret_key_32bytes_minimum!";
+const DEFAULT_SECRET = "sabi_profile_test_secret_key_32bytes_minimum!";
 const REVOKED_KEY_IDS = new Set();
 const KEY_USAGE_TRACKER = new Map();
 
@@ -372,7 +372,7 @@ async function runTestSuite() {
 
   // TEST 7: Super Admin Auth Rejection of Default Secret in Production
   console.log("\nTest 7: Production Security - Admin Auth Insecure Secret Blocking...");
-  const devKey = "sabi_vault_super_admin_master_aes_256_key_32b!";
+  const devKey = "sabi_profile_super_admin_master_aes_256_key_32b!";
   // In production simulation:
   const isProd = true;
   const configuredMasterKey = undefined; // Not configured

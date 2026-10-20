@@ -1,0 +1,61 @@
+"use client";
+
+import { useEffect } from "react";
+
+declare global {
+  interface Window {
+    deferredPwaPrompt?: any;
+  }
+}
+
+export function PwaRegister() {
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    // 1. Capture beforeinstallprompt globally
+    const handleBeforeInstall = (e: Event) => {
+      e.preventDefault();
+      window.deferredPwaPrompt = e;
+      window.dispatchEvent(new CustomEvent("sabi:pwa-ready", { detail: e }));
+      console.log("[PWA] Captured beforeinstallprompt event.");
+    };
+
+    const handleAppInstalled = () => {
+      window.deferredPwaPrompt = null;
+      window.dispatchEvent(new CustomEvent("sabi:pwa-installed"));
+      console.log("[PWA] SabiProfile app successfully installed.");
+    };
+
+    window.addEventListener("beforeinstallprompt", handleBeforeInstall);
+    window.addEventListener("appinstalled", handleAppInstalled);
+
+    // 2. Register Service Worker in production and local testing
+    if ("serviceWorker" in navigator) {
+      const isLocalhost =
+        window.location.hostname === "localhost" ||
+        window.location.hostname === "127.0.0.1" ||
+        window.location.hostname.endsWith(".localhost");
+
+      // Register SW in production or localhost
+      if (process.env.NODE_ENV === "production" || isLocalhost) {
+        navigator.serviceWorker
+          .register("/sw.js")
+          .then((reg) => {
+            console.log("[PWA] Service worker active:", reg.scope);
+          })
+          .catch((err) => {
+            console.debug("[PWA] Service worker registration skipped/error:", err);
+          });
+      }
+    }
+
+    return () => {
+      window.removeEventListener("beforeinstallprompt", handleBeforeInstall);
+      window.removeEventListener("appinstalled", handleAppInstalled);
+    };
+  }, []);
+
+  return null;
+}
+
+

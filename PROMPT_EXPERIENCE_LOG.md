@@ -1337,3 +1337,194 @@
   4. **Compilation & Verification:**
      - Executed full test suites (`test_full_suite.mjs` and `test_enterprise_security.mjs`) with 100% pass rate.
      - Production build `npm run build` compiled all 48 routes with 0 errors.
+
+### Entry #039: Full-Screen Native Store Download Portals, Enterprise PWA App Landing, and Complete Rebranding
+- **Date & Timestamp:** 2026-10-20 10:10:00 (Local)
+- **User Prompt / Intent:**
+  > "the popup for app download playstore and ios is not full screen but only each section which is not nice for user experience, Employ all the motions skills, lucide animated icons, all UI/UX skills to built a simple enterprise PWA with install popup for both desktop and mobile with full simulation for the install pop, app favicon, button mobile nav. etc. with no hompage but PWA landing design page like nativew app, and login and signup button, card designs with images etc. with slides animations talking about the solution."
+- **Work Done:**
+  1. **Complete Legacy File & Identifier Rebranding:**
+     - Renamed `contracts/SabiVaultRegistry.sol` to `contracts/SabiProfileRegistry.sol` and updated Solidity contract identifiers.
+     - Renamed `src/legacy/SabiVaultDemo.tsx` to `src/legacy/SabiProfileDemo.tsx`.
+     - Renamed `Sabi Vault_ Product Specification & Scope.pdf` to `SabiProfile_ Product Specification & Scope.pdf`.
+     - Updated `.cursorrules`, `AGENTS.md`, `CLAUDE.md`, `IMPLEMENTATION_PLAN.md`, `README.md`, `package-lock.json`, `platform_config.ts`, `scoped_key.ts`, `auth_guard.ts`, `session.ts`, and test suites, replacing all remaining instances of `Sabi Vault` / `sabi_vault` with `SabiProfile` / `sabi_profile`.
+  2. **Full-Screen Native Store Modal Portal (`NativeAppDownloadModal.tsx`):**
+     - Engineered full-screen overlay rendered via `createPortal(..., document.body)` with `z-[99999]`, breaking out of all parent layout/overflow stacking contexts.
+     - Built authentic Apple App Store (iOS) and Google Play Store (Android) UI simulation:
+       - App icon, rating (4.9 ★, 18.4K reviews), download size (28.4 MB), age rating, and #1 GovTech chart rank.
+       - Interactive "GET" (iOS) / "Install" (Android) simulation button animating from download progress (0% -> 100%) to "INSTALLING..." to "OPEN".
+       - Interactive 3-slide screenshot gallery showcasing Citizen Vault, Scoped Keys, and Anti-Tamper Shield.
+       - Direct TestFlight / internal APK early-access invite queue with email verification.
+     - Updated `AppDownloadButtons.tsx` across the app to trigger this portal.
+  3. **Enterprise Progressive Web App (PWA) Engine (`PwaInstallModal.tsx` + `sw.js` + `manifest.json`):**
+     - Created `public/manifest.json` configured for standalone PWA deployment with theme color `#059669`.
+     - Created `public/sw.js` service worker with network-first caching and offline fallback.
+     - Integrated PWA manifest, Apple touch icon, and meta tags into `src/app/layout.tsx`.
+     - Engineered `PwaInstallModal.tsx` with full interactive install simulation:
+       - **Desktop:** Chrome/Edge style dialog detailing standalone window execution, offline verification, and hardware biometric acceleration with simulated installation progress bar.
+       - **Mobile iOS:** Step-by-step visual animation for Safari "Add to Home Screen".
+       - **Mobile Android:** One-tap home screen install drawer with simulated progress.
+  4. **Native Mobile Bottom Navigation Bar (`MobileBottomNav.tsx`):**
+     - Fixed bottom navigation bar with liquid glass backdrop (`backdrop-blur-xl bg-white/95`) and safe-area padding.
+     - 5 interactive tabs with animated Lucide icons: Solutions, Vault, Verify, Install, and Account.
+  5. **Interactive Solutions Presentation Slides (`SolutionsSlides.tsx`):**
+     - Built motion-driven slides carousel talking about the core solution:
+       - **Pillar 1 (Immigration & Borders):** 4ms visa clearance, proof of funds attestation, and zero-raw cloud storage.
+       - **Pillar 2 (Education & Degrees):** Tier-2 legal notarization and Base Sepolia EVM on-chain diploma anchor.
+       - **Pillar 3 (Enterprise & Labour):** Multi-agent screening, zero-hallucination RAG scoring, and 60/40 GovTech fee split.
+       - **Citizen Sovereignty:** Scoped consent keys with fine-grained category redaction, TTL countdown, and one-tap revocation.
+     - Features manual tab navigation, touch/gesture swipe, pause/play autoplay, and animated metrics.
+  6. **Enterprise PWA Landing Application (`PwaAppLanding.tsx`):**
+     - Replaced traditional corporate home page with a native app landing experience on `/`:
+       - Native App Header with SabiProfile logo, live Base Sepolia L2 block ticker, Install App button, and Login/Get Started actions.
+       - App quick action cards with interactive widgets: Citizen Vault, Biometric FaceID / NFC simulation, and Sovereign Regional Nodes (NDPC / GDPR).
+       - Live interactive Anti-Tamper Shield demonstration allowing visitors to simulate data forgery and witness real-time 4ms fail-closed rejection.
+  7. **Compilation & Verification:**
+     - `test_full_suite.mjs` passed 100% with all 8 tests green.
+     - Production build `npm run build` compiled all 48 routes with 0 errors.
+
+### Entry #040: Airtight Single-Session Enforcement & Multi-Platform PWA Installability Fix
+- **Date & Timestamp:** 2026-10-20 11:30:00 (UTC)
+- **User Prompt / Intent:**
+  > "Also the secuirity measure is not working it only shows new device logged, users can still access their dashbaord in two different device or two different browsers which is not supposed to be so. the PWA is not showing up in the desktop and mobile devices"
+- **Root Cause Analysis:**
+  1. **Single-Session Enforcement Lapse:**
+     - When logging into Browser B, `enforceSingleSession(userId)` correctly marked Browser A's session in `user_sessions` as `is_active: false`.
+     - However, `DashboardPage` (`src/app/dashboard/page.tsx`) only checked `supabase.auth.getUser()`, which validated Supabase's independent JWT cookie without querying `user_sessions`. Consequently, Browser A could still refresh and view `/dashboard`.
+     - `DashboardShell` lacked a real-time session heartbeat; sitting users on Browser A were never booted upon concurrent login on Browser B.
+     - `src/lib/auth/auth_guard.ts` did not check `is_active` for Supabase cookie sessions on API endpoints.
+  2. **PWA Not Showing Up:**
+     - `public/manifest.json` lacked valid PNG icons meeting the Chromium / Web App Manifest installability specification (`192x192` and `512x512`). `apple-touch-icon.png` was actually an XML SVG file mislabeled with a `.png` extension, causing browser manifest parsers to reject installability.
+     - `PwaRegister.tsx` restricted service worker registration strictly to `process.env.NODE_ENV === "production"`, preventing PWA registration on localhost or preview environments.
+     - Missing floating ambient PWA install banner on desktop and mobile.
+- **Work Done:**
+  1. **Server-Side Active Session Enforcement (`src/app/dashboard/page.tsx` & `src/lib/security/session.ts`):**
+     - Implemented `validateActiveUserSession(userId, rawRefreshToken)` in `session.ts`.
+     - Injected session validation into `DashboardPage`: extracts `sb_refresh_token` and queries `user_sessions`. If the session was revoked due to concurrent login, it triggers an instant server-side redirect to `/login?terminated=concurrent`.
+  2. **Real-Time Client-Side Heartbeat & Lockout Overlay (`src/components/dashboard/DashboardShell.tsx`):**
+     - Engineered continuous 8-second heartbeat polling `/api/auth/session` with immediate trigger on `visibilitychange` (tab switch) and `focus`.
+     - Added unclosable full-screen `Single-Session Security Policy` overlay that freezes the screen if concurrent login is detected, providing one-click session wipe and redirect to sign-in.
+     - Updated `signOut()` to call `logoutAndResetSession()` before Supabase sign-out.
+  3. **API Session Route & AuthGuard (`/api/auth/session` & `auth_guard.ts`):**
+     - Updated `/api/auth/session` to inspect `user_sessions` for revoked status and return HTTP 401 `{ terminated: true, code: "SESSION_TERMINATED_CONCURRENT" }`.
+     - Updated `authenticateUser()` in `src/lib/auth/auth_guard.ts` to reject requests from revoked sessions.
+  4. **Login Banner (`src/components/auth/LoginForm.tsx`):**
+     - Added prominent warning banner on `/login?terminated=concurrent` explaining the single-session termination.
+  5. **Authentic PWA Icons Generation (`scripts/generate_pwa_icons.mjs`):**
+     - Built Node.js binary PNG chunk encoder and generated pixel-perfect PNG assets:
+       - `public/icon-192.png` (192x192 PNG)
+       - `public/icon-512.png` (512x512 PNG)
+       - `public/icon-maskable-192.png` (192x192 Maskable PNG)
+       - `public/icon-maskable-512.png` (512x512 Maskable PNG)
+       - `public/apple-touch-icon.png` (180x180 Real PNG replacing fake SVG)
+  6. **PWA Manifest & Registration (`manifest.json`, `layout.tsx`, `PwaRegister.tsx`):**
+     - Updated `manifest.json` with standard 192x192 & 512x512 PNG icons with `"purpose": "any"` and `"purpose": "maskable"`.
+     - Updated `layout.tsx` with `<meta name="theme-color" content="#059669" />`, icon link tags, and manifest links.
+     - Updated `PwaRegister.tsx` to register on both production and localhost, and capture `beforeinstallprompt` globally.
+  7. **Ambient Floating PWA Install Banner (`src/components/pwa/PwaInstallBanner.tsx`):**
+     - Created non-intrusive floating install prompts:
+       - **Desktop:** Elegant bottom-right floating card with 1-tap install and guide.
+       - **Mobile:** Ambient bar docked above mobile navigation with quick install action.
+       - Connects directly to native `beforeinstallprompt` and falls back to interactive modal.
+     - Embedded in `src/app/(marketing)/layout.tsx`.
+### Entry #041: Signup Lockout Root-Cause Resolution & Mandatory Password Complexity Enforcement
+- **Date & Timestamp:** 2026-10-20 12:45:00 (UTC)
+- **User Prompt / Intent:**
+  > "i was trying to signup but it showed this, why? because the email and passwords i provided for the signup are what i want to use. i will understand if it was a login interface, also force complex password Capital letter, small letters, numbers, characters combination for password in signup."
+- **Root Cause Analysis:**
+  1. **Lockout Triggered on Signup:**
+     - In `LoginForm.tsx`, the form was submitting both `signin` and `signup` requests to `/api/auth/login`.
+     - `/api/auth/login` invoked `supabase.auth.signInWithPassword`. Because the user was attempting to register a new account, the account did not exist yet, causing authentication to fail.
+     - Upon failure, `/api/auth/login` invoked `recordFailedAttempt(identifier)` and advanced the progressive lockout tier, locking the user out after 3 attempts with `Account Locked (Brute-Force Mitigation)`.
+     - Furthermore, `LoginForm.tsx` rendered the lockout alert globally across both signin and signup modes, preventing the user from creating their account.
+  2. **Missing Password Complexity Enforcement:**
+     - The signup flow did not enforce uppercase, lowercase, numbers, or special characters, leading to weak password vulnerabilities and inconsistent security policies.
+- **Work Done:**
+  1. **Password Complexity Engine (`src/lib/security/password.ts`):**
+     - Created `evaluatePasswordComplexity` mandating:
+       - Minimum 8 characters.
+       - At least one uppercase letter (`[A-Z]`).
+       - At least one lowercase letter (`[a-z]`).
+       - At least one number (`[0-9]`).
+       - At least one special symbol (`[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?`~]`).
+     - Returns granular boolean flags and error messages.
+  2. **Dedicated Signup API Endpoint (`src/app/api/auth/signup/route.ts`):**
+     - Created `POST /api/auth/signup` dedicated to user account registration.
+     - Enforces bot defense, IP rate limiting, email format validation, and strict password complexity.
+     - Calls `resetLockout(email)` immediately to wipe any spurious lockout caused by previous failed login attempts on that email.
+     - Registers user in Supabase Auth via `supabase.auth.signUp`, creates initial `vault_profiles` entry, and registers session cookies (`registerUserSession`).
+  3. **Upgraded `LoginForm.tsx` UI & State:**
+     - Routed `mode === "signup"` directly to `/api/auth/signup` (retaining `/api/auth/login` strictly for signin).
+     - Isolated progressive lockout: locked state is strictly applied to sign-in attempts and never prevents legitimate account creation.
+     - Added real-time visual Password Security Requirements checklist widget underneath password input with live green checks for: 8+ chars, uppercase, lowercase, number, and special character.
+     - Added real-time password confirmation match indicator.
+     - Enforced password complexity in `signup/organization/page.tsx` as well.
+  4. **Improved Login Feedback (`/api/auth/login/route.ts`):**
+     - Updated failed login error message to guide unregistered users: `"Invalid email or password. If you don't have a vault account yet, please switch to 'Create one now'."`
+- **Validation:**
+  - `node tests/test_signup_security.mjs`: 100% Passed (verified rejection of weak passwords and acceptance of compliant complex passwords).
+  - `node tests/test_enterprise_security.mjs`: 100% Passed.
+  - `node tests/test_full_suite.mjs`: 100% Passed (8/8 test suites).
+  - `npm run build`: Compiled successfully across all 49 routes with 0 errors.
+
+### Entry #042: Deep Security Audit of Signup Pipeline & Gap Remediation
+- **Date & Timestamp:** 2026-10-20 13:15:00 (UTC)
+- **User Prompt / Intent:**
+  > "Audit this and check for gaps and incomplete etc and recommend fixes if any" (Auditing recent signup and lockout changes).
+- **Audit Findings & Security Gaps Identified:**
+  1. **Lockout Bypass Vulnerability (GAP-S1):** `resetLockout(identifier)` was previously executed unconditionally at the start of `/api/auth/signup` before verifying if the account existed. An attacker brute-forcing an existing account could repeatedly call `/api/auth/signup` to wipe the lockout timer for their victim's email.
+  2. **Unconfirmed Email Session Leakage (GAP-S2):** When Supabase projects require email verification, `signUp` creates the user with `session === null`. However, `/api/auth/signup` was still issuing an active session cookie and access token, allowing unverified signups to bypass email confirmation.
+  3. **Password DoS Vulnerability (GAP-S3):** `password.ts` lacked an upper boundary (`MAX_PASSWORD_LENGTH`), leaving regex evaluation and cryptographic password hashing susceptible to CPU exhaustion via oversized payloads.
+  4. **Vault Profile Provisioning Inconsistency (GAP-S4):** `/api/auth/signup` attempted ad-hoc manual SQL insertion rather than using the centralized `ensureVaultProfile` service, risking schema drift.
+  5. **UI Inconsistency on Organization Signup (GAP-S5):** `src/app/signup/organization/page.tsx` lacked the real-time visual checklist available on citizen signup.
+- **Remediations Applied:**
+  1. **Secured Lockout Reset:** Moved `resetLockout(identifier)` in `signup/route.ts` to execute *strictly after* successful creation of a new account. Existing accounts returning 409 preserve their lockout state.
+  2. **Session Cookie Isolation:** If `requiresEmailConfirmation` is true, session creation and HttpOnly cookies are suppressed; the user is instructed to confirm via email first.
+  3. **OWASP Upper Limit:** Added `MAX_PASSWORD_LENGTH = 128` to `password.ts`.
+  4. **Canonical Profile Service:** Bound `/api/auth/signup` to `ensureVaultProfile({ id: data.user.id, email: identifier })`.
+  5. **Organization Signup Checklist:** Added real-time password complexity checklist and matching indicator to `src/app/signup/organization/page.tsx`.
+  6. **Automated Verification:** Expanded `tests/test_signup_security.mjs` with test cases verifying lockout bypass mitigation, DoS length rejection, and unconfirmed email session isolation.
+- **Validation:**
+  - `node tests/test_signup_security.mjs`: 100% Passed (4/4 test groups).
+  - `node tests/test_enterprise_security.mjs`: 100% Passed.
+  - `node tests/test_full_suite.mjs`: 100% Passed.
+  - `npm run build`: Compiled successfully across all 49 routes with 0 errors.
+
+### Entry #043: End-to-End Password Policy Alignment & Callback Flow Validation
+- **Date & Timestamp:** 2026-10-20 13:40:00 (UTC)
+- **User Prompt / Intent:**
+  > "are all gaps fixed?"
+- **Work Done:**
+  1. **Password Policy Enforcement on Reset Flow (`src/app/reset-password/page.tsx`):**
+     - Enforced `evaluatePasswordComplexity` on password reset submissions.
+     - Added real-time Password Security Requirements checklist widget and password match indicator.
+     - Redirects user to `/login?notice=password_reset_success` upon completion.
+  2. **URL Notification & Error Hydration in `LoginForm.tsx`:**
+     - Connected `searchParams` parsing to initial state for `notice` and `error` parameters:
+       - Displays `"Password updated successfully. Please sign in with your new password."` upon reset completion.
+       - Displays `"Email confirmed successfully. Please sign in to access your sovereign vault."` on confirmed email callback.
+       - Displays `"Email confirmation link was invalid or has expired."` if callback fails.
+  3. **Verification & Production Build:**
+     - `node tests/test_signup_security.mjs`: 100% Passed.
+     - `node tests/test_enterprise_security.mjs`: 100% Passed.
+     - `node tests/test_full_suite.mjs`: 100% Passed.
+     - `npm run build`: Compiled all 49 routes with 0 errors.
+
+### Entry #044: Resolution of IDE Language Server Diagnostics & Side-Effect Type Declarations
+- **Date & Timestamp:** 2026-10-20 14:00:00 (UTC)
+- **User Prompt / Intent:**
+  > "Fix all problems Workspace Problems (see below for diagnostics) [24 problems in layout.tsx, route.ts, DashboardShell.tsx, PwaInstallModal.tsx]"
+- **Root Cause Analysis:**
+  1. **CSS Side-Effect Import Error:** In Next.js with `moduleResolution: "bundler"`, TypeScript language servers require ambient module declarations for `.css` side-effect imports (`./globals.css`). Without `src/types/css.d.ts`, IDEs flag `Cannot find module or type declarations for side-effect import of './globals.css'`.
+  2. **Stale Language Server Diagnostics & Line Endings:** The 23 syntax errors in `(marketing)/layout.tsx`, `api/auth/session/route.ts`, `DashboardShell.tsx`, and `PwaInstallModal.tsx` were transient artifacts captured during active stream editing, compounded by UTF-8 BOM byte presence and mixed CRLF/LF line endings.
+- **Work Done:**
+  1. Created `src/types/css.d.ts` declaring `module "*.css"` and updated `tsconfig.json` `include` array to explicitly track `"src/**/*.d.ts"`.
+  2. Stripped all UTF-8 BOM headers and normalized line endings across all reported files (`layout.tsx`, `route.ts`, `DashboardShell.tsx`, `PwaInstallModal.tsx`).
+  3. Re-verified full compiler validity via `npx tsc --noEmit -p tsconfig.json` (0 errors) and `npm run build` (0 errors across 49 routes).
+- **Validation:**
+  - `npx tsc --noEmit -p tsconfig.json`: 0 errors.
+  - `npm run build`: 49/49 routes compiled successfully.
+  - All automated test suites (Full Suite, Enterprise Security, Signup Security) passed 100%.
+
+
+

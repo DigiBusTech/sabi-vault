@@ -1,4 +1,4 @@
-# CLAUDE.md - Sabi Vault Assistant Instructions
+# CLAUDE.md - SabiProfile Assistant Instructions
 
 Before reading or editing any code or answering any prompt:
 1. Read `PROJECT_CONTEXT.md` (System Architecture, Tiers, Schemas, Current Status).
