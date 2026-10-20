@@ -30,28 +30,28 @@ export default function HomePage() {
           {/* Hero Left Column */}
           <div className="lg:col-span-7">
             <Reveal>
-              <div className="liquid-glass-pill inline-flex items-center gap-2 p-1 pr-3.5 shadow-sm">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#059669] text-white">
+              <div className="liquid-glass-pill inline-flex items-center gap-2 p-1 pr-3.5 shadow-sm max-w-full overflow-hidden">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#059669] text-white">
                   <ShieldCheckAnimated size={13} strokeWidth={2.4} />
                 </span>
-                <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#0f172a]">
-                  Sovereign Identity Infrastructure • Powered by Base Sepolia
+                <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.12em] sm:tracking-[0.18em] text-[#0f172a] truncate">
+                  Sovereign Identity Infrastructure <span className="hidden sm:inline">• Powered by Base Sepolia</span>
                 </span>
               </div>
 
-              <h1 className="mt-5 font-poppins text-4xl font-extrabold leading-[1.04] tracking-tight text-[#0f172a] sm:text-5xl lg:text-6xl">
+              <h1 className="mt-5 font-poppins text-3xl sm:text-5xl lg:text-6xl font-extrabold leading-[1.08] sm:leading-[1.04] tracking-tight text-[#0f172a]">
                 Zero-forged records. Instant sovereign trust.
               </h1>
 
-              <p className="mt-5 max-w-[54ch] text-base leading-relaxed text-slate-600 sm:text-lg">
+              <p className="mt-5 max-w-[54ch] text-sm sm:text-lg leading-relaxed text-slate-600">
                 SabiProfile turns physical passports, bank statements, degrees, and employment records into tamper-proof, schema-validated cryptographic credentials. Physical documents stay in your private cloud; only mathematical proofs cross borders.
               </p>
 
               {/* Action Button Pills */}
-              <div className="mt-8 flex flex-wrap items-center gap-3.5">
+              <div className="mt-8 flex flex-col sm:flex-row items-stretch sm:items-center gap-3.5 max-w-md sm:max-w-none">
                 <Link
                   href="/login?mode=signup"
-                  className="group inline-flex items-center gap-3 rounded-full bg-[#059669] px-7 py-3.5 text-sm font-semibold text-white shadow-md transition-all duration-200 hover:bg-[#047857] active:scale-[0.98]"
+                  className="group inline-flex items-center justify-center gap-3 rounded-full bg-[#059669] px-7 py-3.5 text-sm font-semibold text-white shadow-md transition-all duration-200 hover:bg-[#047857] active:scale-[0.98] text-center"
                 >
                   <span>Create Your Sovereign Vault</span>
                   <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/20 transition-transform group-hover:translate-x-1">
@@ -61,7 +61,7 @@ export default function HomePage() {
 
                 <Link
                   href="/enterprise"
-                  className="liquid-glass-pill group inline-flex items-center gap-2.5 px-6 py-3.5 text-sm font-semibold text-[#0f172a] transition-all hover:bg-white active:scale-[0.98]"
+                  className="liquid-glass-pill group inline-flex items-center justify-center gap-2.5 px-6 py-3.5 text-sm font-semibold text-[#0f172a] transition-all hover:bg-white active:scale-[0.98] text-center"
                 >
                   <span>Enterprise Solutions</span>
                 </Link>

@@ -379,16 +379,16 @@ export function LoginForm() {
       )}
 
       {deviceChallenge ? (
-        <div className="mt-8 rounded-3xl border border-emerald-200 bg-white p-6 shadow-xl space-y-5 animate-fadeIn">
+        <div className="mt-6 sm:mt-8 rounded-2xl sm:rounded-3xl border border-emerald-200 bg-white p-4 sm:p-6 shadow-xl space-y-4 sm:space-y-5 animate-fadeIn">
           <div className="flex items-center gap-3">
-            <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-800 ring-4 ring-emerald-50">
-              <ShieldCheck size={26} className="text-[#059669]" />
+            <span className="flex h-11 w-11 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-800 ring-4 ring-emerald-50">
+              <ShieldCheck size={24} className="text-[#059669]" />
             </span>
-            <div>
+            <div className="min-w-0 flex-1">
               <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[10px] font-bold text-emerald-800 uppercase tracking-wider">
                 Multi-Device Protection
               </span>
-              <h2 className="font-poppins text-lg font-bold text-slate-900">
+              <h2 className="font-poppins text-base sm:text-lg font-bold text-slate-900 truncate">
                 Authorize on Active Device
               </h2>
             </div>
@@ -402,7 +402,7 @@ export function LoginForm() {
             <div className="rounded-2xl bg-slate-50 p-3.5 text-xs space-y-1.5 border border-slate-200/80">
               <div className="flex justify-between text-slate-600">
                 <span>Active Device:</span>
-                <strong className="text-slate-900 truncate max-w-[200px]">
+                <strong className="text-slate-900 truncate max-w-[150px] sm:max-w-[220px]">
                   {deviceChallenge.activeDevice.userAgent || "Active Session"}
                 </strong>
               </div>

@@ -65,29 +65,28 @@ export function NativeAppDownloadModal({
 
   if (!mounted || !isOpen) return null;
 
-  const handleInstallClick = () => {
+  const handleInstallClick = async () => {
+    if (typeof window !== "undefined" && window.deferredPwaPrompt) {
+      try {
+        window.deferredPwaPrompt.prompt();
+        const { outcome } = await window.deferredPwaPrompt.userChoice;
+        if (outcome === "accepted") {
+          setInstallState("installed");
+          window.deferredPwaPrompt = null;
+          return;
+        }
+      } catch (err) {
+        console.warn("[PWA] Prompt error:", err);
+      }
+    }
+
     if (installState === "installed") {
-      window.location.href = "/login";
+      window.location.href = "/pwa";
       return;
     }
-    if (installState !== "idle") return;
 
-    setInstallState("downloading");
-    setProgress(15);
-
-    const interval = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 90) {
-          clearInterval(interval);
-          setInstallState("installing");
-          setTimeout(() => {
-            setInstallState("installed");
-          }, 1200);
-          return 100;
-        }
-        return prev + 25;
-      });
-    }, 350);
+    // Set installed guide view
+    setInstallState("installed");
   };
 
   const screenshots = [

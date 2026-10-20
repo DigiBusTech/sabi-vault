@@ -1430,6 +1430,42 @@
 ### Entry #041: Signup Lockout Root-Cause Resolution & Mandatory Password Complexity Enforcement
 - **Date & Timestamp:** 2026-10-20 12:45:00 (UTC)
 - **User Prompt / Intent:**
+
+### Entry #048: Mobile Screen Formatting Overhaul & Native PWA Install Flow Hardening
+- **Date & Timestamp:** 2026-10-20 23:55:00 (UTC)
+- **User Prompt / Intent:**
+  > "the mobile screen is not foramtted well, it is not mobile responsive and the PWA install is not working well, it does not install the app on mobile phone,"
+- **Root Cause Analysis:**
+  1. **Simulated vs Real PWA Installation:** `PwaInstallModal.tsx` and `NativeAppDownloadModal.tsx` previously fell back to a timer-based progress bar simulation that displayed "Added to Home Screen!" without actually triggering the OS install sheet or providing platform-specific browser instructions.
+  2. **Service Worker Hostname Gate:** `PwaRegister.tsx` guarded SW registration with `process.env.NODE_ENV === "production" || isLocalhost`. When a mobile phone connected over a local network IP (`192.168.x.x`) during development or staging, the service worker was skipped, causing mobile Chrome to disqualify the site from PWA installability.
+  3. **Broken Tag Nesting in `PwaInstallBanner.tsx`:** An unclosed mobile floating container swallowed the desktop floating card markup, causing malformed DOM rendering, touch event interference, and layout breakage on mobile viewports.
+  4. **Horizontal Viewport Overflows:**
+     - 66-character unbroken SHA-256 hash strings in `PwaAppLanding.tsx` and `VerificationSim.tsx` stretched the layout to 480px+, forcing an unwanted horizontal scrollbar on mobile devices.
+     - Fixed-width button groups in the top header and hero banner pushed action buttons off-screen on 320px–390px mobile screens.
+     - Navigation tabs in `SolutionsSlides.tsx` wrapped awkwardly into multiple jagged lines.
+- **Architectural Fixes Applied:**
+  1. **Universal Service Worker Registration:** Removed the environment/localhost gate in `PwaRegister.tsx` so `navigator.serviceWorker.register("/sw.js")` executes universally across mobile devices.
+  2. **Service Worker Start URL Caching:** Added `"/pwa"` to `STATIC_ASSETS` in `public/sw.js`.
+  3. **Native PWA Execution & Real Mobile Guides (`PwaInstallModal.tsx`):**
+     - Invokes `deferredPrompt.prompt()` directly when the browser's native `beforeinstallprompt` event is captured.
+     - When native prompts cannot be triggered automatically (e.g. iOS Safari which restricts programmatic prompts by design, or Android Chrome on LAN), the modal displays step-by-step visual guides:
+       - **Android:** Tap the three-dot menu (⋮) &rarr; Tap "Install app" / "Add to Home screen" &rarr; Tap "Install".
+       - **iOS:** Tap the Safari Share button (⬆) &rarr; Tap "Add to Home Screen" (➕) &rarr; Tap "Add".
+  4. **DOM & Responsive Layout Correction (`PwaInstallBanner.tsx`):**
+     - Corrected the container tag nesting so mobile and desktop components render in distinct, properly closed blocks.
+  5. **Complete Mobile Responsiveness Overhaul:**
+     - Fixed all hash strings with `break-all` so they wrap cleanly inside card containers.
+     - Restructured top header actions in `PwaAppLanding.tsx` with responsive padding and compact sizing to prevent wrapping on narrow viewports.
+     - Converted slide category tabs in `SolutionsSlides.tsx` into a smooth horizontal touch-scroll track (`overflow-x-auto no-scrollbar`).
+     - Added safe-area bottom padding (`env(safe-area-inset-bottom)`) in `MobileBottomNav.tsx` for iOS home indicator clearance.
+     - Enhanced `viewport` in `src/app/layout.tsx` with `viewportFit: "cover"` and `maximumScale: 5`.
+- **Validation:**
+  - `npx tsx --env-file=.env.local tests/test_device_verification.mjs`: 100% Passed.
+  - `node tests/test_enterprise_security.mjs`: 100% Passed.
+  - `node tests/test_full_suite.mjs`: 100% Passed.
+  - `npx tsc --noEmit`: 0 errors.
+  - `npm run build`: 54/54 Next.js routes compiled with 0 errors.
+
   > "i was trying to signup but it showed this, why? because the email and passwords i provided for the signup are what i want to use. i will understand if it was a login interface, also force complex password Capital letter, small letters, numbers, characters combination for password in signup."
 - **Root Cause Analysis:**
   1. **Lockout Triggered on Signup:**

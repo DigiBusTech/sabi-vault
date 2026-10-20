@@ -17,6 +17,7 @@ import {
   Cpu,
   Layers,
   ChevronRight,
+  MoreVertical,
 } from "lucide-react";
 
 export interface PwaInstallModalProps {
@@ -81,38 +82,21 @@ export function PwaInstallModal({ isOpen, onClose }: PwaInstallModalProps) {
 
   if (!mounted || !isOpen) return null;
 
-  const handleSimulateInstall = async () => {
-    // If real browser beforeinstallprompt is present, fire it first
-    if (deferredPrompt) {
+  const handleNativeInstall = async () => {
+    const prompt = deferredPrompt || (typeof window !== "undefined" ? window.deferredPwaPrompt : null);
+    if (prompt) {
       try {
-        deferredPrompt.prompt();
-        const { outcome } = await deferredPrompt.userChoice;
+        prompt.prompt();
+        const { outcome } = await prompt.userChoice;
         if (outcome === "accepted") {
           setInstallState("installed");
           setDeferredPrompt(null);
-          return;
+          if (typeof window !== "undefined") window.deferredPwaPrompt = null;
         }
       } catch (err) {
-        console.warn("Native prompt deferred, running simulation.", err);
+        console.warn("[PWA] Prompt error:", err);
       }
     }
-
-    // Interactive high-fidelity simulation
-    setInstallState("installing");
-    setProgress(10);
-
-    const interval = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 95) {
-          clearInterval(interval);
-          setTimeout(() => {
-            setInstallState("installed");
-          }, 800);
-          return 100;
-        }
-        return prev + 20;
-      });
-    }, 280);
   };
 
   const modalContent = (
@@ -121,40 +105,40 @@ export function PwaInstallModal({ isOpen, onClose }: PwaInstallModalProps) {
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-lg rounded-[2.5rem] border border-slate-200/80 bg-white p-6 sm:p-8 text-slate-900 shadow-2xl transition-all"
+        className="relative w-full max-w-lg max-h-[92vh] overflow-y-auto rounded-3xl sm:rounded-[2.5rem] border border-slate-200/80 bg-white p-5 sm:p-7 text-slate-900 shadow-2xl transition-all"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close Button */}
         <button
           type="button"
           onClick={onClose}
-          className="absolute top-5 right-5 flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-900 transition-colors shadow-sm"
+          className="absolute top-4 right-4 z-10 flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-900 transition-colors shadow-xs cursor-pointer"
           aria-label="Close modal"
         >
-          <X size={18} />
+          <X size={16} />
         </button>
 
         {/* Device Switcher Pills (Allows testing iOS, Android, or Desktop view) */}
-        <div className="flex items-center justify-between border-b border-slate-100 pb-4 pr-10">
-          <div className="flex items-center gap-2">
-            <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200">
-              <Download size={14} />
+        <div className="flex items-center justify-between border-b border-slate-100 pb-3 pr-8">
+          <div className="flex items-center gap-1.5">
+            <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200">
+              <Download size={13} />
             </span>
             <span className="font-poppins text-xs font-bold uppercase tracking-wider text-slate-700">
-              Progressive Web App
+              Install App
             </span>
           </div>
 
-          <div className="flex rounded-xl bg-slate-100 p-1 text-[11px] font-bold">
+          <div className="flex rounded-xl bg-slate-100 p-0.5 text-[11px] font-bold">
             <button
               type="button"
-              onClick={() => { setDeviceType("desktop"); setInstallState("idle"); }}
+              onClick={() => { setDeviceType("android"); setInstallState("idle"); }}
               className={`flex items-center gap-1 rounded-lg px-2.5 py-1 transition-all ${
-                deviceType === "desktop" ? "bg-white text-slate-900 shadow-xs" : "text-slate-500 hover:text-slate-900"
+                deviceType === "android" ? "bg-white text-emerald-800 shadow-xs" : "text-slate-500 hover:text-slate-900"
               }`}
             >
-              <Monitor size={12} />
-              <span className="hidden sm:inline">Desktop</span>
+              <Smartphone size={11} />
+              <span>Android</span>
             </button>
             <button
               type="button"
@@ -163,18 +147,19 @@ export function PwaInstallModal({ isOpen, onClose }: PwaInstallModalProps) {
                 deviceType === "ios" ? "bg-white text-slate-900 shadow-xs" : "text-slate-500 hover:text-slate-900"
               }`}
             >
-              <Smartphone size={12} />
+              <Smartphone size={11} />
               <span>iOS</span>
             </button>
             <button
               type="button"
-              onClick={() => { setDeviceType("android"); setInstallState("idle"); }}
+              onClick={() => { setDeviceType("desktop"); setInstallState("idle"); }}
               className={`flex items-center gap-1 rounded-lg px-2.5 py-1 transition-all ${
-                deviceType === "android" ? "bg-white text-emerald-800 shadow-xs" : "text-slate-500 hover:text-slate-900"
+                deviceType === "desktop" ? "bg-white text-slate-900 shadow-xs" : "text-slate-500 hover:text-slate-900"
               }`}
             >
-              <Smartphone size={12} />
-              <span>Android</span>
+              <Monitor size={11} />
+              <span className="hidden sm:inline">Desktop</span>
+              <span className="sm:hidden">PC</span>
             </button>
           </div>
         </div>
@@ -230,53 +215,31 @@ export function PwaInstallModal({ isOpen, onClose }: PwaInstallModalProps) {
               </div>
             </div>
 
-            {/* Install Button & Progress */}
+            {/* Install Button / Guide */}
             <div className="pt-2">
-              {installState === "idle" && (
+              {deferredPrompt ? (
                 <button
                   type="button"
-                  onClick={handleSimulateInstall}
-                  className="w-full flex items-center justify-center gap-2 rounded-2xl bg-[#059669] py-3.5 text-xs font-bold text-white shadow-md shadow-emerald-700/20 hover:bg-[#047857] hover:scale-[1.01] active:scale-[0.98] transition-all"
+                  onClick={handleNativeInstall}
+                  className="w-full flex items-center justify-center gap-2 rounded-2xl bg-[#059669] py-3.5 text-xs font-bold text-white shadow-md shadow-emerald-700/20 hover:bg-[#047857] hover:scale-[1.01] active:scale-[0.98] transition-all cursor-pointer"
                 >
                   <Download size={15} />
                   <span>Install SabiProfile on Desktop</span>
                 </button>
-              )}
-
-              {installState === "installing" && (
-                <div className="space-y-2 rounded-2xl border border-emerald-200 bg-emerald-50/70 p-4 text-center">
-                  <div className="flex items-center justify-between text-xs font-bold text-emerald-900">
-                    <span className="flex items-center gap-1.5">
-                      <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-emerald-600 border-t-transparent" />
-                      Registering Service Worker & Caching Assets...
-                    </span>
-                    <span>{progress}%</span>
-                  </div>
-                  <div className="h-2 w-full overflow-hidden rounded-full bg-emerald-200">
-                    <div
-                      className="h-full bg-emerald-600 transition-all duration-300"
-                      style={{ width: `${progress}%` }}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {installState === "installed" && (
-                <div className="space-y-3 rounded-2xl border border-emerald-300 bg-emerald-50 p-4 text-center">
-                  <div className="flex items-center justify-center gap-2 text-emerald-800 font-bold text-sm">
-                    <Check size={18} className="text-emerald-600" />
-                    <span>SabiProfile Installed Successfully!</span>
-                  </div>
-                  <p className="text-xs text-slate-600">
-                    SabiProfile is now registered on your system. You can launch it anytime.
+              ) : (
+                <div className="rounded-2xl border border-slate-100 bg-slate-50 p-3.5 text-xs text-slate-700 space-y-2">
+                  <p className="font-bold text-slate-900">Install via Browser Address Bar:</p>
+                  <p className="text-slate-600 text-[11px] leading-relaxed">
+                    Look for the <strong>Install icon (⊕ or ⬇)</strong> on the right side of your browser address bar (Chrome, Edge, Brave), then click <strong>Install</strong>.
                   </p>
-                  <a
-                    href="/login"
-                    className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 py-3 text-xs font-bold text-white hover:bg-slate-800 transition-all shadow-sm"
+                  <button
+                    type="button"
+                    onClick={handleNativeInstall}
+                    className="w-full mt-1 flex items-center justify-center gap-1.5 rounded-xl border border-emerald-600 bg-emerald-50 py-2 text-xs font-bold text-emerald-800 hover:bg-emerald-100 transition-all cursor-pointer"
                   >
-                    <span>Launch SabiProfile App</span>
-                    <ArrowRight size={13} />
-                  </a>
+                    <Download size={13} />
+                    <span>Check System Prompt</span>
+                  </button>
                 </div>
               )}
             </div>
@@ -328,96 +291,75 @@ export function PwaInstallModal({ isOpen, onClose }: PwaInstallModalProps) {
               </div>
             </div>
 
-            {/* Test Simulation Button */}
-            <div className="pt-1">
-              <button
-                type="button"
-                onClick={handleSimulateInstall}
-                className="w-full flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 py-3 text-xs font-bold text-white shadow-sm hover:bg-emerald-700 transition-all"
-              >
-                {installState === "installed" ? (
-                  <>
-                    <Check size={14} />
-                    <span>Home Screen Icon Verified! Open Vault</span>
-                  </>
-                ) : (
-                  <>
-                    <Sparkles size={14} />
-                    <span>Simulate Mobile Installation</span>
-                  </>
-                )}
-              </button>
+            {/* iOS Tip Box */}
+            <div className="rounded-xl bg-amber-50 p-2.5 text-[11px] text-amber-800 border border-amber-200/80">
+              <strong>Tip:</strong> If you are viewing this inside Chrome or another browser on iOS, please copy the URL and open it in <strong>Safari</strong> to enable the Home Screen installation feature.
             </div>
           </div>
         )}
 
         {deviceType === "android" && (
-          <div className="mt-5 space-y-4">
+          <div className="mt-4 space-y-3.5">
             <p className="text-xs leading-relaxed text-slate-600">
-              One-tap direct PWA install on Android Chrome. Gives you instant NFC tap-to-verify, hardware FaceID unlock, and offline QR consent keys.
+              Install SabiProfile directly on Android Chrome for full-screen biometric execution, offline keys, and zero browser bars.
             </p>
 
-            <div className="rounded-2xl border border-emerald-100 bg-emerald-50/50 p-4 space-y-2 text-xs">
-              <div className="flex items-center gap-2 text-slate-800">
-                <Check size={14} className="text-emerald-600" />
-                <span>Instant Android App Drawer integration</span>
-              </div>
-              <div className="flex items-center gap-2 text-slate-800">
-                <Check size={14} className="text-emerald-600" />
-                <span>Hardware Biometric unlock (Fingerprint / Face Unlock)</span>
-              </div>
-              <div className="flex items-center gap-2 text-slate-800">
-                <Check size={14} className="text-emerald-600" />
-                <span>Offline cryptographic verification proofs</span>
-              </div>
-            </div>
-
-            <div className="pt-2">
-              {installState === "idle" && (
+            {deferredPrompt ? (
+              <div className="space-y-2 pt-1">
                 <button
                   type="button"
-                  onClick={handleSimulateInstall}
-                  className="w-full flex items-center justify-center gap-2 rounded-2xl bg-[#059669] py-3.5 text-xs font-bold text-white shadow-md shadow-emerald-700/20 hover:bg-[#047857] transition-all"
+                  onClick={handleNativeInstall}
+                  className="w-full flex items-center justify-center gap-2 rounded-2xl bg-[#059669] py-3.5 text-xs font-bold text-white shadow-md shadow-emerald-700/20 hover:bg-[#047857] active:scale-95 transition-all cursor-pointer"
                 >
                   <Download size={15} />
-                  <span>Add SabiProfile to Home Screen</span>
+                  <span>Install SabiProfile on This Phone</span>
                 </button>
-              )}
-
-              {installState === "installing" && (
-                <div className="space-y-2 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-center">
-                  <div className="flex items-center justify-between text-xs font-bold text-emerald-900">
-                    <span className="flex items-center gap-1.5">
-                      <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-emerald-600 border-t-transparent" />
-                      Installing SabiProfile PWA...
+                <p className="text-[11px] text-slate-400 text-center">
+                  Tap above to trigger Android&apos;s system install sheet.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2 pt-1">
+                <p className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">
+                  How to Add to Home Screen in Chrome:
+                </p>
+                <div className="space-y-2 text-xs">
+                  <div className="flex items-center gap-2.5 rounded-xl border border-slate-100 bg-slate-50 p-2.5">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-emerald-800 font-bold text-[11px]">
+                      1
                     </span>
-                    <span>{progress}%</span>
+                    <p className="text-slate-700">
+                      Tap the <strong>three dots menu</strong> (<MoreVertical size={12} className="inline text-slate-600" />) in the top-right corner of Chrome.
+                    </p>
                   </div>
-                  <div className="h-2 w-full overflow-hidden rounded-full bg-emerald-200">
-                    <div
-                      className="h-full bg-emerald-600 transition-all duration-300"
-                      style={{ width: `${progress}%` }}
-                    />
+                  <div className="flex items-center gap-2.5 rounded-xl border border-slate-100 bg-slate-50 p-2.5">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-emerald-800 font-bold text-[11px]">
+                      2
+                    </span>
+                    <p className="text-slate-700">
+                      Tap <strong>&quot;Install app&quot;</strong> or <strong>&quot;Add to Home screen&quot;</strong>.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2.5 rounded-xl border border-slate-100 bg-slate-50 p-2.5">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-emerald-800 font-bold text-[11px]">
+                      3
+                    </span>
+                    <p className="text-slate-700">
+                      Tap <strong>&quot;Install&quot;</strong> to place SabiProfile on your phone&apos;s home screen.
+                    </p>
                   </div>
                 </div>
-              )}
 
-              {installState === "installed" && (
-                <div className="space-y-3 rounded-2xl border border-emerald-300 bg-emerald-50 p-4 text-center">
-                  <div className="flex items-center justify-center gap-2 text-emerald-800 font-bold text-sm">
-                    <Check size={18} className="text-emerald-600" />
-                    <span>Added to Home Screen!</span>
-                  </div>
-                  <a
-                    href="/login"
-                    className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 py-3 text-xs font-bold text-white hover:bg-slate-800 transition-all shadow-sm"
-                  >
-                    <span>Launch Android App</span>
-                    <ArrowRight size={13} />
-                  </a>
-                </div>
-              )}
-            </div>
+                <button
+                  type="button"
+                  onClick={handleNativeInstall}
+                  className="w-full mt-2 flex items-center justify-center gap-2 rounded-xl border border-emerald-600 bg-emerald-50 py-2.5 text-xs font-bold text-emerald-800 hover:bg-emerald-100 active:scale-95 transition-all cursor-pointer"
+                >
+                  <Download size={13} />
+                  <span>Check for System Install Prompt</span>
+                </button>
+              </div>
+            )}
           </div>
         )}
 

@@ -87,14 +87,14 @@ export function PwaAppLanding() {
           </div>
 
           {/* Quick Action Navigation / Login / Install */}
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-1.5 sm:gap-2.5">
             {/* PWA Install Button */}
             <button
               type="button"
               onClick={() => setPwaModalOpen(true)}
-              className="inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-white px-3.5 py-1.5 text-xs font-bold text-slate-800 shadow-xs hover:border-emerald-600 hover:text-emerald-700 transition-all active:scale-95 cursor-pointer"
+              className="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-white px-2.5 sm:px-3.5 py-1.5 text-[11px] sm:text-xs font-bold text-slate-800 shadow-xs hover:border-emerald-600 hover:text-emerald-700 transition-all active:scale-95 cursor-pointer"
             >
-              <Download size={13} className="text-emerald-600" />
+              <Download size={12} className="text-emerald-600" />
               <span className="hidden sm:inline">Install App</span>
               <span className="sm:hidden">Install</span>
             </button>
@@ -102,7 +102,7 @@ export function PwaAppLanding() {
             {/* Login Link */}
             <Link
               href="/login"
-              className="rounded-full px-3.5 py-1.5 text-xs font-bold text-slate-700 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+              className="rounded-full px-2.5 sm:px-3.5 py-1.5 text-[11px] sm:text-xs font-bold text-slate-700 hover:text-slate-900 hover:bg-slate-100 transition-colors"
             >
               Log In
             </Link>
@@ -110,10 +110,10 @@ export function PwaAppLanding() {
             {/* Sign Up Primary Pill */}
             <Link
               href="/login?mode=signup"
-              className="inline-flex items-center gap-1.5 rounded-full bg-[#059669] px-4 py-1.5 text-xs font-bold text-white shadow-md shadow-emerald-700/20 hover:bg-[#047857] active:scale-95 transition-all"
+              className="inline-flex items-center gap-1 rounded-full bg-[#059669] px-3 sm:px-4 py-1.5 text-[11px] sm:text-xs font-bold text-white shadow-md shadow-emerald-700/20 hover:bg-[#047857] active:scale-95 transition-all whitespace-nowrap"
             >
               <span>Get Started</span>
-              <ArrowRightAnimated size={12} />
+              <ArrowRightAnimated size={11} />
             </Link>
           </div>
         </div>
@@ -138,10 +138,10 @@ export function PwaAppLanding() {
           </p>
 
           {/* Quick Trigger Buttons */}
-          <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
+          <div className="mt-5 flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-2.5 sm:gap-3 max-w-md sm:max-w-none mx-auto">
             <Link
               href="/login?mode=signup"
-              className="inline-flex items-center gap-2 rounded-full bg-[#059669] px-6 py-3 text-xs sm:text-sm font-bold text-white shadow-lg shadow-emerald-700/25 hover:bg-[#047857] hover:scale-105 active:scale-95 transition-all"
+              className="inline-flex items-center justify-center gap-2 rounded-full bg-[#059669] px-6 py-3 text-xs sm:text-sm font-bold text-white shadow-lg shadow-emerald-700/25 hover:bg-[#047857] hover:scale-105 active:scale-95 transition-all"
             >
               <Key size={14} />
               <span>Create Sovereign Vault</span>
@@ -149,7 +149,7 @@ export function PwaAppLanding() {
 
             <Link
               href="/login"
-              className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-5 py-3 text-xs sm:text-sm font-bold text-slate-800 shadow-sm hover:border-emerald-500 hover:text-emerald-700 active:scale-95 transition-all"
+              className="inline-flex items-center justify-center gap-2 rounded-full border border-slate-300 bg-white px-5 py-3 text-xs sm:text-sm font-bold text-slate-800 shadow-sm hover:border-emerald-500 hover:text-emerald-700 active:scale-95 transition-all"
             >
               <Lock size={14} className="text-emerald-600" />
               <span>Log In</span>
@@ -158,10 +158,10 @@ export function PwaAppLanding() {
             <button
               type="button"
               onClick={() => setPwaModalOpen(true)}
-              className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-5 py-3 text-xs sm:text-sm font-bold text-slate-700 hover:bg-slate-200 active:scale-95 transition-all cursor-pointer"
+              className="inline-flex items-center justify-center gap-2 rounded-full bg-slate-100 px-5 py-3 text-xs sm:text-sm font-bold text-slate-700 hover:bg-slate-200 active:scale-95 transition-all cursor-pointer"
             >
               <Download size={14} className="text-emerald-600" />
-              <span>Install PWA</span>
+              <span>Install PWA App</span>
             </button>
           </div>
         </section>
@@ -410,7 +410,7 @@ export function PwaAppLanding() {
                 <div className="rounded-xl bg-slate-900 p-3 font-mono text-[11px] space-y-1 text-slate-300">
                   <p>&quot;contract&quot;: &quot;SabiProfileRegistry.sol&quot;,</p>
                   <p>&quot;block&quot;: 19421802,</p>
-                  <p>&quot;anchorHash&quot;: <span className="text-emerald-400">{authenticHash}</span></p>
+                  <p className="break-all">&quot;anchorHash&quot;: <span className="text-emerald-400 break-all">{authenticHash}</span></p>
                 </div>
                 <div>
                   <span className="text-slate-400">Attestation Status:</span>
@@ -447,10 +447,10 @@ export function PwaAppLanding() {
               Create your sovereign vault in under 60 seconds. Connect your private cloud drive, mint scoped keys, and verify records against the Base Sepolia ledger.
             </p>
 
-            <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+            <div className="mt-6 flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 max-w-md sm:max-w-none mx-auto">
               <Link
                 href="/login?mode=signup"
-                className="inline-flex items-center gap-2 rounded-full bg-[#059669] px-7 py-3.5 text-xs sm:text-sm font-bold text-white shadow-lg shadow-emerald-700/25 hover:bg-[#047857] hover:scale-105 active:scale-95 transition-all"
+                className="inline-flex items-center justify-center gap-2 rounded-full bg-[#059669] px-7 py-3.5 text-xs sm:text-sm font-bold text-white shadow-lg shadow-emerald-700/25 hover:bg-[#047857] hover:scale-105 active:scale-95 transition-all"
               >
                 <Key size={15} />
                 <span>Create Sovereign Vault</span>
@@ -459,7 +459,7 @@ export function PwaAppLanding() {
 
               <Link
                 href="/login"
-                className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-7 py-3.5 text-xs sm:text-sm font-bold text-slate-800 shadow-sm hover:border-emerald-600 hover:text-emerald-700 active:scale-95 transition-all"
+                className="inline-flex items-center justify-center gap-2 rounded-full border border-slate-300 bg-white px-7 py-3.5 text-xs sm:text-sm font-bold text-slate-800 shadow-sm hover:border-emerald-600 hover:text-emerald-700 active:scale-95 transition-all"
               >
                 <Lock size={15} className="text-emerald-600" />
                 <span>Log In to Existing Vault</span>
@@ -470,7 +470,7 @@ export function PwaAppLanding() {
 
         {/* 6. APP STORE & GOOGLE PLAY DOWNLOAD CENTER SECTION */}
         <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10">
-          <div className="rounded-[2.5rem] border border-slate-200/90 bg-gradient-to-br from-slate-50 via-white to-emerald-50/40 p-8 sm:p-12 text-center shadow-lg">
+          <div className="rounded-[2.5rem] border border-slate-200/90 bg-gradient-to-br from-slate-50 via-white to-emerald-50/40 p-6 sm:p-12 text-center shadow-lg">
             <span className="inline-flex items-center gap-2 rounded-full bg-emerald-100 px-3.5 py-1 text-xs font-bold text-emerald-800 mb-3">
               <Download size={13} className="text-emerald-700" />
               <span>Native iOS, Android & Desktop PWA</span>
@@ -484,7 +484,7 @@ export function PwaAppLanding() {
               Enjoy biometric FaceID verification, instant NFC tap-to-verify, and offline QR scoped keys with native store and PWA integration.
             </p>
 
-            <div className="mt-6 flex flex-wrap items-center justify-center gap-4">
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-3 sm:gap-4">
               {/* App Store & Play Store Buttons with Full-Screen Simulation Portal */}
               <AppDownloadButtons size="lg" />
 
@@ -497,7 +497,7 @@ export function PwaAppLanding() {
                 <Download size={16} className="text-emerald-600" />
                 <div className="flex flex-col text-left">
                   <span className="text-[8px] uppercase tracking-wider text-slate-400">Install</span>
-                  <span className="text-xs font-bold leading-tight font-poppins">Desktop PWA</span>
+                  <span className="text-xs font-bold leading-tight font-poppins">PWA App</span>
                 </div>
               </button>
             </div>

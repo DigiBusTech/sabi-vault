@@ -310,7 +310,7 @@ export function SolutionsSlides() {
       </div>
 
       {/* Slide Navigation Tabs */}
-      <div className="mt-8 flex flex-wrap items-center justify-center gap-2">
+      <div className="mt-6 sm:mt-8 flex items-center gap-2 overflow-x-auto no-scrollbar py-2 px-1 max-w-full justify-start sm:justify-center">
         {slides.map((s, idx) => {
           const TabIcon = s.sectorIcon;
           const isActive = idx === activeIdx;
@@ -322,7 +322,7 @@ export function SolutionsSlides() {
                 setActiveIdx(idx);
                 setIsPlaying(false);
               }}
-              className={`flex items-center gap-2 rounded-2xl px-4 py-2 text-xs font-bold transition-all shadow-xs ${
+              className={`flex items-center gap-1.5 sm:gap-2 rounded-2xl px-3 sm:px-4 py-2 text-xs font-bold transition-all shadow-xs shrink-0 whitespace-nowrap cursor-pointer ${
                 isActive
                   ? "bg-slate-900 text-white shadow-md scale-105"
                   : "bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900"
@@ -338,7 +338,7 @@ export function SolutionsSlides() {
         <button
           type="button"
           onClick={() => setIsPlaying(!isPlaying)}
-          className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-900 transition-colors"
+          className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-900 transition-colors shrink-0 cursor-pointer"
           title={isPlaying ? "Pause auto-slides" : "Play auto-slides"}
           aria-label={isPlaying ? "Pause auto-slides" : "Play auto-slides"}
         >
@@ -347,20 +347,20 @@ export function SolutionsSlides() {
       </div>
 
       {/* Active Slide Presentation Canvas */}
-      <div className="mt-8 overflow-hidden rounded-[2.5rem] border border-slate-200/90 bg-gradient-to-br from-white via-slate-50/50 to-emerald-50/20 p-6 sm:p-10 lg:p-12 shadow-xl relative">
-        <div className="grid items-center gap-10 lg:grid-cols-12">
+      <div className="mt-6 sm:mt-8 overflow-hidden rounded-3xl sm:rounded-[2.5rem] border border-slate-200/90 bg-gradient-to-br from-white via-slate-50/50 to-emerald-50/20 p-4 sm:p-8 lg:p-12 shadow-xl relative">
+        <div className="grid items-center gap-6 lg:gap-10 lg:grid-cols-12">
           {/* Left Narrative Column */}
-          <div className="lg:col-span-7 space-y-4">
+          <div className="lg:col-span-7 space-y-3 sm:space-y-4">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1 text-[11px] font-bold text-emerald-800">
               <SectorIcon size={12} className="text-emerald-700" />
               <span>{current.pill}</span>
             </span>
 
-            <h3 className="font-poppins text-2xl sm:text-3xl lg:text-4xl font-extrabold text-slate-900 leading-tight">
+            <h3 className="font-poppins text-xl sm:text-3xl lg:text-4xl font-extrabold text-slate-900 leading-tight">
               {current.title}
             </h3>
 
-            <p className="font-poppins text-sm sm:text-base font-semibold text-emerald-700">
+            <p className="font-poppins text-xs sm:text-base font-semibold text-emerald-700">
               {current.tagline}
             </p>
 
@@ -369,13 +369,13 @@ export function SolutionsSlides() {
             </p>
 
             {/* Metrics Grid */}
-            <div className="grid grid-cols-3 gap-3 pt-2">
+            <div className="grid grid-cols-3 gap-1.5 sm:gap-3 pt-2">
               {current.metrics.map((m, mi) => (
-                <div key={mi} className="rounded-2xl border border-slate-200/80 bg-white p-3 shadow-xs">
-                  <p className="font-poppins text-lg sm:text-xl font-extrabold text-slate-900">
+                <div key={mi} className="rounded-xl sm:rounded-2xl border border-slate-200/80 bg-white p-2 sm:p-3 shadow-xs text-center sm:text-left">
+                  <p className="font-poppins text-sm sm:text-lg lg:text-xl font-extrabold text-slate-900 leading-tight">
                     {m.value}
                   </p>
-                  <p className="text-[10px] sm:text-xs font-semibold text-slate-500">
+                  <p className="text-[9px] sm:text-xs font-semibold text-slate-500 mt-0.5 leading-tight">
                     {m.label}
                   </p>
                 </div>
@@ -383,10 +383,10 @@ export function SolutionsSlides() {
             </div>
 
             {/* Call to Action Button */}
-            <div className="pt-3 flex flex-wrap items-center gap-3">
+            <div className="pt-2 sm:pt-3 flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3">
               <Link
                 href={current.ctaHref}
-                className="inline-flex items-center gap-2 rounded-full bg-[#059669] px-6 py-3 text-xs sm:text-sm font-bold text-white shadow-md shadow-emerald-700/20 hover:bg-[#047857] hover:scale-105 active:scale-95 transition-all"
+                className="inline-flex items-center justify-center gap-2 rounded-full bg-[#059669] px-6 py-3 text-xs sm:text-sm font-bold text-white shadow-md shadow-emerald-700/20 hover:bg-[#047857] hover:scale-105 active:scale-95 transition-all text-center"
               >
                 <span>{current.ctaText}</span>
                 <ArrowRightAnimated size={14} />
@@ -394,7 +394,7 @@ export function SolutionsSlides() {
 
               <Link
                 href="/login?mode=signup"
-                className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-5 py-3 text-xs sm:text-sm font-bold text-slate-800 hover:bg-slate-50 transition-all"
+                className="inline-flex items-center justify-center gap-2 rounded-full border border-slate-300 bg-white px-5 py-3 text-xs sm:text-sm font-bold text-slate-800 hover:bg-slate-50 transition-all text-center"
               >
                 <span>Sign Up Free</span>
               </Link>
@@ -402,7 +402,7 @@ export function SolutionsSlides() {
           </div>
 
           {/* Right Visual Card Column */}
-          <div className="lg:col-span-5">
+          <div className="lg:col-span-5 w-full overflow-hidden">
             {current.visual}
           </div>
         </div>

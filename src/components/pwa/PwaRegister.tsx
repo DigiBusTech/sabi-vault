@@ -29,24 +29,16 @@ export function PwaRegister() {
     window.addEventListener("beforeinstallprompt", handleBeforeInstall);
     window.addEventListener("appinstalled", handleAppInstalled);
 
-    // 2. Register Service Worker in production and local testing
+    // 2. Register Service Worker universally for PWA installability
     if ("serviceWorker" in navigator) {
-      const isLocalhost =
-        window.location.hostname === "localhost" ||
-        window.location.hostname === "127.0.0.1" ||
-        window.location.hostname.endsWith(".localhost");
-
-      // Register SW in production or localhost
-      if (process.env.NODE_ENV === "production" || isLocalhost) {
-        navigator.serviceWorker
-          .register("/sw.js")
-          .then((reg) => {
-            console.log("[PWA] Service worker active:", reg.scope);
-          })
-          .catch((err) => {
-            console.debug("[PWA] Service worker registration skipped/error:", err);
-          });
-      }
+      navigator.serviceWorker
+        .register("/sw.js")
+        .then((reg) => {
+          console.log("[PWA] Service worker active:", reg.scope);
+        })
+        .catch((err) => {
+          console.debug("[PWA] Service worker registration error:", err);
+        });
     }
 
     // 3. Standalone PWA detection: launch into native PWA onboarding route

@@ -98,6 +98,9 @@ export function PwaInstallBanner() {
               <X size={14} />
             </button>
           </div>
+        </div>
+      </div>
+
       {/* Desktop Floating Card */}
       <div className="fixed bottom-6 right-6 z-40 hidden md:block max-w-sm animate-fadeIn">
         <div className="relative rounded-3xl border border-slate-200/90 bg-white/95 p-4 text-slate-900 shadow-2xl backdrop-blur-xl ring-1 ring-slate-900/5">
@@ -140,9 +143,6 @@ export function PwaInstallBanner() {
               <ChevronRight size={13} />
             </button>
           </div>
-        </div>
-      </div>
-
         </div>
       </div>
       <PwaInstallModal isOpen={modalOpen} onClose={() => setModalOpen(false)} />

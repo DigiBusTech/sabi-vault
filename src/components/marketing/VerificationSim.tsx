@@ -219,7 +219,7 @@ export function VerificationSim() {
             <div className="mt-2 flex items-center gap-1 font-mono text-xs text-brand-dark">
               <span className="text-slate-500">sha256:</span>
               <span
-                className="inline-block overflow-hidden whitespace-nowrap"
+                className="inline-block overflow-hidden whitespace-nowrap text-[10px] sm:text-xs max-w-[210px] sm:max-w-none truncate sm:overflow-visible"
                 style={{ animation: reducedMotion ? "none" : "simTyping 1.4s steps(32) both" }}
               >
                 {HASH_VALUE}

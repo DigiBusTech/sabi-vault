@@ -2,6 +2,7 @@
 const CACHE_NAME = "sabiprofile-cache-v1";
 const STATIC_ASSETS = [
   "/",
+  "/pwa",
   "/favicon.svg",
   "/favicon.ico",
   "/apple-touch-icon.png",

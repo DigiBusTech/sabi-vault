@@ -59,8 +59,8 @@ export function ScrollWorldStory() {
         </div>
       </Reveal>
 
-      <div className="flex justify-center mb-8 overflow-x-auto">
-        <div className="liquid-glass-pill inline-flex p-1.5 gap-1.5 rounded-full border border-slate-200 bg-white/70">
+      <div className="flex justify-start sm:justify-center mb-8 overflow-x-auto no-scrollbar px-2 max-w-full">
+        <div className="liquid-glass-pill inline-flex p-1 sm:p-1.5 gap-1 sm:gap-1.5 rounded-full border border-slate-200 bg-white/70 shrink-0">
           {STAGES.map((s, idx) => (
             <button
               key={s.step}
