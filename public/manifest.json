@@ -2,7 +2,7 @@
   "name": "SabiProfile - Sovereign Data Infrastructure",
   "short_name": "SabiProfile",
   "description": "Sovereign career and identity profile infrastructure, programmable credential attestation & decentralized identity platform.",
-  "start_url": "/?pwa=true",
+  "start_url": "/pwa",
   "scope": "/",
   "display": "standalone",
   "background_color": "#ffffff",

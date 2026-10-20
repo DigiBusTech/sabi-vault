@@ -121,8 +121,8 @@ export function PwaAppLanding() {
 
       <main>
         {/* 2. NATIVE HERO BANNER */}
-        <section className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-8 pb-10 text-center">
-          <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3.5 py-1 text-xs font-bold text-slate-700 shadow-xs mb-4">
+        <section className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-8 pb-6 text-center">
+          <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3.5 py-1 text-xs font-bold text-slate-700 shadow-xs mb-3">
             <span className="flex h-4 w-4 items-center justify-center rounded-full bg-emerald-600 text-white text-[9px]">
               ✓
             </span>
@@ -130,7 +130,7 @@ export function PwaAppLanding() {
           </div>
 
           <h1 className="font-poppins text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 tracking-tight max-w-3xl mx-auto leading-tight">
-            The Sovereign Data & Credential Identity App
+            The Sovereign Data &amp; Credential Identity App
           </h1>
 
           <p className="mt-3 text-xs sm:text-sm md:text-base text-slate-600 max-w-2xl mx-auto leading-relaxed">
@@ -138,7 +138,7 @@ export function PwaAppLanding() {
           </p>
 
           {/* Quick Trigger Buttons */}
-          <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+          <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
             <Link
               href="/login?mode=signup"
               className="inline-flex items-center gap-2 rounded-full bg-[#059669] px-6 py-3 text-xs sm:text-sm font-bold text-white shadow-lg shadow-emerald-700/25 hover:bg-[#047857] hover:scale-105 active:scale-95 transition-all"
@@ -147,30 +147,31 @@ export function PwaAppLanding() {
               <span>Create Sovereign Vault</span>
             </Link>
 
-            <button
-              type="button"
-              onClick={() => setPwaModalOpen(true)}
-              className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-5 py-3 text-xs sm:text-sm font-bold text-slate-800 shadow-sm hover:border-emerald-500 hover:text-emerald-700 active:scale-95 transition-all cursor-pointer"
+            <Link
+              href="/login"
+              className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-5 py-3 text-xs sm:text-sm font-bold text-slate-800 shadow-sm hover:border-emerald-500 hover:text-emerald-700 active:scale-95 transition-all"
             >
-              <Download size={14} className="text-emerald-600" />
-              <span>Install SabiProfile PWA</span>
-            </button>
+              <Lock size={14} className="text-emerald-600" />
+              <span>Log In</span>
+            </Link>
 
             <button
               type="button"
-              onClick={() => {
-                const el = document.getElementById("tamper-simulation-section");
-                el?.scrollIntoView({ behavior: "smooth" });
-              }}
-              className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-4 py-3 text-xs font-bold text-slate-700 hover:bg-slate-200 transition-all cursor-pointer"
+              onClick={() => setPwaModalOpen(true)}
+              className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-5 py-3 text-xs sm:text-sm font-bold text-slate-700 hover:bg-slate-200 active:scale-95 transition-all cursor-pointer"
             >
-              <ShieldCheck size={14} className="text-emerald-600" />
-              <span>Test Anti-Tamper Shield</span>
+              <Download size={14} className="text-emerald-600" />
+              <span>Install PWA</span>
             </button>
           </div>
         </section>
 
-        {/* 3. NATIVE CARDS GRID WITH REALISTIC WIDGETS */}
+        {/* 3. SOLUTIONS SLIDES ANIMATION (DISCOVER PLATFORM PILLARS) */}
+        <div id="solutions-section">
+          <SolutionsSlides />
+        </div>
+
+        {/* 4. NATIVE CARDS GRID WITH REALISTIC WIDGETS */}
         <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {/* Card 1: Citizen Sovereign Vault */}
@@ -432,10 +433,40 @@ export function PwaAppLanding() {
           </div>
         </section>
 
-        {/* 5. SOLUTIONS SLIDES ANIMATION (TALKING ABOUT THE SOLUTION) */}
-        <div id="solutions-section">
-          <SolutionsSlides />
-        </div>
+        {/* 5. ONBOARDING ACCOUNT ACTION DECK */}
+        <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+          <div className="rounded-[2.5rem] border border-emerald-200/90 bg-gradient-to-br from-emerald-50 via-white to-emerald-50/50 p-6 sm:p-10 text-center shadow-lg">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3.5 py-1 text-xs font-bold text-emerald-800 mb-3">
+              <Key size={13} className="text-emerald-700" />
+              <span>Sovereign Identity Onboarding</span>
+            </span>
+            <h3 className="font-poppins text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+              Ready to take control of your credentials?
+            </h3>
+            <p className="mt-2 text-xs sm:text-sm text-slate-600 max-w-xl mx-auto leading-relaxed">
+              Create your sovereign vault in under 60 seconds. Connect your private cloud drive, mint scoped keys, and verify records against the Base Sepolia ledger.
+            </p>
+
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+              <Link
+                href="/login?mode=signup"
+                className="inline-flex items-center gap-2 rounded-full bg-[#059669] px-7 py-3.5 text-xs sm:text-sm font-bold text-white shadow-lg shadow-emerald-700/25 hover:bg-[#047857] hover:scale-105 active:scale-95 transition-all"
+              >
+                <Key size={15} />
+                <span>Create Sovereign Vault</span>
+                <ArrowRightAnimated size={14} />
+              </Link>
+
+              <Link
+                href="/login"
+                className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-7 py-3.5 text-xs sm:text-sm font-bold text-slate-800 shadow-sm hover:border-emerald-600 hover:text-emerald-700 active:scale-95 transition-all"
+              >
+                <Lock size={15} className="text-emerald-600" />
+                <span>Log In to Existing Vault</span>
+              </Link>
+            </div>
+          </div>
+        </section>
 
         {/* 6. APP STORE & GOOGLE PLAY DOWNLOAD CENTER SECTION */}
         <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10">

@@ -1528,3 +1528,34 @@
 
 
 
+
+### Entry #045: Restoration of Web Landing Page & Architectural Separation of Native PWA Onboarding
+- **Date & Timestamp:** 2026-10-20 16:15:00 (UTC)
+- **User Prompt / Intent:**
+  > "there is a problem the homepage and landing page is removed why, the landing page here is talking about PWA, no. What i asked for was for the landing pages and designs to remain but create a pwa with a different landing page like native app page for pwa, when it is opened it shows slides and cards with info before user clicks login or create account on the PWA, not the web landing pages, please the web landing pages should be restored. please give me and fix plan to see if you understand what i want." -> "yes continue with fixes"
+- **Root Cause Analysis:**
+  - In commit `8d84669` ("PWA"), `src/app/(marketing)/page.tsx` was replaced directly with `PwaAppLanding`, and `src/app/(marketing)/layout.tsx` was modified to conditionally hide `MarketingNav` and `MarketingFooter` when `pathname === "/"`.
+  - This inadvertently overwrote the web marketing experience for desktop and browser visitors with the mobile app interface.
+- **Actions Taken & Architecture Implemented:**
+  1. **Full Web Landing Page Restored (`src/app/(marketing)/page.tsx` & `layout.tsx`):**
+     - Fully restored the complete 457-line marketing landing page from commit `41b045e`, preserving the hero section, live verification simulator, domain bento grid, scroll-world story, tamper visual, audience cards, FAQs, and enterprise CTA.
+     - Restored `src/app/(marketing)/layout.tsx` so `MarketingNav` and `MarketingFooter` are unconditionally rendered for all public web visitors.
+  2. **Dedicated Native PWA App Route (`src/app/pwa/page.tsx` & `layout.tsx`):**
+     - Established a dedicated native app route at `/pwa` with an isolated standalone app shell (`src/app/pwa/layout.tsx`).
+     - Rendered the native app onboarding experience (`src/components/pwa/PwaAppLanding.tsx`):
+       - Top native app header bar with Base Sepolia live block ticker and quick authentication actions.
+       - Prominent interactive onboarding slides (`SolutionsSlides`) at the top showcasing Immigration & Border Security, Higher Education & Academics, Labour & Enterprise Screening, and Scoped Keys.
+       - Informative sovereign architecture cards (Citizen Vault, Biometric Enclave, Multi-Agent Screening, Sovereign Node Isolation).
+       - Real-time cryptographic anti-tamper simulator comparing database payload against immutable Base Sepolia anchor.
+       - Clear Onboarding Account Action Deck providing prominent "Create Sovereign Vault" and "Log In to Existing Vault" options.
+       - Integrated mobile bottom navigation bar (`MobileBottomNav`).
+  3. **Manifest & Standalone Launcher Integration:**
+     - Updated `public/manifest.json` with `"start_url": "/pwa"` and `"display": "standalone"`.
+     - Hardened `src/components/pwa/PwaRegister.tsx` to detect standalone app mode (`window.matchMedia('(display-mode: standalone)').matches`) and route installed mobile app launches to `/pwa`, while standard browser visits to `/` always view the full web landing page.
+  4. **Diagnostic & Line Ending Normalization (`src/app/pwa/layout.tsx`):**
+     - Resolved language server diagnostic TS1005 (`'}' expected`) caused by Windows CRLF byte presence on the metadata definition by normalizing line endings to Unix LF and cleaning the export signature.
+- **Verification & Validation:**
+  - `npx tsc --noEmit`: 0 errors.
+  - `npm run build`: 50 routes compiled successfully with 0 errors (`/` as static marketing page, `/pwa` as native app onboarding page).
+  - `node tests/test_full_suite.mjs`: 100% Passed (all 6 core and expansion suites passed).
+

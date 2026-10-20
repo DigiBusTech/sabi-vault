@@ -49,6 +49,16 @@ export function PwaRegister() {
       }
     }
 
+    // 3. Standalone PWA detection: launch into native PWA onboarding route
+    const isStandalone =
+      window.matchMedia("(display-mode: standalone)").matches ||
+      (window.navigator as any).standalone === true ||
+      new URLSearchParams(window.location.search).get("pwa") === "true";
+
+    if (isStandalone && window.location.pathname === "/") {
+      window.location.replace("/pwa");
+    }
+
     return () => {
       window.removeEventListener("beforeinstallprompt", handleBeforeInstall);
       window.removeEventListener("appinstalled", handleAppInstalled);
