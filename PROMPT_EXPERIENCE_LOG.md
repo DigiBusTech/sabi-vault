@@ -1557,5 +1557,40 @@
 - **Verification & Validation:**
   - `npx tsc --noEmit`: 0 errors.
   - `npm run build`: 50 routes compiled successfully with 0 errors (`/` as static marketing page, `/pwa` as native app onboarding page).
+
+### Entry #046: Multi-Device Verification Challenge & Authorization Architecture
+- **Date & Timestamp:** 2026-10-20 22:45:00 (UTC)
+- **User Prompt / Intent:**
+  > "another problem is when i login in one device and login in another it automatically close my first session, it is supposed to lock the new device and ask to verify with the other device before it can be logged in and register new device,"
+- **Root Cause & Previous Architecture:**
+  - Previously, `/api/auth/login` unconditionally called `enforceSingleSession(userId)` on every successful password validation. This immediately terminated the previous active device session (`isActive = false`), leaving the active user suddenly locked out with `SESSION_TERMINATED_CONCURRENT`.
+- **New Architecture Implemented:**
+  1. **Device Verification Challenge Store (`src/lib/security/device_challenge.ts`):**
+     - Engineered dual-persistence challenge manager (fast in-memory registry + Supabase `device_verification_challenges` table fallback).
+     - Generates 6-digit numeric cryptographic authorization codes with a 10-minute expiration TTL.
+     - Provides `createDeviceChallenge`, `getPendingChallengeForUser`, `approveDeviceChallenge`, `rejectDeviceChallenge`, and `confirmDeviceChallenge`.
+  2. **Database Migration (`supabase/migrations/20261021000000_device_verification_challenges.sql`):**
+     - Defined `device_verification_challenges` table with foreign key cascade to `auth.users`, status tracking (`pending`, `approved`, `rejected`, `completed`, `expired`), and strict service-role RLS policies.
+  3. **Non-Destructive Concurrent Login Guard (`src/app/api/auth/login/route.ts` & `session.ts`):**
+     - Added `getActiveSessionForUser(userId)` to inspect existing active sessions.
+     - When an active session is detected on a different device fingerprint, `/api/auth/login` leaves the first session active, locks the new device, and returns `{ requiresDeviceVerification: true, challengeId, verificationCode, activeDevice }`.
+  4. **Device Verification API Suite (`src/app/api/auth/device-verify/`):**
+     - `GET /api/auth/device-verify/pending`: Authenticated endpoint queried by the active session to detect pending new device login requests.
+     - `POST /api/auth/device-verify/respond`: Authenticated endpoint allowing the active user on Device A to `approve` or `reject` the new device request.
+     - `GET /api/auth/device-verify/status`: Polling endpoint queried by Device B while awaiting approval.
+     - `POST /api/auth/device-verify/confirm`: Completes the challenge once approved or when the 6-digit PIN is entered on Device B; registers the new device, transitions the single-session state cleanly, and mints HttpOnly session cookies.
+  5. **Client-Side New Device Verification UI (`src/components/auth/LoginForm.tsx`):**
+     - Renders an interactive multi-device protection screen displaying active device details, a 6-digit PIN input, real-time background status polling every 2.5s, and a cancel option.
+  6. **Active Session Notification & Approval Modal (`src/components/dashboard/DashboardShell.tsx`):**
+     - Polls `/api/auth/device-verify/pending` every 4 seconds.
+     - If a challenge is pending, presents an enterprise-grade "Authorize New Device?" security modal with device specs, IP address, 6-digit authorization PIN, and `[Approve Device]` / `[Deny & Block]` buttons.
+- **Validation:**
+  - `npx tsx tests/test_device_verification.mjs`: 100% Passed (5/5 tests covering Device A preservation, challenge generation, invalid code rejection, active device approval, and handover).
+  - `node tests/test_enterprise_security.mjs`: 100% Passed.
+  - `node tests/test_signup_security.mjs`: 100% Passed.
+  - `node tests/test_full_suite.mjs`: 100% Passed.
+  - `npx tsc --noEmit`: 0 errors.
+  - `npm run build`: All 54 Next.js routes compiled successfully.
+
   - `node tests/test_full_suite.mjs`: 100% Passed (all 6 core and expansion suites passed).
 

@@ -23,7 +23,7 @@ import {
   Lock,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { logoutAndResetSession } from "@/lib/security/silent_refresh.client";
+import { logoutAndResetSession, getStoredAccessToken } from "@/lib/security/silent_refresh.client";
 
 export interface ShellNavItem {
   id: string;
@@ -73,6 +73,80 @@ export function DashboardShell({ role, email, orgName, navItems, children }: Das
   const [activeId, setActiveId] = useState<string>(navItems[0]?.id ?? "overview");
   const [mobileOpen, setMobileOpen] = useState<boolean>(false);
   const [sessionTerminated, setSessionTerminated] = useState<boolean>(false);
+  const [pendingChallenge, setPendingChallenge] = useState<{
+    id: string;
+    ipAddress: string;
+    userAgent: string;
+    verificationCode: string;
+    createdAt: string;
+  } | null>(null);
+  const [respondingChallenge, setRespondingChallenge] = useState<boolean>(false);
+
+  // Poll for pending multi-device authorization challenges every 4 seconds
+  useEffect(() => {
+    let isCancelled = false;
+
+    const checkPendingChallenge = async () => {
+      try {
+        const token = getStoredAccessToken();
+        const headers: Record<string, string> = {};
+        if (token) headers["Authorization"] = `Bearer ${token}`;
+
+        const res = await fetch("/api/auth/device-verify/pending", {
+          headers,
+          credentials: "include",
+        });
+        if (res.ok) {
+          const data = await res.json().catch(() => ({}));
+          if (!isCancelled) {
+            if (data.hasPending && data.challenge) {
+              setPendingChallenge(data.challenge);
+            } else {
+              setPendingChallenge(null);
+            }
+          }
+        }
+      } catch {
+        // Non-fatal
+      }
+    };
+
+    checkPendingChallenge();
+    const interval = setInterval(checkPendingChallenge, 4000);
+    return () => {
+      isCancelled = true;
+      clearInterval(interval);
+    };
+  }, []);
+
+  const handleRespondChallenge = async (action: "approve" | "reject") => {
+    if (!pendingChallenge) return;
+    setRespondingChallenge(true);
+    try {
+      const token = getStoredAccessToken();
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
+      const res = await fetch("/api/auth/device-verify/respond", {
+        method: "POST",
+        headers,
+        credentials: "include",
+        body: JSON.stringify({
+          challengeId: pendingChallenge.id,
+          action,
+        }),
+      });
+
+      if (res.ok) {
+        setPendingChallenge(null);
+      }
+    } catch {
+      // Non-fatal
+    } finally {
+      setRespondingChallenge(false);
+    }
+  };
+
 
   // Single-Session Enforcement Heartbeat:
   // Continuously monitors active session status across devices/browsers
@@ -313,6 +387,73 @@ export function DashboardShell({ role, email, orgName, navItems, children }: Das
       <main className="relative z-10 lg:pl-[260px]">
         <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</div>
       </main>
+      {/* Real-time Multi-Device Authorization Challenge Modal */}
+      {pendingChallenge && (
+        <div className="fixed inset-0 z-[99998] flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4 animate-fadeIn">
+          <div className="max-w-md w-full rounded-3xl border border-amber-400/50 bg-white p-7 text-slate-900 shadow-2xl text-center space-y-4">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-100 text-amber-700 ring-4 ring-amber-50">
+              <ShieldCheck size={28} className="text-amber-600" />
+            </div>
+
+            <div>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-3 py-1 text-[11px] font-bold text-amber-800">
+                <Lock size={12} />
+                Multi-Device Security Verification
+              </span>
+              <h3 className="mt-2 font-poppins text-xl font-extrabold text-slate-900">
+                Authorize New Device?
+              </h3>
+              <p className="mt-2 text-xs leading-relaxed text-slate-600">
+                A new device or browser is attempting to sign into your SabiProfile account. Do you authorize this device?
+              </p>
+            </div>
+
+            <div className="rounded-2xl bg-slate-50 p-4 text-left text-xs space-y-2 border border-slate-200">
+              <div className="flex justify-between text-slate-600">
+                <span>Requesting Device:</span>
+                <strong className="text-slate-900 truncate max-w-[200px]">
+                  {pendingChallenge.userAgent}
+                </strong>
+              </div>
+              <div className="flex justify-between text-slate-600">
+                <span>IP Address:</span>
+                <strong className="text-slate-900">{pendingChallenge.ipAddress}</strong>
+              </div>
+              <div className="pt-2 border-t border-slate-200 flex items-center justify-between">
+                <span className="font-semibold text-slate-700">6-Digit PIN:</span>
+                <span className="font-mono text-base font-extrabold tracking-widest text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-lg border border-emerald-200">
+                  {pendingChallenge.verificationCode}
+                </span>
+              </div>
+            </div>
+
+            <p className="text-[11px] text-slate-500">
+              Approving will register the new device and transfer your active single-session dashboard access.
+            </p>
+
+            <div className="grid grid-cols-2 gap-3 pt-2">
+              <button
+                type="button"
+                disabled={respondingChallenge}
+                onClick={() => handleRespondChallenge("reject")}
+                className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-300 bg-white py-2.5 text-xs font-bold text-slate-700 hover:bg-rose-50 hover:border-rose-300 hover:text-rose-700 transition-colors cursor-pointer"
+              >
+                <span>Deny &amp; Block</span>
+              </button>
+
+              <button
+                type="button"
+                disabled={respondingChallenge}
+                onClick={() => handleRespondChallenge("approve")}
+                className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#059669] py-2.5 text-xs font-bold text-white hover:bg-[#047857] shadow-md transition-all cursor-pointer"
+              >
+                <span>Approve Device</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Unclosable Security Lockout Overlay for Concurrent Login */}
       {sessionTerminated && (
         <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-950/85 backdrop-blur-md p-4 animate-fadeIn">

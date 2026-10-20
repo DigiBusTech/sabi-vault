@@ -587,6 +587,52 @@ export async function getActiveSession(sessionId: string): Promise<UserSessionRe
 }
 
 /**
+ * Retrieve the currently active session record for a user, if one exists.
+ */
+export async function getActiveSessionForUser(userId: string): Promise<UserSessionRecord | null> {
+  if (!userId) return null;
+
+  let activeSessionForUser: UserSessionRecord | null = null;
+  memorySessions.forEach((s) => {
+    if (s.userUuid === userId && s.isActive) activeSessionForUser = s;
+  });
+
+  if (!activeSessionForUser) {
+    try {
+      const supabase = createAdminSupabaseClient();
+      const { data } = await supabase
+        .from("user_sessions")
+        .select("*")
+        .eq("user_uuid", userId)
+        .eq("is_active", true)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (data) {
+        activeSessionForUser = {
+          id: data.id,
+          userUuid: data.user_uuid,
+          role: data.role as import("@/lib/auth/auth_guard").UserRole,
+          orgId: data.org_id || undefined,
+          deviceFingerprint: data.device_fingerprint,
+          refreshTokenHash: data.refresh_token_hash,
+          ipAddress: data.ip_address,
+          userAgent: data.user_agent,
+          isActive: data.is_active,
+          lastActiveAt: new Date(data.last_active_at),
+          createdAt: new Date(data.created_at),
+        };
+      }
+    } catch {
+      // Fall through
+    }
+  }
+
+  return activeSessionForUser;
+}
+
+/**
  * Validates whether a given user and optional raw refresh token represents the currently
  * active session for that user under Single-Session Enforcement (1 device/browser policy).
  */
@@ -658,42 +704,7 @@ export async function validateActiveUserSession(
   }
 
   // 2. Check if the user has ANY active session in memory or DB
-  let activeSessionForUser: UserSessionRecord | null = null;
-  memorySessions.forEach((s) => {
-    if (s.userUuid === userId && s.isActive) activeSessionForUser = s;
-  });
-
-  if (!activeSessionForUser) {
-    try {
-      const supabase = createAdminSupabaseClient();
-      const { data } = await supabase
-        .from("user_sessions")
-        .select("*")
-        .eq("user_uuid", userId)
-        .eq("is_active", true)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (data) {
-        activeSessionForUser = {
-          id: data.id,
-          userUuid: data.user_uuid,
-          role: data.role as import("@/lib/auth/auth_guard").UserRole,
-          orgId: data.org_id || undefined,
-          deviceFingerprint: data.device_fingerprint,
-          refreshTokenHash: data.refresh_token_hash,
-          ipAddress: data.ip_address,
-          userAgent: data.user_agent,
-          isActive: data.is_active,
-          lastActiveAt: new Date(data.last_active_at),
-          createdAt: new Date(data.created_at),
-        };
-      }
-    } catch {
-      // Fall through
-    }
-  }
+  const activeSessionForUser = await getActiveSessionForUser(userId);
 
   // If there is an active session for this user, but this client's token didn't match it (or client had no token)
   if (activeSessionForUser && rawRefreshToken) {
@@ -710,3 +721,4 @@ export async function validateActiveUserSession(
 
   return { isValid: true, isTerminated: false, session: activeSessionForUser || undefined };
 }
+

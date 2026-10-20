@@ -10,6 +10,7 @@ import {
   Check,
   Loader2,
   Lock,
+  Key,
   ShieldCheck,
   Smartphone,
   X,
@@ -55,6 +56,19 @@ export function LoginForm() {
   // Progressive lockout countdown state (strictly for sign-in mode)
   const [lockoutRemaining, setLockoutRemaining] = useState<number | null>(null);
   const [isPermanentLock, setIsPermanentLock] = useState(false);
+
+  // Multi-Device Challenge State
+  const [deviceChallenge, setDeviceChallenge] = useState<{
+    challengeId: string;
+    activeDevice?: {
+      userAgent?: string;
+      ipAddress?: string;
+      lastActive?: string;
+    };
+    message?: string;
+  } | null>(null);
+  const [verificationCodeInput, setVerificationCodeInput] = useState("");
+  const [verifyingChallenge, setVerifyingChallenge] = useState(false);
 
   // Behavioral telemetry
   const mountTimeRef = useRef<number>(Date.now());
@@ -109,6 +123,75 @@ export function LoginForm() {
       setIsPermanentLock(false);
     }
   };
+
+  const handleConfirmChallenge = async (codeToSubmit?: string) => {
+    if (!deviceChallenge) return;
+    setVerifyingChallenge(true);
+    setError("");
+
+    try {
+      const res = await fetch("/api/auth/device-verify/confirm", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          challengeId: deviceChallenge.challengeId,
+          verificationCode: codeToSubmit || verificationCodeInput || undefined,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Verification failed. Please check the code or approve on your active device.");
+        return;
+      }
+
+      if (data.accessToken) {
+        setStoredAccessToken(data.accessToken);
+      }
+
+      const nextUrl = searchParams.get("next") || "/dashboard";
+      router.replace(nextUrl);
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error verifying device.");
+    } finally {
+      setVerifyingChallenge(false);
+    }
+  };
+
+  // Auto-poll challenge status from active device
+  useEffect(() => {
+    if (!deviceChallenge) return;
+
+    let isMounted = true;
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/auth/device-verify/status?challengeId=${deviceChallenge.challengeId}`);
+        if (!res.ok) return;
+        const data = await res.json();
+
+        if (data.status === "approved" && isMounted) {
+          clearInterval(interval);
+          handleConfirmChallenge();
+        } else if (data.status === "rejected" && isMounted) {
+          clearInterval(interval);
+          setError("Device authorization was rejected by your active device.");
+          setDeviceChallenge(null);
+        } else if (data.status === "expired" && isMounted) {
+          clearInterval(interval);
+          setError("Device verification request expired. Please sign in again.");
+          setDeviceChallenge(null);
+        }
+      } catch {
+        // Non-fatal
+      }
+    }, 2500);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, [deviceChallenge]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -181,6 +264,17 @@ export function LoginForm() {
         }
 
         setError(data.error || "Authentication failed.");
+        return;
+      }
+
+      // Handle Multi-Device Verification Challenge
+      if (data.requiresDeviceVerification) {
+        setDeviceChallenge({
+          challengeId: data.challengeId,
+          activeDevice: data.activeDevice,
+          message: data.message,
+        });
+        setIsSubmitting(false);
         return;
       }
 
@@ -284,7 +378,95 @@ export function LoginForm() {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="mt-8 space-y-5" noValidate>
+      {deviceChallenge ? (
+        <div className="mt-8 rounded-3xl border border-emerald-200 bg-white p-6 shadow-xl space-y-5 animate-fadeIn">
+          <div className="flex items-center gap-3">
+            <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-800 ring-4 ring-emerald-50">
+              <ShieldCheck size={26} className="text-[#059669]" />
+            </span>
+            <div>
+              <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[10px] font-bold text-emerald-800 uppercase tracking-wider">
+                Multi-Device Protection
+              </span>
+              <h2 className="font-poppins text-lg font-bold text-slate-900">
+                Authorize on Active Device
+              </h2>
+            </div>
+          </div>
+
+          <p className="text-xs leading-relaxed text-slate-600">
+            An active session is currently running on your account. To protect your sovereign vault and register this new device, please <strong>approve the request</strong> on your active device or enter the 6-digit authorization PIN shown on it.
+          </p>
+
+          {deviceChallenge.activeDevice && (
+            <div className="rounded-2xl bg-slate-50 p-3.5 text-xs space-y-1.5 border border-slate-200/80">
+              <div className="flex justify-between text-slate-600">
+                <span>Active Device:</span>
+                <strong className="text-slate-900 truncate max-w-[200px]">
+                  {deviceChallenge.activeDevice.userAgent || "Active Session"}
+                </strong>
+              </div>
+              <div className="flex justify-between text-slate-600">
+                <span>Network Location:</span>
+                <strong className="text-slate-900">{deviceChallenge.activeDevice.ipAddress}</strong>
+              </div>
+            </div>
+          )}
+
+          {/* 6-digit code input & action */}
+          <div className="space-y-3 pt-2">
+            <label className="block text-xs font-bold text-slate-700">
+              Enter 6-Digit Verification PIN (from your other device)
+            </label>
+            <input
+              type="text"
+              maxLength={6}
+              value={verificationCodeInput}
+              onChange={(e) => setVerificationCodeInput(e.target.value.replace(/\D/g, ""))}
+              placeholder="e.g. 482915"
+              className="w-full tracking-[0.3em] text-center font-mono text-xl font-bold rounded-xl border border-slate-300 py-3 text-slate-900 placeholder:text-slate-300 focus:border-[#059669] focus:ring-2 focus:ring-[#059669]/20 outline-none"
+            />
+
+            <button
+              type="button"
+              disabled={verifyingChallenge || verificationCodeInput.length < 6}
+              onClick={() => handleConfirmChallenge(verificationCodeInput)}
+              className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#059669] py-3 text-xs font-bold text-white shadow-md hover:bg-[#047857] disabled:opacity-50 transition-all cursor-pointer"
+            >
+              {verifyingChallenge ? (
+                <span>Authorizing Device...</span>
+              ) : (
+                <>
+                  <Key size={14} />
+                  <span>Verify &amp; Register This Device</span>
+                </>
+              )}
+            </button>
+          </div>
+
+          <div className="flex items-center justify-center gap-2 text-xs text-slate-500 pt-1">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-600"></span>
+            </span>
+            <span>Waiting for one-tap approval on your active device...</span>
+          </div>
+
+          <div className="pt-2 text-center">
+            <button
+              type="button"
+              onClick={() => {
+                setDeviceChallenge(null);
+                setVerificationCodeInput("");
+              }}
+              className="text-xs font-bold text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
+            >
+              Cancel and Return to Sign In
+            </button>
+          </div>
+        </div>
+      ) : (
+        <form onSubmit={handleSubmit} className="mt-8 space-y-5" noValidate>
         {/* Invisible Bot Honeypot */}
         <input
           type="text"
@@ -441,45 +623,48 @@ export function LoginForm() {
             : "Send reset link"}
         </button>
       </form>
+      )}
 
-      <div className="mt-6 border-t border-slate-100 pt-6 text-center text-xs text-slate-500">
-        {mode === "signin" && (
-          <p>
-            Don&apos;t have a vault yet?{" "}
-            <button
-              type="button"
-              onClick={() => switchMode("signup")}
-              className="font-semibold text-brand-green hover:text-brand-green-hover cursor-pointer"
-            >
-              Create one now
-            </button>
-          </p>
-        )}
-        {mode === "signup" && (
-          <p>
-            Already have a vault?{" "}
-            <button
-              type="button"
-              onClick={() => switchMode("signin")}
-              className="font-semibold text-brand-green hover:text-brand-green-hover cursor-pointer"
-            >
-              Sign in
-            </button>
-          </p>
-        )}
-        {mode === "forgot" && (
-          <p>
-            Remember your password?{" "}
-            <button
-              type="button"
-              onClick={() => switchMode("signin")}
-              className="font-semibold text-brand-green hover:text-brand-green-hover cursor-pointer"
-            >
-              Back to sign in
-            </button>
-          </p>
-        )}
-      </div>
+      {!deviceChallenge && (
+        <div className="mt-6 border-t border-slate-100 pt-6 text-center text-xs text-slate-500">
+          {mode === "signin" && (
+            <p>
+              Don&apos;t have a vault yet?{" "}
+              <button
+                type="button"
+                onClick={() => switchMode("signup")}
+                className="font-semibold text-brand-green hover:text-brand-green-hover cursor-pointer"
+              >
+                Create one now
+              </button>
+            </p>
+          )}
+          {mode === "signup" && (
+            <p>
+              Already have a vault?{" "}
+              <button
+                type="button"
+                onClick={() => switchMode("signin")}
+                className="font-semibold text-brand-green hover:text-brand-green-hover cursor-pointer"
+              >
+                Sign in
+              </button>
+            </p>
+          )}
+          {mode === "forgot" && (
+            <p>
+              Remember your password?{" "}
+              <button
+                type="button"
+                onClick={() => switchMode("signin")}
+                className="font-semibold text-brand-green hover:text-brand-green-hover cursor-pointer"
+              >
+                Back to sign in
+              </button>
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 }

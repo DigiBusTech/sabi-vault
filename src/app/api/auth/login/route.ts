@@ -10,11 +10,13 @@ import {
 import {
   registerUserSession,
   computeSha256,
+  getActiveSessionForUser,
   REFRESH_COOKIE_NAME,
   DEVICE_COOKIE_NAME,
   REFRESH_TOKEN_TTL_DAYS,
   generateDeviceId,
 } from "@/lib/security/session";
+import { createDeviceChallenge } from "@/lib/security/device_challenge";
 import { verifyBotDefense, isScraperOrHeadless } from "@/lib/security/bot_defense";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { globalAdminStore } from "@/core/admin/admin_store";
@@ -173,10 +175,51 @@ export async function POST(req: NextRequest) {
     await resetLockout(identifier);
     resetIpFailures(ipAddress);
 
-    // 5. Device Fingerprinting & Single-Session Enforcement
+    // 5. Device Fingerprinting & Multi-Device Verification Check
     const deviceId = req.cookies.get(DEVICE_COOKIE_NAME)?.value || generateDeviceId();
     const effectiveFingerprint =
       rawFingerprint || computeSha256(`${userAgent}::${ipAddress}::${deviceId}`);
+
+    // Check if an active session already exists for this user on another device
+    const activeSession = await getActiveSessionForUser(authenticatedUser.id);
+    const isDifferentDevice = Boolean(
+      activeSession &&
+      activeSession.deviceFingerprint !== effectiveFingerprint
+    );
+
+    if (isDifferentDevice && activeSession) {
+      // An active session is currently running on another device.
+      // Do NOT terminate the first session! Lock the new device and require verification from the active device.
+      const challenge = await createDeviceChallenge({
+        userId: authenticatedUser.id,
+        userEmail: authenticatedUser.email,
+        deviceFingerprint: effectiveFingerprint,
+        deviceId,
+        ipAddress,
+        userAgent,
+        activeSessionId: activeSession.id,
+      });
+
+      return NextResponse.json(
+        {
+          success: false,
+          requiresDeviceVerification: true,
+          challengeId: challenge.id,
+          verificationCode: challenge.verificationCode,
+          message: "An active session exists on another device. Please verify with your active device to authorize and register this new device.",
+          activeDevice: {
+            userAgent: activeSession.userAgent || "Active Device / Browser",
+            ipAddress: activeSession.ipAddress || "Unknown IP",
+            lastActive: activeSession.lastActiveAt,
+          },
+          user: {
+            id: authenticatedUser.id,
+            email: authenticatedUser.email,
+          },
+        },
+        { status: 200 }
+      );
+    }
 
     const sessionResult = await registerUserSession({
       userId: authenticatedUser.id,
