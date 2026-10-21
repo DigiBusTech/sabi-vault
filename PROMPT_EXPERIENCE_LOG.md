@@ -1825,3 +1825,36 @@
   - npx tsc --noEmit: 100% Passed (0 errors).
   - node tests/test_full_suite.mjs: 100% Passed (all 8 master test suites).
   - npm run build: 100% Passed (all 52 static and dynamic routes compiled cleanly).
+
+---
+
+### Entry #053: Mobile Web Overflow Resolution & Viewport Clipping Architecture
+- **Date & Timestamp:** 2026-10-21 20:05:00 (Local)
+- **User Prompt / Intent:**
+  > "fixed but new problem, mobile web is not reponsive content is expanding screen display and look like desktop switch on mobile web, please fix this for mobile web browser responsiveness and better screen content alignement. fix only this for web mobile"
+- **Root Cause Analysis:**
+  - Inspection of the mobile screenshot revealed a ~60px horizontal overflow shift cutting off the left edge of the page ("SabiPro", "Instant ", "Your d", "Store your u").
+  - The root cause was several wide elements exceeding the 360px mobile viewport:
+    1. Hero Pill text with letter-spacing tracking exceeded 380px without mobile wrapping.
+    2. Section 2 compliance badges ("NDPC Certified • Nigeria & ECOWAS Data Protection") in an inline-flex single line measured over 400px.
+    3. Missing horizontal clipping on the root marketing layout wrapper allowed child content to expand the layout viewport on mobile WebKit and Chrome.
+    4. Sub-components (DomainBento, TamperVisual, ScrollWorldStory, AudienceCards, MobileAppCard) lacked responsive mobile padding and min-w-0 on truncated flex items.
+- **Actions Taken:**
+  1. **Strict Viewport & Root Overflow Clipping:**
+     - In globals.css, applied overflow-x: clip and max-width: 100% on both html and body to prevent horizontal panning.
+     - In src/app/(marketing)/layout.tsx, wrapped the page hierarchy in an overflow-x-clip max-w-full min-w-0 container.
+     - In src/app/(marketing)/page.tsx, added overflow-x-clip max-w-full min-w-0 to <main> and every section.
+  2. **Mobile Hero Responsiveness & Typography:**
+     - Scaled headline to text-2xl sm:text-4xl md:text-5xl lg:text-6xl with break-words.
+     - Responsive Hero Pill: compact "Instant Verification • Tamper-Proof" on mobile (< sm) and full text on desktop (>= sm) with max-w-[calc(100vw-2.5rem)].
+     - Made hero CTAs w-full on mobile with stacked layout, scaling to sm:w-auto.
+     - Stacked trust highlights vertically on mobile (items-start) with shrink-0 icons to prevent text squeezing.
+  3. **Section-Level Mobile Guardrails:**
+     - Section 2 Compliance Badges: stacked vertically on mobile with w-full text-center, wrapping long regional descriptions.
+     - Section 4 Comparison: switched to grid-cols-1 on mobile with distinct card backgrounds, expanding to sm:grid-cols-2.
+     - DomainBento: added min-w-0 max-w-full to hashRef flex container so 64-character hashes truncate cleanly without expanding cards.
+     - TamperVisual, ScrollWorldStory, AudienceCards, and MobileAppCard: adjusted mobile padding to p-4 / p-5, preventing padding blowout on 360px viewports.
+- **Validation:**
+  - npx tsc --noEmit: 100% Passed (0 errors).
+  - node tests/test_full_suite.mjs: 100% Passed (8/8 test suites).
+  - npm run build: 100% Passed (all 52 static and dynamic routes compiled cleanly).

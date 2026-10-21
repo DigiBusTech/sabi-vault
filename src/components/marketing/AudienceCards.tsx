@@ -9,7 +9,7 @@ import { Reveal } from "@/components/marketing/Reveal";
 
 export function AudienceCards() {
   return (
-    <section className="mx-auto max-w-7xl px-5 py-20 lg:px-8 font-sans">
+    <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16 sm:py-20 font-sans w-full max-w-full overflow-hidden">
       <Reveal>
         <div className="text-center max-w-2xl mx-auto mb-12">
           <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#059669]">
@@ -27,7 +27,7 @@ export function AudienceCards() {
       <div className="grid gap-8 md:grid-cols-2">
         {/* For Governments Card */}
         <Reveal>
-          <LiquidGlassCard className="h-full p-8 md:p-10 rounded-[2rem] border border-slate-200 shadow-md flex flex-col justify-between hover:border-emerald-500/40 transition-all">
+          <LiquidGlassCard className="h-full p-5 sm:p-8 md:p-10 rounded-3xl sm:rounded-[2rem] border border-slate-200 shadow-md flex flex-col justify-between hover:border-emerald-500/40 transition-all">
             <div>
               <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700 shadow-xs border border-emerald-100">
                 <Landmark size={24} />
@@ -57,7 +57,7 @@ export function AudienceCards() {
 
         {/* For Enterprises Card */}
         <Reveal delay={100}>
-          <LiquidGlassCard className="h-full p-8 md:p-10 rounded-[2rem] border border-slate-200 shadow-md flex flex-col justify-between hover:border-emerald-500/40 transition-all">
+          <LiquidGlassCard className="h-full p-5 sm:p-8 md:p-10 rounded-3xl sm:rounded-[2rem] border border-slate-200 shadow-md flex flex-col justify-between hover:border-emerald-500/40 transition-all">
             <div>
               <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700 shadow-xs border border-emerald-100">
                 <Building2 size={24} />

@@ -1,4 +1,4 @@
-﻿import { AlertTriangle, FileText, Hash, Link2, Pencil } from "lucide-react";
+import { AlertTriangle, FileText, Hash, Link2, Pencil } from "lucide-react";
 import { CheckCircle2Animated } from "@/components/ui/animated-icons";
 
 /**
@@ -9,12 +9,12 @@ import { CheckCircle2Animated } from "@/components/ui/animated-icons";
 export function TamperVisual() {
   return (
     <div
-      className="relative mx-auto w-full max-w-lg space-y-4"
+      className="relative mx-auto w-full max-w-lg space-y-4 min-w-0 overflow-hidden"
       role="img"
       aria-label="Comparison: a static PDF can be edited after issue with no way to detect it, while a SabiProfile record is hash-anchored and verified in real time"
     >
       {/* The paper way */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_12px_30px_-18px_rgba(15,23,42,0.18)]">
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-[0_12px_30px_-18px_rgba(15,23,42,0.18)]">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-3">
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500">
@@ -52,7 +52,7 @@ export function TamperVisual() {
       </div>
 
       {/* The SabiProfile way */}
-      <div className="liquid-glass-card rounded-2xl border-brand-green/30 bg-emerald-50/70 p-5 shadow-[0_12px_30px_-18px_rgba(5,150,105,0.25)]">
+      <div className="liquid-glass-card rounded-2xl border-brand-green/30 bg-emerald-50/70 p-4 sm:p-5 shadow-[0_12px_30px_-18px_rgba(5,150,105,0.25)]">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-3">
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-brand-green shadow-sm">

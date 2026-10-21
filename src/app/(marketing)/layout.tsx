@@ -6,13 +6,15 @@ import { PwaInstallBanner } from "@/components/pwa/PwaInstallBanner";
 
 export default function MarketingLayout({ children }: { children: ReactNode }) {
   return (
-    <>
+    <div className="relative w-full max-w-full overflow-x-clip min-w-0 flex flex-col min-h-screen">
       <MarketingNav />
-      {children}
+      <div className="flex-1 w-full max-w-full overflow-x-clip min-w-0">
+        {children}
+      </div>
       <PwaInstallBanner />
       <MarketingFooter />
       <CookieConsent />
-    </>
+    </div>
   );
 }
 

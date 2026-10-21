@@ -158,7 +158,7 @@ export function DomainBento() {
   const [activeCardId, setActiveCardId] = useState<string>("finance");
 
   return (
-    <section className="mx-auto max-w-7xl px-5 py-24 lg:px-8">
+    <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16 sm:py-24 w-full max-w-full overflow-hidden">
       <Reveal>
         <div className="max-w-3xl">
           <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#059669]">
@@ -191,7 +191,7 @@ export function DomainBento() {
                 }`}
               >
                 {/* Inner Core Content Card */}
-                <div className="h-full rounded-[calc(2rem-0.375rem)] liquid-glass-card p-6 md:p-8 flex flex-col justify-between shadow-sm transition-all">
+                <div className="h-full rounded-[calc(2rem-0.375rem)] liquid-glass-card p-4 sm:p-6 md:p-8 flex flex-col justify-between shadow-sm transition-all min-w-0 max-w-full overflow-hidden">
                   <div>
                     {/* Header: Icon + Verification Tier Tag */}
                     <div className="flex items-center justify-between">
@@ -249,9 +249,9 @@ export function DomainBento() {
                       ))}
                     </div>
 
-                    <div className="mt-3 flex items-center gap-2 font-mono text-[10px] text-slate-400 truncate">
+                    <div className="mt-3 flex items-center gap-2 font-mono text-[10px] text-slate-400 min-w-0 max-w-full overflow-hidden">
                       <Hash size={11} className="text-[#059669] shrink-0" />
-                      <span className="truncate">{card.sampleRecord.hashRef}</span>
+                      <span className="truncate min-w-0 flex-1">{card.sampleRecord.hashRef}</span>
                     </div>
                   </div>
                 </div>

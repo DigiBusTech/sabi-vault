@@ -8,9 +8,9 @@ import { Smartphone, Lock, QrCode, ShieldCheck, Sparkles } from "lucide-react";
 
 export function MobileAppCard() {
   return (
-    <section className="mx-auto max-w-7xl px-5 py-20 lg:px-8">
+    <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16 sm:py-20 w-full max-w-full overflow-hidden">
       <Reveal>
-        <LiquidGlassCard className="relative overflow-hidden rounded-[2.5rem] border border-slate-200/90 bg-gradient-to-br from-white/95 via-emerald-50/30 to-white/95 p-8 md:p-14 shadow-xl">
+        <LiquidGlassCard className="relative overflow-hidden rounded-3xl sm:rounded-[2.5rem] border border-slate-200/90 bg-gradient-to-br from-white/95 via-emerald-50/30 to-white/95 p-5 sm:p-8 md:p-14 shadow-xl">
           {/* Ambient Glow */}
           <div
             className="pointer-events-none absolute -right-20 -top-20 h-80 w-80 rounded-full bg-emerald-400/15 blur-3xl"

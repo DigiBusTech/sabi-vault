@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState } from "react";
 import { CheckCircle2Animated, SparklesAnimated, ArrowRightAnimated } from "@/components/ui/animated-icons";
@@ -43,7 +43,7 @@ export function ScrollWorldStory() {
   const cur = STAGES[active];
 
   return (
-    <section className="relative mx-auto max-w-7xl px-5 py-20 lg:px-8 font-sans">
+    <section className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16 sm:py-20 font-sans w-full max-w-full overflow-hidden">
       <Reveal>
         <div className="text-center max-w-2xl mx-auto mb-10">
           <div className="liquid-glass-pill inline-flex items-center gap-2 px-3 py-1 text-xs font-bold text-[#059669]">
@@ -79,7 +79,7 @@ export function ScrollWorldStory() {
 
       <Reveal key={active}>
         <div className="grid gap-6 lg:grid-cols-12 items-stretch">
-          <LiquidGlassCard className="lg:col-span-6 p-7 rounded-3xl flex flex-col justify-between border border-slate-200 shadow-md">
+          <LiquidGlassCard className="lg:col-span-6 p-5 sm:p-7 rounded-3xl flex flex-col justify-between border border-slate-200 shadow-md">
             <div>
               <div className="flex items-center gap-2.5">
                 <span className="font-mono text-xs font-extrabold text-[#059669]">Stage {cur.step}/03</span>
@@ -98,7 +98,7 @@ export function ScrollWorldStory() {
             </div>
           </LiquidGlassCard>
 
-          <div className="lg:col-span-6 flex flex-col justify-between rounded-3xl bg-[#0f172a] text-white p-6 shadow-xl border border-slate-800">
+          <div className="lg:col-span-6 flex flex-col justify-between rounded-3xl bg-[#0f172a] text-white p-4 sm:p-6 shadow-xl border border-slate-800">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <span className="font-mono text-xs text-slate-400">{cur.codeLabel}</span>
               <span className="font-mono text-[10px] text-emerald-400 bg-emerald-950 px-2 py-0.5 rounded border border-emerald-800">ENFORCED IN CODE</span>
