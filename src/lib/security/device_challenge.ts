@@ -127,6 +127,37 @@ export async function getDeviceChallenge(challengeId: string): Promise<DeviceCha
     }
   }
 
+  // Cross-check resolution in database to catch status updates across serverless lambdas
+  if (challenge && challenge.status === "pending") {
+    try {
+      const supabase = createAdminSupabaseClient();
+      const { data: resolutions } = await supabase
+        .from("security_audit_events")
+        .select("event_type, metadata")
+        .in("event_type", [
+          "DEVICE_VERIFICATION_COMPLETED",
+          "DEVICE_VERIFICATION_APPROVED",
+          "DEVICE_VERIFICATION_REJECTED",
+        ])
+        .order("created_at", { ascending: false })
+        .limit(10);
+
+      const match = resolutions?.find((r: any) => r.metadata?.challengeId === challengeId);
+      if (match) {
+        if (match.event_type === "DEVICE_VERIFICATION_COMPLETED") {
+          challenge.status = "completed";
+        } else if (match.event_type === "DEVICE_VERIFICATION_APPROVED") {
+          challenge.status = "approved";
+        } else if (match.event_type === "DEVICE_VERIFICATION_REJECTED") {
+          challenge.status = "rejected";
+        }
+        memoryChallenges.set(challengeId, challenge);
+      }
+    } catch {
+      // Fall through
+    }
+  }
+
   if (challenge && challenge.status === "pending" && new Date() > challenge.expiresAt) {
     challenge.status = "expired";
     memoryChallenges.set(challengeId, challenge);
@@ -141,14 +172,41 @@ export async function getPendingChallengeForUser(userId: string): Promise<Device
   let found: DeviceChallenge | null = null;
 
   memoryChallenges.forEach((ch) => {
-    if ((ch.userId === userId || ch.userId === validUuid) && ch.status === "pending") {
+    if (ch.userId === userId || ch.userId === validUuid) {
       if (now > ch.expiresAt) {
         ch.status = "expired";
-      } else {
+      } else if (ch.status === "pending") {
         found = ch;
       }
     }
   });
+
+  // Cross-check whether a resolution event (completed/rejected) occurred for any challenge in memory
+  if (found) {
+    try {
+      const supabase = createAdminSupabaseClient();
+      const { data: resolutions } = await supabase
+        .from("security_audit_events")
+        .select("event_type, metadata")
+        .eq("user_uuid", validUuid)
+        .in("event_type", [
+          "DEVICE_VERIFICATION_COMPLETED",
+          "DEVICE_VERIFICATION_REJECTED",
+        ])
+        .order("created_at", { ascending: false })
+        .limit(10);
+
+      const resolved = resolutions?.some(
+        (r: any) => r.metadata?.challengeId === found?.id
+      );
+      if (resolved) {
+        (found as DeviceChallenge).status = "completed";
+        found = null;
+      }
+    } catch {
+      // Fall through
+    }
+  }
 
   if (!found) {
     try {
@@ -164,7 +222,36 @@ export async function getPendingChallengeForUser(userId: string): Promise<Device
 
       if (data && data.metadata) {
         const meta = data.metadata as any;
+        const challengeId = meta.challengeId;
         const expiresAt = new Date(meta.expiresAt);
+
+        // Check if there is any subsequent completion, approval, or rejection event for this challenge
+        const { data: resolutions } = await supabase
+          .from("security_audit_events")
+          .select("event_type, metadata")
+          .eq("user_uuid", validUuid)
+          .in("event_type", [
+            "DEVICE_VERIFICATION_COMPLETED",
+            "DEVICE_VERIFICATION_REJECTED",
+            "DEVICE_VERIFICATION_APPROVED",
+          ])
+          .order("created_at", { ascending: false })
+          .limit(10);
+
+        const resolution = resolutions?.find(
+          (r: any) => r.metadata?.challengeId === challengeId
+        );
+
+        if (resolution) {
+          if (
+            resolution.event_type === "DEVICE_VERIFICATION_COMPLETED" ||
+            resolution.event_type === "DEVICE_VERIFICATION_REJECTED"
+          ) {
+            // Already finalized! No pending challenge exists.
+            return null;
+          }
+        }
+
         if (meta.status === "pending" && now <= expiresAt) {
           found = {
             id: meta.challengeId,
@@ -174,7 +261,7 @@ export async function getPendingChallengeForUser(userId: string): Promise<Device
             verificationCode: meta.verificationCode,
             ipAddress: data.ip_address || undefined,
             userAgent: data.user_agent || undefined,
-            status: meta.status,
+            status: resolution?.event_type === "DEVICE_VERIFICATION_APPROVED" ? "approved" : "pending",
             createdAt: new Date(data.created_at),
             expiresAt,
           };

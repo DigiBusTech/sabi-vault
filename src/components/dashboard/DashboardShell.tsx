@@ -20,10 +20,12 @@ import {
   Users,
   Settings2,
   AlertTriangle,
+  Laptop,
   Lock,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { logoutAndResetSession, getStoredAccessToken } from "@/lib/security/silent_refresh.client";
+import { getDeviceFingerprint } from "@/lib/security/fingerprint.client";
 
 export interface ShellNavItem {
   id: string;
@@ -53,6 +55,7 @@ const NAV_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   config: Settings2,
   ledger: Landmark,
   fraud: ShieldCheck,
+  devices: Laptop,
 };
 
 function roleLabel(role: string): string {
@@ -91,6 +94,13 @@ export function DashboardShell({ role, email, orgName, navItems, children }: Das
         const token = getStoredAccessToken();
         const headers: Record<string, string> = {};
         if (token) headers["Authorization"] = `Bearer ${token}`;
+
+        try {
+          const { fingerprintHash } = await getDeviceFingerprint();
+          if (fingerprintHash) headers["x-device-fingerprint"] = fingerprintHash;
+        } catch {
+          // Non-fatal
+        }
 
         const res = await fetch("/api/auth/device-verify/pending", {
           headers,

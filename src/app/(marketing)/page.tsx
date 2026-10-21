@@ -23,7 +23,7 @@ export default function HomePage() {
   return (
     <main className="w-full max-w-full overflow-x-clip min-w-0 bg-white text-[#0f172a] font-sans selection:bg-[#059669]/20 selection:text-[#0f172a]">
       {/* 1. HERO SECTION */}
-      <section className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-8 pb-14 sm:pt-12 sm:pb-16 lg:pt-20 lg:pb-24 w-full max-w-full overflow-x-clip">
+      <section className="relative mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 pt-8 pb-14 sm:pt-12 sm:pb-16 lg:pt-20 lg:pb-24 overflow-x-clip">
         <div className="grid items-center gap-8 lg:gap-12 lg:grid-cols-12 w-full max-w-full min-w-0">
           {/* Hero Left Column */}
           <div className="lg:col-span-7 w-full max-w-full min-w-0">
@@ -190,7 +190,7 @@ export default function HomePage() {
       </section>
 
       {/* 4. THE PROBLEM: STATIC PAPER VS IMMUTABLE PROOFS */}
-      <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16 sm:py-24 w-full max-w-full overflow-hidden">
+      <section className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-16 sm:py-24 overflow-hidden">
         <div className="grid items-center gap-10 sm:gap-12 lg:grid-cols-2">
           <Reveal className="w-full max-w-full overflow-hidden">
             <TamperVisual />
@@ -334,7 +334,7 @@ export default function HomePage() {
       <MobileAppCard />
 
       {/* 10. CUSTOMER & PARTNER TESTIMONIALS */}
-      <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16 sm:py-24 w-full max-w-full overflow-hidden">
+      <section className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-16 sm:py-24 overflow-hidden">
         <Reveal>
           <div className="text-center max-w-2xl mx-auto">
             <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#059669]">
@@ -449,7 +449,7 @@ export default function HomePage() {
       </section>
 
       {/* 12. CLOSING CTA */}
-      <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16 sm:py-24 w-full max-w-full overflow-hidden">
+      <section className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-16 sm:py-24 overflow-hidden">
         <Reveal>
           <LiquidGlassCard className="rounded-3xl sm:rounded-[2.5rem] border border-emerald-200/80 bg-emerald-50/80 p-6 sm:p-10 md:p-16 text-center shadow-lg">
             <span className="liquid-glass-pill inline-block px-3.5 py-1 text-xs font-bold text-[#059669] shadow-sm">

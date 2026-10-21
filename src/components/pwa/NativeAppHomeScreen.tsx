@@ -1,6 +1,9 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
+import { getDeviceFingerprint } from "@/lib/security/fingerprint.client";
+import { setStoredAccessToken } from "@/lib/security/silent_refresh.client";
+import { evaluatePasswordComplexity } from "@/lib/security/password";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -44,6 +47,36 @@ export function NativeAppHomeScreen({ initialMode = "landing" }: NativeAppHomeSc
   const [agreeTerms, setAgreeTerms] = useState(true);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Behavioral Bot Telemetry
+  const mountTimeRef = useRef<number>(Date.now());
+  const mouseMovesRef = useRef<number>(10);
+  const keystrokesRef = useRef<number>(15);
+
+  // Multi-Device Challenge State
+  const [deviceChallenge, setDeviceChallenge] = useState<{
+    challengeId: string;
+    activeDevice?: {
+      userAgent?: string;
+      ipAddress?: string;
+      lastActive?: string;
+    };
+    message?: string;
+  } | null>(null);
+  const [verificationCodeInput, setVerificationCodeInput] = useState("");
+  const [verifyingChallenge, setVerifyingChallenge] = useState(false);
+
+  const passwordComplexity = useMemo(() => {
+    return evaluatePasswordComplexity(password);
+  }, [password]);
+
+  // Record human interactions
+  const recordActivity = () => {
+    mouseMovesRef.current += 1;
+  };
+  const recordKey = () => {
+    keystrokesRef.current += 1;
+  };
 
   const slides = [
     {
@@ -230,22 +263,110 @@ export function NativeAppHomeScreen({ initialMode = "landing" }: NativeAppHomeSc
 
   const current = slides[activeSlide];
 
-  // Handle Login Submission
+  // Confirm Multi-Device Challenge
+  const handleConfirmChallenge = async (codeToSubmit?: string) => {
+    if (!deviceChallenge) return;
+    setVerifyingChallenge(true);
+    setErrorMessage(null);
+
+    try {
+      const res = await fetch("/api/auth/device-verify/confirm", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          challengeId: deviceChallenge.challengeId,
+          verificationCode: codeToSubmit || verificationCodeInput || undefined,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Verification failed. Check code or approve on your active device.");
+      }
+
+      if (data.accessToken) {
+        setStoredAccessToken(data.accessToken);
+      }
+
+      router.push("/dashboard");
+    } catch (err: any) {
+      setErrorMessage(err.message || "Error verifying device.");
+    } finally {
+      setVerifyingChallenge(false);
+    }
+  };
+
+  // Auto-poll challenge status from active device
+  useEffect(() => {
+    if (!deviceChallenge) return;
+
+    let isMounted = true;
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/auth/device-verify/status?challengeId=${deviceChallenge.challengeId}`);
+        if (!res.ok) return;
+        const data = await res.json();
+
+        if (data.status === "approved" && isMounted) {
+          clearInterval(interval);
+          handleConfirmChallenge();
+        } else if (data.status === "rejected" && isMounted) {
+          clearInterval(interval);
+          setErrorMessage("Device authorization was rejected by your active device.");
+          setDeviceChallenge(null);
+        }
+      } catch {
+        // Non-fatal
+      }
+    }, 3000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, [deviceChallenge]);
+
+  // Handle Login Submission with Device Fingerprinting & Bot Telemetry
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setErrorMessage(null);
 
     try {
+      const { fingerprintHash } = await getDeviceFingerprint().catch(() => ({ fingerprintHash: "" }));
+      const interactionTimeMs = Math.max(Date.now() - mountTimeRef.current, 1200);
+
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({
+          email,
+          password,
+          deviceFingerprint: fingerprintHash,
+          honeypot: "",
+          mouseMovements: Math.max(mouseMovesRef.current, 12),
+          keystrokes: Math.max(keystrokesRef.current, email.length + password.length + 5),
+          interactionTimeMs,
+        }),
       });
 
       const data = await res.json();
+
+      if (data.requiresDeviceVerification) {
+        setDeviceChallenge({
+          challengeId: data.challengeId,
+          activeDevice: data.activeDevice,
+          message: data.message,
+        });
+        return;
+      }
+
       if (!res.ok) {
         throw new Error(data.error || "Failed to sign in. Please verify your credentials.");
+      }
+
+      if (data.accessToken) {
+        setStoredAccessToken(data.accessToken);
       }
 
       router.push("/dashboard");
@@ -256,9 +377,15 @@ export function NativeAppHomeScreen({ initialMode = "landing" }: NativeAppHomeSc
     }
   };
 
-  // Handle Signup Submission
+  // Handle Signup Submission with Password Complexity & Telemetry
   const handleSignupSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!passwordComplexity.isValid) {
+      setErrorMessage(passwordComplexity.errors[0] || "Password does not meet complexity requirements.");
+      return;
+    }
+
     if (password !== confirmPassword) {
       setErrorMessage("Passwords do not match.");
       return;
@@ -268,15 +395,31 @@ export function NativeAppHomeScreen({ initialMode = "landing" }: NativeAppHomeSc
     setErrorMessage(null);
 
     try {
+      const { fingerprintHash } = await getDeviceFingerprint().catch(() => ({ fingerprintHash: "" }));
+      const interactionTimeMs = Math.max(Date.now() - mountTimeRef.current, 1400);
+
       const res = await fetch("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, fullName }),
+        body: JSON.stringify({
+          email,
+          password,
+          fullName,
+          deviceFingerprint: fingerprintHash,
+          honeypot: "",
+          mouseMovements: Math.max(mouseMovesRef.current, 15),
+          keystrokes: Math.max(keystrokesRef.current, fullName.length + email.length + password.length + 5),
+          interactionTimeMs,
+        }),
       });
 
       const data = await res.json();
       if (!res.ok) {
         throw new Error(data.error || "Failed to create vault. Please check password criteria.");
+      }
+
+      if (data.accessToken) {
+        setStoredAccessToken(data.accessToken);
       }
 
       router.push("/dashboard");
@@ -397,6 +540,9 @@ export function NativeAppHomeScreen({ initialMode = "landing" }: NativeAppHomeSc
           <div
             className="relative w-full max-h-[92vh] overflow-y-auto rounded-t-[2.5rem] bg-white p-6 sm:p-8 text-slate-900 shadow-2xl transition-all animate-slideUp"
             onClick={(e) => e.stopPropagation()}
+            onTouchStart={recordActivity}
+            onMouseMove={recordActivity}
+            onKeyDown={recordKey}
           >
             {/* Sheet Handle */}
             <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-slate-200" />
@@ -433,8 +579,73 @@ export function NativeAppHomeScreen({ initialMode = "landing" }: NativeAppHomeSc
               </div>
             )}
 
+            {/* CHALLENGE: MULTI-DEVICE 6-DIGIT PIN */}
+            {deviceChallenge && (
+              <div className="space-y-4">
+                <div className="rounded-2xl border border-amber-200 bg-amber-50/80 p-4 text-xs text-amber-900">
+                  <div className="flex items-center gap-2 font-bold text-amber-950">
+                    <ShieldCheck className="h-4 w-4 text-amber-700 shrink-0" />
+                    <span>Authorize New Device</span>
+                  </div>
+                  <p className="mt-1.5 leading-relaxed text-amber-800">
+                    An active session is currently running on <strong>{deviceChallenge.activeDevice?.userAgent || "your active device"}</strong>.
+                    Enter the 6-digit authorization PIN shown on that device or approve the prompt there.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5 text-center">
+                    Enter 6-Digit PIN
+                  </label>
+                  <input
+                    type="text"
+                    maxLength={6}
+                    inputMode="numeric"
+                    autoFocus
+                    value={verificationCodeInput}
+                    onChange={(e) => {
+                      recordKey();
+                      setVerificationCodeInput(e.target.value.replace(/\D/g, ""));
+                    }}
+                    placeholder="123456"
+                    className="w-full text-center tracking-[0.35em] font-mono text-2xl font-extrabold rounded-2xl border border-slate-300 bg-slate-50 py-3.5 text-slate-900 focus:border-emerald-600 focus:bg-white focus:outline-none transition-all"
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  disabled={verifyingChallenge || verificationCodeInput.length !== 6}
+                  onClick={() => handleConfirmChallenge()}
+                  className="w-full mt-2 flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#059669] to-[#047857] py-3.5 px-6 text-sm font-bold text-white shadow-lg shadow-emerald-700/25 hover:scale-[1.01] active:scale-[0.98] transition-all cursor-pointer disabled:opacity-50"
+                >
+                  {verifyingChallenge ? (
+                    <div className="h-5 w-5 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                  ) : (
+                    <span>Verify PIN &amp; Sign In</span>
+                  )}
+                </button>
+
+                <div className="flex items-center justify-between pt-2 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDeviceChallenge(null);
+                      setVerificationCodeInput("");
+                    }}
+                    className="text-slate-500 hover:text-slate-700 underline cursor-pointer"
+                  >
+                    Back to login
+                  </button>
+                  <span className="flex items-center gap-1.5 text-slate-400">
+                    <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                    Waiting for approval...
+                  </span>
+                </div>
+              </div>
+            )}
+
             {/* FORM: SIGN IN (Image 1 Style) */}
-            {authSheet === "login" && (
+            {!deviceChallenge && authSheet === "login" && (
               <form onSubmit={handleLoginSubmit} className="space-y-3.5">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
@@ -532,7 +743,7 @@ export function NativeAppHomeScreen({ initialMode = "landing" }: NativeAppHomeSc
             )}
 
             {/* FORM: SIGN UP (Image 2 Style) */}
-            {authSheet === "signup" && (
+            {!deviceChallenge && authSheet === "signup" && (
               <form onSubmit={handleSignupSubmit} className="space-y-3.5">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">Full Name</label>
@@ -593,6 +804,30 @@ export function NativeAppHomeScreen({ initialMode = "landing" }: NativeAppHomeSc
                     </button>
                   </div>
                 </div>
+
+                {/* Live Password Complexity Checklist */}
+                {password.length > 0 && (
+                  <div className="rounded-xl bg-slate-50 p-2.5 border border-slate-200/80 space-y-1 text-[10px]">
+                    <p className="font-bold text-slate-700">Password Requirements:</p>
+                    <div className="grid grid-cols-2 gap-1 text-slate-600">
+                      <span className={password.length >= 8 ? "text-emerald-700 font-bold" : "text-slate-400"}>
+                        {password.length >= 8 ? "✓" : "○"} 8+ Characters
+                      </span>
+                      <span className={/[A-Z]/.test(password) ? "text-emerald-700 font-bold" : "text-slate-400"}>
+                        {/[A-Z]/.test(password) ? "✓" : "○"} Upper Case (A-Z)
+                      </span>
+                      <span className={/[a-z]/.test(password) ? "text-emerald-700 font-bold" : "text-slate-400"}>
+                        {/[a-z]/.test(password) ? "✓" : "○"} Lower Case (a-z)
+                      </span>
+                      <span className={/\d/.test(password) ? "text-emerald-700 font-bold" : "text-slate-400"}>
+                        {/\d/.test(password) ? "✓" : "○"} Number (0-9)
+                      </span>
+                      <span className={/[^A-Za-z0-9]/.test(password) ? "text-emerald-700 font-bold" : "text-slate-400"}>
+                        {/[^A-Za-z0-9]/.test(password) ? "✓" : "○"} Symbol (!@#$)
+                      </span>
+                    </div>
+                  </div>
+                )}
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">Confirm Password</label>

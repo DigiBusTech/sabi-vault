@@ -746,3 +746,265 @@ export async function validateActiveUserSession(
   return { isValid: true, isTerminated: false, session: activeSessionForUser || undefined };
 }
 
+
+
+export interface UserDeviceSessionInfo {
+  id: string;
+  deviceFingerprint: string;
+  ipAddress: string;
+  userAgent: string;
+  browser: string;
+  os: string;
+  deviceType: "mobile" | "desktop" | "tablet";
+  displayName: string;
+  isActive: boolean;
+  lastActiveAt: string;
+  createdAt: string;
+  isCurrent: boolean;
+}
+
+export function parseUserAgentFriendly(ua: string = ""): {
+  browser: string;
+  os: string;
+  deviceType: "mobile" | "desktop" | "tablet";
+  displayName: string;
+} {
+  const isMobile = /Android|iPhone|iPod|Mobile/i.test(ua);
+  const isTablet = /iPad|Tablet/i.test(ua);
+  const deviceType = isTablet ? "tablet" : isMobile ? "mobile" : "desktop";
+
+  let browser = "Web Browser";
+  if (/Edg\//i.test(ua)) browser = "Microsoft Edge";
+  else if (/Chrome\//i.test(ua)) browser = "Google Chrome";
+  else if (/Safari\//i.test(ua) && !/Chrome/i.test(ua)) browser = "Apple Safari";
+  else if (/Firefox\//i.test(ua)) browser = "Mozilla Firefox";
+  else if (/Opera|OPR\//i.test(ua)) browser = "Opera";
+
+  let os = "Unknown OS";
+  if (/iPhone/i.test(ua)) os = "iOS";
+  else if (/iPad/i.test(ua)) os = "iPadOS";
+  else if (/Android/i.test(ua)) os = "Android";
+  else if (/Windows/i.test(ua)) os = "Windows";
+  else if (/Macintosh|Mac OS/i.test(ua)) os = "macOS";
+  else if (/Linux/i.test(ua)) os = "Linux";
+
+  return {
+    browser,
+    os,
+    deviceType,
+    displayName: `${browser} on ${os}`,
+  };
+}
+
+/**
+ * Retrieve all registered device sessions for a user, sorted by active status and last active time.
+ */
+export async function getUserDeviceSessions(params: {
+  userId: string;
+  currentSessionId?: string;
+  currentFingerprint?: string;
+}): Promise<UserDeviceSessionInfo[]> {
+  const { userId, currentSessionId, currentFingerprint } = params;
+  const validUuid = toValidUuid(userId);
+  const sessionMap = new Map<string, UserDeviceSessionInfo>();
+
+  // 1. In-memory sessions
+  memorySessions.forEach((session, id) => {
+    if (session.userUuid === userId || session.userUuid === validUuid) {
+      const parsed = parseUserAgentFriendly(session.userAgent || "");
+      const isCurrent = Boolean(
+        (currentSessionId && id === currentSessionId) ||
+        (currentFingerprint && session.deviceFingerprint === currentFingerprint)
+      );
+      sessionMap.set(id, {
+        id,
+        deviceFingerprint: session.deviceFingerprint,
+        ipAddress: session.ipAddress || "Unknown IP",
+        userAgent: session.userAgent || "Unknown Device",
+        browser: parsed.browser,
+        os: parsed.os,
+        deviceType: parsed.deviceType,
+        displayName: parsed.displayName,
+        isActive: session.isActive,
+        lastActiveAt: session.lastActiveAt.toISOString(),
+        createdAt: session.createdAt.toISOString(),
+        isCurrent,
+      });
+    }
+  });
+
+  // 2. Query Supabase user_sessions table
+  try {
+    const supabase = createAdminSupabaseClient();
+    const { data, error } = await supabase
+      .from("user_sessions")
+      .select("*")
+      .eq("user_uuid", validUuid)
+      .order("last_active_at", { ascending: false });
+
+    if (!error && data) {
+      for (const row of data) {
+        const parsed = parseUserAgentFriendly(row.user_agent || "");
+        const isCurrent = Boolean(
+          (currentSessionId && row.id === currentSessionId) ||
+          (currentFingerprint && row.device_fingerprint === currentFingerprint)
+        );
+        sessionMap.set(row.id, {
+          id: row.id,
+          deviceFingerprint: row.device_fingerprint,
+          ipAddress: row.ip_address || "Unknown IP",
+          userAgent: row.user_agent || "Unknown Device",
+          browser: parsed.browser,
+          os: parsed.os,
+          deviceType: parsed.deviceType,
+          displayName: parsed.displayName,
+          isActive: Boolean(row.is_active),
+          lastActiveAt: row.last_active_at || row.created_at,
+          createdAt: row.created_at,
+          isCurrent,
+        });
+      }
+    }
+  } catch (err) {
+    console.warn("[Device Management] DB query error:", err);
+  }
+
+  const list = Array.from(sessionMap.values());
+  list.sort((a, b) => {
+    if (a.isCurrent !== b.isCurrent) return a.isCurrent ? -1 : 1;
+    if (a.isActive !== b.isActive) return a.isActive ? -1 : 1;
+    return new Date(b.lastActiveAt).getTime() - new Date(a.lastActiveAt).getTime();
+  });
+
+  return list;
+}
+
+/**
+ * Revoke/logout a specific session for a user.
+ */
+export async function revokeUserDeviceSession(userId: string, sessionId: string): Promise<boolean> {
+  const validUuid = toValidUuid(userId);
+  const mem = memorySessions.get(sessionId);
+  if (mem && (mem.userUuid === userId || mem.userUuid === validUuid)) {
+    mem.isActive = false;
+    memorySessions.set(sessionId, mem);
+  }
+
+  try {
+    const supabase = createAdminSupabaseClient();
+    await supabase
+      .from("user_sessions")
+      .update({ is_active: false })
+      .eq("id", sessionId)
+      .eq("user_uuid", validUuid);
+
+    await logSecurityEvent({
+      userUuid: userId,
+      eventType: "SESSION_REVOKED_BY_USER",
+      metadata: { revokedSessionId: sessionId },
+    });
+    return true;
+  } catch (err) {
+    console.warn("[Device Management] Revoke session error:", err);
+    return false;
+  }
+}
+
+/**
+ * Revoke/logout all sessions for a user, optionally preserving the current active session.
+ */
+export async function revokeAllUserDeviceSessions(userId: string, exceptSessionId?: string): Promise<number> {
+  const validUuid = toValidUuid(userId);
+  let count = 0;
+
+  memorySessions.forEach((session, id) => {
+    if ((session.userUuid === userId || session.userUuid === validUuid) && session.isActive) {
+      if (exceptSessionId && id === exceptSessionId) return;
+      session.isActive = false;
+      count++;
+    }
+  });
+
+  try {
+    const supabase = createAdminSupabaseClient();
+    let query = supabase
+      .from("user_sessions")
+      .update({ is_active: false })
+      .eq("user_uuid", validUuid)
+      .eq("is_active", true);
+
+    if (exceptSessionId) {
+      query = query.neq("id", exceptSessionId);
+    }
+
+    const { error } = await query;
+    if (!error) {
+      await logSecurityEvent({
+        userUuid: userId,
+        eventType: "ALL_SESSIONS_REVOKED_BY_USER",
+        metadata: { exceptSessionId },
+      });
+    }
+  } catch (err) {
+    console.warn("[Device Management] Revoke all error:", err);
+  }
+
+  return count;
+}
+
+/**
+ * Delete a specific device session record entirely from history.
+ */
+export async function deleteUserDeviceRecord(userId: string, sessionId: string): Promise<boolean> {
+  const validUuid = toValidUuid(userId);
+  memorySessions.delete(sessionId);
+
+  try {
+    const supabase = createAdminSupabaseClient();
+    await supabase
+      .from("user_sessions")
+      .delete()
+      .eq("id", sessionId)
+      .eq("user_uuid", validUuid);
+
+    await logSecurityEvent({
+      userUuid: userId,
+      eventType: "DEVICE_RECORD_DELETED",
+      metadata: { deletedSessionId: sessionId },
+    });
+    return true;
+  } catch (err) {
+    console.warn("[Device Management] Delete session error:", err);
+    return false;
+  }
+}
+
+/**
+ * Delete all device session records for a user from history.
+ */
+export async function deleteAllUserDeviceRecords(userId: string): Promise<boolean> {
+  const validUuid = toValidUuid(userId);
+  memorySessions.forEach((session, id) => {
+    if (session.userUuid === userId || session.userUuid === validUuid) {
+      memorySessions.delete(id);
+    }
+  });
+
+  try {
+    const supabase = createAdminSupabaseClient();
+    await supabase
+      .from("user_sessions")
+      .delete()
+      .eq("user_uuid", validUuid);
+
+    await logSecurityEvent({
+      userUuid: userId,
+      eventType: "ALL_DEVICE_RECORDS_DELETED",
+      metadata: {},
+    });
+    return true;
+  } catch (err) {
+    console.warn("[Device Management] Delete all error:", err);
+    return false;
+  }
+}

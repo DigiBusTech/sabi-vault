@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { VaultCategory, FullUserVault } from "@/types/vault";
 import { DocumentIntake } from "@/components/dashboard/DocumentIntake";
+import { DeviceManager } from "@/components/dashboard/DeviceManager";
 
 interface CitizenVaultViewProps {
   onMintKeyForDemo?: (key: string) => void;
@@ -847,6 +848,13 @@ export function CitizenVaultView({ onMintKeyForDemo }: CitizenVaultViewProps) {
               })}
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* ---- Connected Devices & Session Management ---- */}
+      <section id="devices" className={sectionAnchor}>
+        <div className="clean-card dash-card-in rounded-2xl p-6" style={{ animationDelay: "100ms" }}>
+          <DeviceManager />
         </div>
       </section>
 

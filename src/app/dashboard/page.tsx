@@ -22,6 +22,7 @@ const NAV_BY_ROLE: Record<string, ShellNavItem[]> = {
     { id: "documents", label: "Add documents" },
     { id: "vault", label: "Vault" },
     { id: "keys", label: "Scoped keys" },
+    { id: "devices", label: "Devices & Security" },
     { id: "audit", label: "Audit trail" },
   ],
   enterprise_admin: [

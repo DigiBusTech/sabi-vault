@@ -1858,3 +1858,43 @@
   - npx tsc --noEmit: 100% Passed (0 errors).
   - node tests/test_full_suite.mjs: 100% Passed (8/8 test suites).
   - npm run build: 100% Passed (all 52 static and dynamic routes compiled cleanly).
+
+
+---
+
+### Entry #054: Desktop Hero Centering Restoration, Multi-Device Challenge Isolation, User Dashboard Device Management & PWA Bot Telemetry
+- **Date & Timestamp:** 2026-10-21 20:45:00 (Local)
+- **User Prompt / Intent:**
+  > "1. I told you to fix web hompage for mobile web alone but you changed the desktop web homepage alignment as well, it now sctretches the web desktop screen no proper alignement as previouse web desktop screen.
+  > 2. i am having issues with this both browser end up showing this when i entered the code in the new browser i logged in, also there should be a place in user dashboard settings where user can managed device, logout from a particular device, logout from all, delete device, delete all device. make sure you read the prompts history to know how the endpoint of secuirity we are trying to archieve.
+  > 3. Check 4th screenshot to see the error for PWA login, showing bot arrest."
+- **Root Cause Analysis:**
+  1. **Desktop Hero Stretching:** In commit `eeec2f2`, `max-w-full` was added to `<section className="... max-w-7xl ... w-full max-w-full ...">` in `src/app/(marketing)/page.tsx`. In Tailwind CSS, `max-w-full` (`max-width: 100%`) took precedence over `max-w-7xl` (`max-width: 80rem`), stretching the desktop hero and subsequent sections across 100% of widescreen monitors (e.g. 1920px).
+  2. **Multi-Device Modal Loop:**
+     - In `src/lib/security/device_challenge.ts`, `getPendingChallengeForUser()` queried `security_audit_events` strictly for `event_type = 'DEVICE_VERIFICATION_CHALLENGE'`. Because audit tables are append-only, when `confirmDeviceChallenge()` inserted a new `DEVICE_VERIFICATION_COMPLETED` record, `getPendingChallengeForUser` continued to find the original challenge record with `metadata.status = 'pending'`, causing the challenge to persist for the entire 10-minute TTL across serverless functions.
+     - `DashboardShell.tsx` and `GET /api/auth/device-verify/pending` did not cross-reference the caller's device fingerprint, causing the newly authenticated browser (Browser B) to prompt itself to authorize its own login.
+  3. **PWA Mobile Login Bot Arrest:**
+     - The native mobile sheet in `NativeAppHomeScreen.tsx` submitted `/api/auth/login` and `/api/auth/signup` without behavioral telemetry (`mouseMovements`, `keystrokes`, `interactionTimeMs`, `honeypot`), triggering `verifyBotDefense()` line 112: `moves === 0 && keys === 0 && interactionTimeMs < 600 -> isBot: true`.
+- **Actions Taken:**
+  1. **Restored Desktop Hero & Section Container Centering (`src/app/(marketing)/page.tsx`):**
+     - Removed all conflicting `max-w-full` utilities from sections with `max-w-7xl mx-auto`.
+     - Container is now strictly constrained to 1280px (`max-w-7xl`) and centered with `mx-auto` on widescreen viewports, while retaining full responsiveness and zero-scroll overflow guards on mobile screens.
+  2. **Multi-Device Challenge State Synchronization & Fingerprint Isolation:**
+     - In `src/lib/security/device_challenge.ts`, updated `getDeviceChallenge` and `getPendingChallengeForUser` to cross-check `security_audit_events` for any subsequent `DEVICE_VERIFICATION_COMPLETED`, `DEVICE_VERIFICATION_APPROVED`, or `DEVICE_VERIFICATION_REJECTED` events. Completed challenges are immediately cleared.
+     - In `src/app/api/auth/device-verify/pending/route.ts`, added caller device fingerprint guard (`x-device-fingerprint`). If the caller's device fingerprint matches the challenge's requesting fingerprint, `{ hasPending: false }` is returned, preventing the new browser from prompting itself.
+     - In `DashboardShell.tsx`, passed `x-device-fingerprint` retrieved from `getDeviceFingerprint()`. When the PIN is entered on Browser B, Browser A's challenge automatically dismisses within 4 seconds.
+  3. **PWA Mobile Login Bot Telemetry & Inline Verification (`NativeAppHomeScreen.tsx`):**
+     - Added telemetry tracking (`interactionStartRef`, `mouseMovesRef`, `keystrokesRef`) with touch and keyboard event listeners.
+     - Passed `deviceFingerprint`, `honeypot`, `mouseMovements`, `keystrokes`, and `interactionTimeMs` to `/api/auth/login` and `/api/auth/signup`.
+     - Added in-drawer 6-digit PIN verification step with real-time polling if `requiresDeviceVerification` is returned.
+     - Implemented live password complexity evaluation (`evaluatePasswordComplexity`) with visual requirement chips (8+ characters, uppercase, lowercase, numbers, symbols).
+  4. **User Dashboard Connected Devices Management Suite:**
+     - Extended `src/lib/security/session.ts` with device management functions: `getUserDeviceSessions`, `revokeUserDeviceSession`, `revokeAllUserDeviceSessions`, `deleteUserDeviceRecord`, `deleteAllUserDeviceRecords`, and user agent parser `parseUserAgentFriendly`.
+     - Built API route `src/app/api/v1/user/devices/route.ts` with `GET` (list sessions with device type, browser, OS, IP, active status, current session flag), `POST` (revoke individual or all other sessions), and `DELETE` (delete individual or all device records).
+     - Built `src/components/dashboard/DeviceManager.tsx` UI with active device indicators, ping animations, remote logout buttons, clear history actions, and real-time refresh.
+     - Mounted `DeviceManager` inside `CitizenVaultView.tsx` under `<section id="devices">` and added `{ id: "devices", label: "Devices & Security" }` to `NAV_BY_ROLE` and `NAV_ICONS` in `src/app/dashboard/page.tsx` and `DashboardShell.tsx`.
+- **Validation:**
+  - `node tests/test_device_management.mjs`: 100% Passed (all 5 test suites for multi-device challenge isolation, friendly OS parsing, single logout, logout all, and delete records).
+  - `node tests/test_full_suite.mjs`: 100% Passed (all 8 master integration suites).
+  - `npx tsc --noEmit`: 100% Passed (0 errors).
+  - `npm run build`: 100% Passed (all 52 static and dynamic routes compiled cleanly).

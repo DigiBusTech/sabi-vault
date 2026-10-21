@@ -23,7 +23,9 @@ export async function GET(req: NextRequest) {
     if (!userId) {
       try {
         const supabase = createServerSupabaseClient();
-        const { data: { user } } = await supabase.auth.getUser();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
         if (user) {
           userId = user.id;
         }
@@ -38,6 +40,15 @@ export async function GET(req: NextRequest) {
 
     const pending = await getPendingChallengeForUser(userId);
     if (!pending) {
+      return NextResponse.json({ hasPending: false }, { status: 200 });
+    }
+
+    // 3. Caller Device Guard: The requesting device must never be prompted to authorize itself
+    const callerFingerprint =
+      req.headers.get("x-device-fingerprint") ||
+      req.nextUrl.searchParams.get("fingerprint");
+
+    if (callerFingerprint && pending.deviceFingerprint === callerFingerprint) {
       return NextResponse.json({ hasPending: false }, { status: 200 });
     }
 
