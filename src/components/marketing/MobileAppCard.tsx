@@ -21,16 +21,16 @@ export function MobileAppCard() {
             <div className="lg:col-span-7">
               <span className="liquid-glass-pill inline-flex items-center gap-2 px-3.5 py-1 text-xs font-bold text-emerald-700 shadow-xs">
                 <Sparkles size={13} className="text-emerald-600" />
-                <span>Private Mobile Beta Launch</span>
+                <span>Mobile App Available</span>
               </span>
 
               <h2 className="mt-4 font-poppins text-3xl font-extrabold tracking-tight text-slate-900 md:text-4xl">
-                Your sovereign identity, <br />
+                Your verified credentials, <br />
                 <span className="text-emerald-700">always in your pocket.</span>
               </h2>
 
               <p className="mt-4 text-sm md:text-base leading-relaxed text-slate-600 max-w-xl">
-                The SabiProfile Mobile App brings biometric FaceID encryption, instant NFC tap-to-verify, and offline QR-scoped consent keys to iOS and Android devices.
+                Access your degrees, bank statements, and ID cards anytime from your phone. Log in securely with Face ID or fingerprint, and share verified proof with a simple QR code scan.
               </p>
 
               <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-slate-700">
@@ -38,13 +38,13 @@ export function MobileAppCard() {
                   <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 shrink-0">
                     <Lock size={15} />
                   </span>
-                  <span className="font-medium">Hardware enclave encryption</span>
+                  <span className="font-medium">Face ID &amp; Fingerprint Security</span>
                 </div>
                 <div className="flex items-center gap-2.5 rounded-xl bg-white/80 p-3 border border-slate-200/70 shadow-xs">
                   <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 shrink-0">
                     <QrCode size={15} />
                   </span>
-                  <span className="font-medium">Offline QR consent sharing</span>
+                  <span className="font-medium">Instant 1-Tap QR Sharing</span>
                 </div>
               </div>
 

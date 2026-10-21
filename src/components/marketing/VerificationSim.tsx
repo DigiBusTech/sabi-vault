@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState } from "react";
 import {
@@ -11,18 +11,18 @@ import {
 import { CheckCircle2Animated } from "@/components/ui/animated-icons";
 
 const STAGES = [
-  { id: "scan", label: "Scanning document", duration: 2200 },
-  { id: "extract", label: "Extracting structured fields", duration: 2000 },
-  { id: "hash", label: "Computing SHA-256", duration: 2200 },
-  { id: "anchor", label: "Anchoring on-chain", duration: 2000 },
-  { id: "query", label: "Enterprise query", duration: 3200 },
+  { id: "scan", label: "Step 1: Reading document safely", duration: 2400 },
+  { id: "extract", label: "Step 2: Checking name, grade & university", duration: 2200 },
+  { id: "hash", label: "Step 3: Creating unique digital fingerprint", duration: 2400 },
+  { id: "anchor", label: "Step 4: Locking permanent fraud-proof record", duration: 2200 },
+  { id: "query", label: "Step 5: Instant proof for employers & embassies", duration: 3200 },
 ] as const;
 
 const NODES = [
-  { icon: FileText, label: "Scan" },
-  { icon: Hash, label: "Hash" },
-  { icon: Boxes, label: "Anchor" },
-  { icon: SearchCheck, label: "Query" },
+  { icon: FileText, label: "Read" },
+  { icon: Hash, label: "Fingerprint" },
+  { icon: Boxes, label: "Lock" },
+  { icon: SearchCheck, label: "Verify" },
 ] as const;
 
 const HASH_VALUE = "a3f9c18d2b74e6f05c91d8a2b6e34f07";
@@ -78,7 +78,7 @@ export function VerificationSim() {
 
   return (
     <div
-      className="relative mx-auto w-full max-w-full sm:max-w-lg overflow-hidden rounded-2xl sm:rounded-3xl liquid-glass-card shadow-[0_20px_50px_-20px_rgba(15,23,42,0.15)] min-w-0"
+      className="relative mx-auto w-full max-w-md sm:max-w-lg overflow-hidden rounded-2xl sm:rounded-3xl liquid-glass-card shadow-[0_20px_50px_-20px_rgba(15,23,42,0.15)] min-w-0"
       role="img"
       aria-label="Simulation of a document being scanned, hashed, anchored on-chain, and verified by an enterprise query"
     >
@@ -184,18 +184,18 @@ export function VerificationSim() {
       </div>
 
       {/* Stage detail panel (fixed height prevents layout shift) */}
-      <div className="h-[7.5rem] border-t border-slate-100 bg-slate-50/50 px-5 py-4">
+      <div className="h-[7.5rem] border-t border-slate-100 bg-slate-50/50 px-5 py-3.5">
         <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-green">
           {stage.label}
         </p>
 
         {stage.id === "scan" && (
           <div key="scan" style={{ animation: "simFadeSlide 0.35s ease-out" }}>
-            <p className="mt-2 font-mono text-xs text-slate-600">
-              drive://vault/degree-certificate.pdf
+            <p className="mt-1.5 text-xs font-semibold text-slate-700">
+              Your file stays safely in your own Google Drive or Dropbox
             </p>
             <p className="mt-1 text-xs text-slate-500">
-              Read-only OAuth · parsed in memory · buffer wiped after
+              Only verified details are read — zero copies saved on our servers.
             </p>
           </div>
         )}
@@ -205,10 +205,11 @@ export function VerificationSim() {
             {EXTRACTED_FIELDS.map(([field, value], index) => (
               <span
                 key={field}
-                className="rounded-lg border border-slate-200 bg-white px-2 py-1 font-mono text-[11px] text-slate-700"
+                className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px] text-slate-700"
                 style={{ animation: `simFadeSlide 0.35s ease-out ${index * 120}ms both` }}
               >
-                {field}: <span className="font-semibold text-brand-dark">{value}</span>
+                {field === "degree" ? "Degree" : field === "gpa" ? "Honours" : "School"}:{" "}
+                <span className="font-semibold text-brand-dark">{value}</span>
               </span>
             ))}
           </div>
@@ -216,10 +217,10 @@ export function VerificationSim() {
 
         {stage.id === "hash" && (
           <div key="hash" style={{ animation: "simFadeSlide 0.35s ease-out" }}>
-            <div className="mt-2 flex items-center gap-1 font-mono text-xs text-brand-dark">
-              <span className="text-slate-500">sha256:</span>
+            <div className="mt-1.5 flex items-center gap-1.5 font-mono text-xs text-brand-dark">
+              <span className="text-slate-500 font-sans text-xs font-medium">Digital Fingerprint:</span>
               <span
-                className="inline-block overflow-hidden whitespace-nowrap text-[10px] sm:text-xs max-w-[210px] sm:max-w-none truncate sm:overflow-visible"
+                className="inline-block overflow-hidden whitespace-nowrap text-[10px] sm:text-xs max-w-[200px] sm:max-w-none truncate sm:overflow-visible font-mono font-semibold text-[#059669]"
                 style={{ animation: reducedMotion ? "none" : "simTyping 1.4s steps(32) both" }}
               >
                 {HASH_VALUE}
@@ -232,37 +233,44 @@ export function VerificationSim() {
                 />
               )}
             </div>
-            <p className="mt-1.5 text-xs text-slate-500">One character changed, and this hash no longer matches.</p>
+            <p className="mt-1 text-xs text-slate-500">
+              If anyone alters a single letter or grade, this seal breaks immediately.
+            </p>
           </div>
         )}
 
         {stage.id === "anchor" && (
           <div key="anchor" style={{ animation: "simFadeSlide 0.35s ease-out" }}>
-            <div className="mt-2 flex items-center gap-2">
-              <span className="rounded-lg bg-brand-dark px-2 py-1 font-mono text-[11px] font-semibold text-white">
-                block 8,421,077
+            <div className="mt-1.5 flex items-center gap-2">
+              <span className="rounded-lg bg-brand-dark px-2.5 py-1 text-[11px] font-semibold text-white">
+                Official Proof Recorded
               </span>
               <span className="inline-flex items-center gap-1 font-mono text-[11px] text-slate-600">
-                <Link2 size={12} /> tx 0x7f3e…c91a
+                <Link2 size={12} /> ID: #8,421,077
               </span>
             </div>
-            <p className="mt-1.5 text-xs text-slate-500">Anchored to the public registry. Cannot be edited later.</p>
+            <p className="mt-1 text-xs text-slate-500">
+              Permanent and fraud-proof. Cannot be forged or duplicated.
+            </p>
           </div>
         )}
 
         {stage.id === "query" && (
           <div key="query" style={{ animation: "simFadeSlide 0.35s ease-out" }}>
-            <div className="mt-2 flex flex-wrap items-center gap-2">
-              <span className="rounded-lg border border-slate-200 bg-white px-2 py-1 font-mono text-[11px] text-slate-700">
-                GET /vault/query · scope: academics
+            <div className="mt-1.5 flex flex-wrap items-center gap-2">
+              <span className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px] font-medium text-slate-700">
+                Employer &amp; Visa Check
               </span>
               <span
-                className="inline-flex items-center gap-1.5 rounded-full bg-brand-green px-2.5 py-1 text-[11px] font-bold text-white"
+                className="inline-flex items-center gap-1.5 rounded-full bg-brand-green px-2.5 py-1 text-[11px] font-bold text-white shadow-xs"
                 style={{ animation: reducedMotion ? "none" : "simFadeSlide 0.4s ease-out 0.5s both" }}
               >
-                <CheckCircle2Animated size={12} /> Verified · Tier 2 · hash match
+                <CheckCircle2Animated size={12} /> 100% Genuine &amp; Verified
               </span>
             </div>
+            <p className="mt-1 text-xs text-slate-500">
+              Instant verification in 4 milliseconds. No paper calls needed!
+            </p>
           </div>
         )}
       </div>

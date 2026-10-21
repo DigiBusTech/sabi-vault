@@ -1800,3 +1800,28 @@
 - **Validation:**
   - `git branch -vv`: Both `main` and `master` synchronized at `608d232`.
   - `npm run build`: 52/52 routes compiled cleanly (0 errors).
+
+---
+
+### Entry #052: Mobile Web vs PWA Separation, Desktop Hero Alignment & Plain-English Copy Overhaul
+- **Date & Timestamp:** 2026-10-21 19:00:00 (Local)
+- **User Prompt / Intent:**
+  > "There is still a problem the mobile web is displaying the screen which is supposed to be in the PWA, the mobile homepage is supposed to use the same as desktop hompepage, the only difference between PWA and Mobile web is PWA has the simple landing screen while the mobile web browser still have the normal landing pages for the project, with PWA install popup, 2. the web desktop hero section is not aligned well as before again it now stretches the page. 3. Make contents on the project to be simple direct and in a lay man understanding people with no tech savy can relate. the simplest content to convert. no ambigous hero section, just simple text and message that every human in every sector can relate and understand. no complex jargons etc."
+- **Actions Taken:**
+  1. **Mobile Web vs PWA Separation (page.tsx, MarketingNav.tsx, MarketingFooter.tsx, PwaInstallBanner.tsx):**
+     - Restored the normal responsive marketing landing page on mobile web browsers: removed the mobile override that replaced the homepage with NativeAppHomeScreen.
+     - Re-enabled mobile navigation bar with hamburger menu and mobile footer on the homepage.
+     - Removed isHomeMobile suppression from PwaInstallBanner.tsx so mobile web browser visitors receive the floating PWA install bar / popup.
+     - Dedicated /pwa and standalone PWA launch continue to serve NativeAppHomeScreen.
+  2. **Resolved Desktop Hero Alignment & Page Stretching (page.tsx, VerificationSim.tsx):**
+     - Removed conflicting w-full max-w-full attributes that were overriding the centered max-w-7xl mx-auto boundary.
+     - Constrained the verification card with max-w-md sm:max-w-lg and flex justify-center lg:justify-end, restoring crisp alignment without widescreen blowout.
+  3. **Complete Plain-English / Layman Copy Overhaul (Zero Jargon):**
+     - Hero Headline: "Your documents, verified once. Accepted everywhere."
+     - Hero Subheading: "Store your university degrees, bank statements, and work certificates safely in your private cloud. Share instant, fraud-proof digital proof with employers, embassies, and universities worldwide — with zero paper delay."
+     - Replaced technical jargon ("SHA-256", "Buffer wiping", "Base Sepolia block", "OAuth parse") in VerificationSim.tsx with intuitive steps ("Step 1: Reading document safely", "Step 2: Checking name, grade and university", "Step 3: Creating unique digital fingerprint", "Step 4: Locking permanent fraud-proof record", "Step 5: Instant proof for employers and embassies").
+     - Simplified Audience Cards, Mobile App Card, Guarantees, Problem comparison, Testimonials, and FAQ across the entire marketing experience.
+- **Validation:**
+  - npx tsc --noEmit: 100% Passed (0 errors).
+  - node tests/test_full_suite.mjs: 100% Passed (all 8 master test suites).
+  - npm run build: 100% Passed (all 52 static and dynamic routes compiled cleanly).

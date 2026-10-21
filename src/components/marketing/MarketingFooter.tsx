@@ -39,7 +39,7 @@ export function MarketingFooter() {
   const year = new Date().getFullYear();
 
   return (
-    <footer className={`${isHome ? "hidden md:block" : ""} border-t border-slate-200 bg-white`}>
+    <footer className="border-t border-slate-200 bg-white">
       <div className="mx-auto max-w-7xl px-5 py-14 lg:px-8">
         <div className="grid gap-10 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
           <div>

@@ -48,9 +48,9 @@ export function NativeAppHomeScreen({ initialMode = "landing" }: NativeAppHomeSc
   const slides = [
     {
       id: "immigration",
-      title: "Two Worlds. One Sovereign Trust.",
-      subtitle: "Instant 4ms visa & border clearance with zero physical paperwork stored centrally.",
-      badge: "Pillar 1: Immigration",
+      title: "Travel & Visa Documents Made Easy.",
+      subtitle: "Instant proof of funds and identity for embassies — without carrying stacks of paper.",
+      badge: "1. Travel & Visas",
       visual: (
         <div className="relative mx-auto flex h-52 w-72 items-center justify-center">
           {/* Ambient soft glow */}
@@ -101,8 +101,8 @@ export function NativeAppHomeScreen({ initialMode = "landing" }: NativeAppHomeSc
     {
       id: "education",
       title: "Tamper-Proof Degrees & Transcripts.",
-      subtitle: "Institutional attestations bound on-chain. GPAs and diplomas can never be forged.",
-      badge: "Pillar 2: Higher Education",
+      subtitle: "Certified university degrees and diplomas that can never be faked or questioned.",
+      badge: "2. Degrees & Transcripts",
       visual: (
         <div className="relative mx-auto flex h-52 w-72 items-center justify-center">
           <div className="absolute inset-0 rounded-full bg-emerald-500/15 blur-2xl" />
@@ -145,9 +145,9 @@ export function NativeAppHomeScreen({ initialMode = "landing" }: NativeAppHomeSc
     },
     {
       id: "screening",
-      title: "Zero-Hallucination AI Screening.",
-      subtitle: "Multi-agent pipelines evaluate verified JSON schema against requirements mathematically.",
-      badge: "Pillar 3: Labour & Enterprise",
+      title: "Trusted Career & Job History.",
+      subtitle: "Share your verified employment record with top employers in one tap.",
+      badge: "3. Jobs & Careers",
       visual: (
         <div className="relative mx-auto flex h-52 w-72 items-center justify-center">
           <div className="absolute inset-0 rounded-full bg-emerald-500/15 blur-2xl" />
@@ -183,9 +183,9 @@ export function NativeAppHomeScreen({ initialMode = "landing" }: NativeAppHomeSc
     },
     {
       id: "keys",
-      title: "Programmable Keys. Sovereign Consent.",
-      subtitle: "Never send unencrypted PDFs. Mint temporary scoped API keys with instant revocation.",
-      badge: "Pillar 4: Citizen Freedom",
+      title: "You Own & Control Your Data.",
+      subtitle: "Protected by Face ID. Your documents stay in your private drive — never on our servers.",
+      badge: "4. 100% Private",
       visual: (
         <div className="relative mx-auto flex h-52 w-72 items-center justify-center">
           <div className="absolute inset-0 rounded-full bg-emerald-500/15 blur-2xl" />
@@ -311,7 +311,7 @@ export function NativeAppHomeScreen({ initialMode = "landing" }: NativeAppHomeSc
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
             <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-600"></span>
           </span>
-          <span>Base Sepolia • Ready</span>
+          <span>Secure Network • Online</span>
         </div>
       </header>
 
@@ -367,7 +367,7 @@ export function NativeAppHomeScreen({ initialMode = "landing" }: NativeAppHomeSc
           }}
           className="w-full flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#059669] to-[#047857] py-3.5 px-6 text-sm font-bold text-white shadow-lg shadow-emerald-700/25 hover:scale-[1.01] active:scale-[0.98] transition-all cursor-pointer font-poppins"
         >
-          <span>Create Sovereign Vault</span>
+          <span>Create Free Account</span>
           <ArrowRightAnimated size={14} />
         </button>
 
