@@ -158,7 +158,7 @@ export function DomainBento() {
   const [activeCardId, setActiveCardId] = useState<string>("finance");
 
   return (
-    <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16 sm:py-24 w-full max-w-full overflow-hidden">
+    <section className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-16 sm:py-24 overflow-hidden">
       <Reveal>
         <div className="max-w-3xl">
           <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#059669]">

@@ -43,7 +43,7 @@ export function ScrollWorldStory() {
   const cur = STAGES[active];
 
   return (
-    <section className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16 sm:py-20 font-sans w-full max-w-full overflow-hidden">
+    <section className="relative mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-16 sm:py-20 font-sans overflow-hidden">
       <Reveal>
         <div className="text-center max-w-2xl mx-auto mb-10">
           <div className="liquid-glass-pill inline-flex items-center gap-2 px-3 py-1 text-xs font-bold text-[#059669]">

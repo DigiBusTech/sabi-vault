@@ -24,7 +24,7 @@ export function MarketingNav() {
   return (
     <header className="sticky top-0 z-50 border-b border-white/80 bg-white/70 backdrop-blur-2xl shadow-[0_4px_20px_-2px_rgba(15,23,42,0.05),inset_0_1px_1px_0_rgba(255,255,255,0.9)]">
       <LiquidGlassFilter />
-      <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8 w-full max-w-full min-w-0">
+      <nav className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8 min-w-0">
         <Link href="/" className="group flex items-center gap-2 sm:gap-2.5 shrink-0" aria-label="SabiProfile home">
           <span className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-xl bg-brand-green text-white shadow-sm transition-transform duration-300 group-hover:scale-105 shrink-0">
             <ShieldCheckAnimated size={17} strokeWidth={2} />

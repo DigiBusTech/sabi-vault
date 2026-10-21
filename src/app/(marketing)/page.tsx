@@ -135,7 +135,7 @@ export default function HomePage() {
           </div>
 
           {/* Regional Sovereignty Compliance Badges */}
-          <div className="mx-auto mt-8 sm:mt-10 max-w-3xl border-t border-slate-200/60 pt-6 sm:pt-8 px-2 w-full max-w-full overflow-hidden">
+          <div className="mx-auto mt-8 sm:mt-10 w-full max-w-3xl border-t border-slate-200/60 pt-6 sm:pt-8 px-2 overflow-hidden">
             <div className="flex flex-col sm:flex-row flex-wrap items-center justify-center gap-3 sm:gap-4 max-w-full">
               {[
                 { name: "NDPC Certified", region: "Nigeria & ECOWAS Data Protection" },
