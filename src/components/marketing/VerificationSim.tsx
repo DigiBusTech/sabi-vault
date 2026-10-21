@@ -78,7 +78,7 @@ export function VerificationSim() {
 
   return (
     <div
-      className="relative mx-auto w-full max-w-lg overflow-hidden rounded-3xl liquid-glass-card shadow-[0_20px_50px_-20px_rgba(15,23,42,0.15)]"
+      className="relative mx-auto w-full max-w-full sm:max-w-lg overflow-hidden rounded-2xl sm:rounded-3xl liquid-glass-card shadow-[0_20px_50px_-20px_rgba(15,23,42,0.15)] min-w-0"
       role="img"
       aria-label="Simulation of a document being scanned, hashed, anchored on-chain, and verified by an enterprise query"
     >
@@ -140,7 +140,7 @@ export function VerificationSim() {
       </div>
 
       {/* Pipeline nodes */}
-      <div className="flex items-center justify-between px-7 py-4">
+      <div className="flex items-center justify-between px-2 sm:px-7 py-3 sm:py-4 overflow-hidden min-w-0">
         {NODES.map((node, index) => {
           const isDone = reducedMotion || index < activeNode || (index === activeNode && stage.id === "query");
           const isActive = !reducedMotion && index === activeNode;

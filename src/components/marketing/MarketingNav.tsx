@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState } from "react";
 import Link from "next/link";
@@ -16,13 +16,13 @@ const links = [
   { href: "/contact", label: "Contact" },
 ];
 
-
 export function MarketingNav() {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
+  const isHome = pathname === "/";
 
   return (
-    <header className="sticky top-0 z-50 border-b border-white/80 bg-white/70 backdrop-blur-2xl shadow-[0_4px_20px_-2px_rgba(15,23,42,0.05),inset_0_1px_1px_0_rgba(255,255,255,0.9)]">
+    <header className={`${isHome ? "hidden md:block" : ""} sticky top-0 z-50 border-b border-white/80 bg-white/70 backdrop-blur-2xl shadow-[0_4px_20px_-2px_rgba(15,23,42,0.05),inset_0_1px_1px_0_rgba(255,255,255,0.9)]`}>
       <LiquidGlassFilter />
       <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 lg:px-8">
         <Link href="/" className="group flex items-center gap-2.5" aria-label="SabiProfile home">

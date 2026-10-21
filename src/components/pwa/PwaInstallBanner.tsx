@@ -17,8 +17,9 @@ export function PwaInstallBanner() {
       window.matchMedia("(display-mode: standalone)").matches ||
       (window.navigator as any).standalone === true;
     const isPwa = window.location.pathname.startsWith("/pwa");
+    const isHomeMobile = window.location.pathname === "/" && window.innerWidth < 768;
 
-    if (standalone || isPwa) {
+    if (standalone || isPwa || isHomeMobile) {
       setIsStandalone(true);
       return;
     }

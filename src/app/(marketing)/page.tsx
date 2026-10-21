@@ -1,3 +1,4 @@
+import { NativeAppHomeScreen } from "@/components/pwa/NativeAppHomeScreen";
 ﻿import Link from "next/link";
 import {
   ArrowRightAnimated,
@@ -22,13 +23,20 @@ import { Plus } from "lucide-react";
 
 export default function HomePage() {
   return (
-    <main className="bg-white text-[#0f172a] font-sans selection:bg-[#059669]/20 selection:text-[#0f172a]">
+    <>
+      {/* 1. NATIVE MOBILE APP ONBOARDING VIEW (< 768px - matching Image 3 Paga & Image 4 SabiRight) */}
+      <div className="block md:hidden">
+        <NativeAppHomeScreen />
+      </div>
+
+      {/* 2. FULL DESKTOP ENTERPRISE SUITE (>= 768px) */}
+      <main className="hidden md:block bg-white text-[#0f172a] font-sans selection:bg-[#059669]/20 selection:text-[#0f172a]">
 
       {/* 1. HERO SECTION (Apple / Linear-Tier Layout) */}
-      <section className="relative mx-auto max-w-7xl px-5 pt-16 pb-20 lg:px-8 lg:pt-24 overflow-hidden">
-        <div className="grid items-center gap-12 lg:grid-cols-12">
+      <section className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-12 pb-16 lg:pt-24 lg:pb-20 overflow-hidden w-full max-w-full">
+        <div className="grid items-center gap-8 lg:gap-12 lg:grid-cols-12 w-full max-w-full min-w-0">
           {/* Hero Left Column */}
-          <div className="lg:col-span-7">
+          <div className="lg:col-span-7 min-w-0 w-full max-w-full">
             <Reveal>
               <div className="liquid-glass-pill inline-flex items-center gap-2 p-1 pr-3.5 shadow-sm max-w-full overflow-hidden">
                 <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#059669] text-white">
@@ -95,7 +103,7 @@ export default function HomePage() {
           </div>
 
           {/* Hero Right Column: Animated Verification Simulator */}
-          <div className="lg:col-span-5">
+          <div className="lg:col-span-5 min-w-0 w-full max-w-full overflow-hidden">
             <Reveal delay={150}>
               <VerificationSim />
             </Reveal>
@@ -490,5 +498,6 @@ export default function HomePage() {
         </Reveal>
       </section>
     </main>
+    </>
   );
 }
