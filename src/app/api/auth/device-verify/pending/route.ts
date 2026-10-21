@@ -3,6 +3,8 @@ import { getPendingChallengeForUser } from "@/lib/security/device_challenge";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { verifyAccessToken } from "@/lib/security/session";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(req: NextRequest) {
   try {
     let userId: string | null = null;

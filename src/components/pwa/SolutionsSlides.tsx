@@ -415,10 +415,11 @@ export function SolutionsSlides() {
               setActiveIdx((prev) => (prev - 1 + slides.length) % slides.length);
               setIsPlaying(false);
             }}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-all shadow-xs"
+            className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-2.5 sm:px-3.5 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-all shadow-xs shrink-0 cursor-pointer"
           >
             <ChevronLeft size={14} />
-            <span>Previous Solution</span>
+            <span className="hidden sm:inline">Previous Solution</span>
+            <span className="sm:hidden">Prev</span>
           </button>
 
           <div className="flex gap-1.5">
@@ -430,8 +431,8 @@ export function SolutionsSlides() {
                   setActiveIdx(dotIdx);
                   setIsPlaying(false);
                 }}
-                className={`h-2 rounded-full transition-all ${
-                  dotIdx === activeIdx ? "w-8 bg-emerald-600" : "w-2 bg-slate-300 hover:bg-slate-400"
+                className={`h-2 rounded-full transition-all cursor-pointer ${
+                  dotIdx === activeIdx ? "w-6 sm:w-8 bg-emerald-600" : "w-2 bg-slate-300 hover:bg-slate-400"
                 }`}
                 aria-label={`Go to slide ${dotIdx + 1}`}
               />
@@ -444,9 +445,10 @@ export function SolutionsSlides() {
               setActiveIdx((prev) => (prev + 1) % slides.length);
               setIsPlaying(false);
             }}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-all shadow-xs"
+            className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-2.5 sm:px-3.5 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-all shadow-xs shrink-0 cursor-pointer"
           >
-            <span>Next Solution</span>
+            <span className="hidden sm:inline">Next Solution</span>
+            <span className="sm:hidden">Next</span>
             <ChevronRight size={14} />
           </button>
         </div>

@@ -12,13 +12,17 @@ export function PwaInstallBanner() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+
     const standalone =
       window.matchMedia("(display-mode: standalone)").matches ||
       (window.navigator as any).standalone === true;
-    if (standalone) {
+    const isPwa = window.location.pathname.startsWith("/pwa");
+
+    if (standalone || isPwa) {
       setIsStandalone(true);
       return;
     }
+
     if (sessionStorage.getItem("sabi_pwa_dismissed") === "true") return;
     if (window.deferredPwaPrompt) setDeferredPrompt(window.deferredPwaPrompt);
 
@@ -27,7 +31,12 @@ export function PwaInstallBanner() {
       setDeferredPrompt(e);
       window.deferredPwaPrompt = e;
     };
-    const onReady = (e: any) => { if (e.detail) setDeferredPrompt(e.detail); };
+    const onReady = (e: any) => {
+      if (e.detail) {
+        setDeferredPrompt(e.detail);
+        window.deferredPwaPrompt = e.detail;
+      }
+    };
 
     window.addEventListener("beforeinstallprompt", onBefore);
     window.addEventListener("sabi:pwa-ready", onReady);
@@ -48,7 +57,7 @@ export function PwaInstallBanner() {
   };
 
   const handleInstall = async () => {
-    const prompt = deferredPrompt || window.deferredPwaPrompt;
+    const prompt = deferredPrompt || (typeof window !== "undefined" ? window.deferredPwaPrompt : null);
     if (prompt) {
       try {
         prompt.prompt();
@@ -56,7 +65,7 @@ export function PwaInstallBanner() {
         if (outcome === "accepted") {
           setVisible(false);
           setDeferredPrompt(null);
-          window.deferredPwaPrompt = null;
+          if (typeof window !== "undefined") window.deferredPwaPrompt = null;
           return;
         }
       } catch (err) {
@@ -101,50 +110,36 @@ export function PwaInstallBanner() {
         </div>
       </div>
 
-      {/* Desktop Floating Card */}
-      <div className="fixed bottom-6 right-6 z-40 hidden md:block max-w-sm animate-fadeIn">
-        <div className="relative rounded-3xl border border-slate-200/90 bg-white/95 p-4 text-slate-900 shadow-2xl backdrop-blur-xl ring-1 ring-slate-900/5">
+      {/* Desktop Floating Pill */}
+      <div className="fixed bottom-5 right-5 z-30 hidden md:block animate-fadeIn">
+        <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white/95 p-3 pr-4 text-slate-900 shadow-2xl backdrop-blur-xl ring-1 ring-black/5">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#059669] to-[#047857] text-white shadow-md">
+            <Sparkles size={20} />
+          </div>
+          <div>
+            <p className="font-poppins text-xs font-bold text-slate-900">Get SabiProfile Desktop App</p>
+            <p className="text-[11px] text-slate-500">Standalone workstation with hardware crypto</p>
+          </div>
+          <button
+            type="button"
+            onClick={handleInstall}
+            className="ml-2 inline-flex items-center gap-1.5 rounded-xl bg-[#059669] px-3.5 py-2 text-xs font-bold text-white shadow-md hover:bg-[#047857] active:scale-95 transition-all cursor-pointer"
+          >
+            <Download size={13} />
+            <span>Install</span>
+          </button>
           <button
             type="button"
             onClick={handleDismiss}
-            className="absolute top-3 right-3 flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-slate-400 hover:bg-slate-200 hover:text-slate-800 transition-colors cursor-pointer"
+            className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 hover:text-slate-600"
             aria-label="Dismiss"
           >
-            <X size={13} />
+            <X size={15} />
           </button>
-          <div className="flex items-start gap-3 pr-6">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-md shadow-emerald-700/20">
-              <ShieldCheck size={24} />
-            </div>
-            <div>
-              <div className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[9px] font-bold text-emerald-800">
-                <Sparkles size={9} />
-                <span>Enterprise PWA</span>
-              </div>
-              <h4 className="mt-1 font-poppins text-sm font-bold text-slate-900">Install SabiProfile App</h4>
-              <p className="mt-0.5 text-[11px] text-slate-500 leading-snug">Fast standalone window &amp; biometric enclave.</p>
-            </div>
-          </div>
-          <div className="mt-3.5 flex items-center gap-2 pt-2 border-t border-slate-100">
-            <button
-              type="button"
-              onClick={handleInstall}
-              className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#059669] py-2 text-xs font-bold text-white shadow-sm hover:bg-[#047857] active:scale-95 transition-all cursor-pointer"
-            >
-              <Download size={13} />
-              <span>Install to Desktop</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setModalOpen(true)}
-              className="inline-flex items-center justify-center rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
-            >
-              <span>Guide</span>
-              <ChevronRight size={13} />
-            </button>
-          </div>
         </div>
       </div>
+
+      {/* Full-Screen / Modal PWA Prompt */}
       <PwaInstallModal isOpen={modalOpen} onClose={() => setModalOpen(false)} />
     </>
   );

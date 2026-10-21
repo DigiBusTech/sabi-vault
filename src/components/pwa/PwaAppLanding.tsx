@@ -4,7 +4,6 @@ import React, { useState } from "react";
 import Link from "next/link";
 import {
   ShieldCheck,
-  Download,
   Key,
   Layers,
   Sparkles,
@@ -14,29 +13,20 @@ import {
   Smartphone,
   Cpu,
   Globe2,
-  RefreshCw,
   AlertTriangle,
   FileCheck2,
   UserCheck,
   Check,
-  Terminal,
-  ExternalLink,
+  LogIn,
+  Fingerprint,
 } from "lucide-react";
 import { ArrowRightAnimated, ShieldCheckAnimated } from "@/components/ui/animated-icons";
 import { SolutionsSlides } from "@/components/pwa/SolutionsSlides";
-import { PwaInstallModal } from "@/components/pwa/PwaInstallModal";
-import { NativeAppDownloadModal } from "@/components/pwa/NativeAppDownloadModal";
 import { MobileBottomNav } from "@/components/pwa/MobileBottomNav";
-import { AppDownloadButtons } from "@/components/marketing/AppDownloadButtons";
 
 export function PwaAppLanding() {
-  const [pwaModalOpen, setPwaModalOpen] = useState(false);
-  const [storeModalOpen, setStoreModalOpen] = useState(false);
-  const [storePlatform, setStorePlatform] = useState<"ios" | "android">("ios");
-
   // Tamper Simulation State
   const [isTampered, setIsTampered] = useState(false);
-  const [verifying, setVerifying] = useState(false);
   const [faceIdActive, setFaceIdActive] = useState(false);
   const [faceIdSuccess, setFaceIdSuccess] = useState(false);
 
@@ -52,11 +42,11 @@ export function PwaAppLanding() {
       setFaceIdActive(false);
       setFaceIdSuccess(true);
       setTimeout(() => setFaceIdSuccess(false), 3000);
-    }, 1200);
+    }, 1100);
   };
 
   return (
-    <div className="min-h-screen bg-white text-slate-900 selection:bg-emerald-600 selection:text-white pb-20 md:pb-12">
+    <div className="min-h-screen bg-white text-slate-900 selection:bg-emerald-600 selection:text-white pb-24 md:pb-16">
       {/* 1. NATIVE APP TOP HEADER BAR */}
       <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/95 backdrop-blur-md">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8 py-3">
@@ -86,93 +76,59 @@ export function PwaAppLanding() {
             <span>Base Sepolia L2 • Block #19,421,802</span>
           </div>
 
-          {/* Quick Action Navigation / Login / Install */}
-          <div className="flex items-center gap-1.5 sm:gap-2.5">
-            {/* PWA Install Button */}
-            <button
-              type="button"
-              onClick={() => setPwaModalOpen(true)}
-              className="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-white px-2.5 sm:px-3.5 py-1.5 text-[11px] sm:text-xs font-bold text-slate-800 shadow-xs hover:border-emerald-600 hover:text-emerald-700 transition-all active:scale-95 cursor-pointer"
-            >
-              <Download size={12} className="text-emerald-600" />
-              <span className="hidden sm:inline">Install App</span>
-              <span className="sm:hidden">Install</span>
-            </button>
-
-            {/* Login Link */}
+          {/* Clean Auth Navigation */}
+          <div className="flex items-center gap-2 sm:gap-3">
             <Link
               href="/login"
-              className="rounded-full px-2.5 sm:px-3.5 py-1.5 text-[11px] sm:text-xs font-bold text-slate-700 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+              className="rounded-full px-3 py-1.5 text-xs font-bold text-slate-700 hover:text-slate-900 hover:bg-slate-100 transition-colors"
             >
-              Log In
+              Sign In
             </Link>
 
-            {/* Sign Up Primary Pill */}
             <Link
               href="/login?mode=signup"
-              className="inline-flex items-center gap-1 rounded-full bg-[#059669] px-3 sm:px-4 py-1.5 text-[11px] sm:text-xs font-bold text-white shadow-md shadow-emerald-700/20 hover:bg-[#047857] active:scale-95 transition-all whitespace-nowrap"
+              className="inline-flex items-center gap-1.5 rounded-full bg-[#059669] px-3.5 sm:px-4 py-1.5 text-xs font-bold text-white shadow-md shadow-emerald-700/20 hover:bg-[#047857] active:scale-95 transition-all"
             >
               <span>Get Started</span>
-              <ArrowRightAnimated size={11} />
+              <ArrowRightAnimated size={12} />
             </Link>
           </div>
         </div>
       </header>
 
       <main>
-        {/* 2. NATIVE HERO BANNER */}
-        <section className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-8 pb-6 text-center">
-          <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3.5 py-1 text-xs font-bold text-slate-700 shadow-xs mb-3">
-            <span className="flex h-4 w-4 items-center justify-center rounded-full bg-emerald-600 text-white text-[9px]">
-              ✓
-            </span>
-            <span>Enterprise Progressive Web Application</span>
+        {/* 2. ONBOARDING INTRO HERO */}
+        <section className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-6 pb-4 text-center">
+          <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3.5 py-1 text-xs font-bold text-emerald-800 shadow-xs mb-3">
+            <span className="h-2 w-2 rounded-full bg-emerald-600 animate-pulse" />
+            <span>Sovereign Identity &amp; Credential Platform</span>
           </div>
 
-          <h1 className="font-poppins text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 tracking-tight max-w-3xl mx-auto leading-tight">
-            The Sovereign Data &amp; Credential Identity App
+          <h1 className="font-poppins text-2xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 tracking-tight max-w-3xl mx-auto leading-tight">
+            Zero-Forged Records. Instant Sovereign Trust.
           </h1>
 
-          <p className="mt-3 text-xs sm:text-sm md:text-base text-slate-600 max-w-2xl mx-auto leading-relaxed">
-            Zero raw PDFs stored centrally. Physical credentials stay in your private cloud drive; only cryptographically attested SHA-256 proofs cross borders and enterprise screening desks.
+          <p className="mt-2 text-xs sm:text-sm md:text-base text-slate-600 max-w-2xl mx-auto leading-relaxed">
+            Physical documents stay in your private cloud. Only cryptographically attested SHA-256 proofs cross borders and enterprise screening desks.
           </p>
-
-          {/* Quick Trigger Buttons */}
-          <div className="mt-5 flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-2.5 sm:gap-3 max-w-md sm:max-w-none mx-auto">
-            <Link
-              href="/login?mode=signup"
-              className="inline-flex items-center justify-center gap-2 rounded-full bg-[#059669] px-6 py-3 text-xs sm:text-sm font-bold text-white shadow-lg shadow-emerald-700/25 hover:bg-[#047857] hover:scale-105 active:scale-95 transition-all"
-            >
-              <Key size={14} />
-              <span>Create Sovereign Vault</span>
-            </Link>
-
-            <Link
-              href="/login"
-              className="inline-flex items-center justify-center gap-2 rounded-full border border-slate-300 bg-white px-5 py-3 text-xs sm:text-sm font-bold text-slate-800 shadow-sm hover:border-emerald-500 hover:text-emerald-700 active:scale-95 transition-all"
-            >
-              <Lock size={14} className="text-emerald-600" />
-              <span>Log In</span>
-            </Link>
-
-            <button
-              type="button"
-              onClick={() => setPwaModalOpen(true)}
-              className="inline-flex items-center justify-center gap-2 rounded-full bg-slate-100 px-5 py-3 text-xs sm:text-sm font-bold text-slate-700 hover:bg-slate-200 active:scale-95 transition-all cursor-pointer"
-            >
-              <Download size={14} className="text-emerald-600" />
-              <span>Install PWA App</span>
-            </button>
-          </div>
         </section>
 
-        {/* 3. SOLUTIONS SLIDES ANIMATION (DISCOVER PLATFORM PILLARS) */}
+        {/* 3. SOLUTIONS SLIDES: 4 PILLARS (IMMIGRATION, EDUCATION, LABOUR, CITIZEN VAULT) */}
         <div id="solutions-section">
           <SolutionsSlides />
         </div>
 
-        {/* 4. NATIVE CARDS GRID WITH REALISTIC WIDGETS */}
+        {/* 4. NATIVE INTERACTIVE CARDS WITH RICH GRAPHIC DESIGNS */}
         <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
+          <div className="text-center mb-6">
+            <h2 className="font-poppins text-xl sm:text-2xl font-extrabold text-slate-900">
+              Native Sovereign Capabilities
+            </h2>
+            <p className="mt-1 text-xs sm:text-sm text-slate-500">
+              Engineered with biometric enclaves, localized sovereign nodes, and EVM anchors.
+            </p>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {/* Card 1: Citizen Sovereign Vault */}
             <div className="rounded-3xl border border-slate-200/90 bg-white p-6 shadow-md hover:shadow-lg transition-all flex flex-col justify-between">
@@ -190,7 +146,7 @@ export function PwaAppLanding() {
                   Citizen Sovereign Vault
                 </h3>
                 <p className="mt-1 text-xs text-slate-600 leading-relaxed">
-                  Connect Google Drive or Dropbox via OAuth. Standardized into 6 tamper-proof categories: Finance, Academics, Experience, Certifications, Portfolio, and Achievements.
+                  OAuth sync with Google Drive or Dropbox. Organized into 6 schema-validated domains: Finance, Academics, Experience, Certifications, Portfolio, and Achievements.
                 </p>
 
                 <div className="mt-4 rounded-2xl bg-slate-50 p-3 space-y-1.5 text-xs border border-slate-100">
@@ -233,10 +189,10 @@ export function PwaAppLanding() {
                 </div>
 
                 <h3 className="mt-4 font-poppins text-lg font-bold text-slate-900">
-                  Biometric FaceID & NFC Attestation
+                  Biometric FaceID &amp; NFC Attestation
                 </h3>
                 <p className="mt-1 text-xs text-slate-600 leading-relaxed">
-                  Hardware-bound cryptographic security. Mint scoped keys or tap NFC to share temporary credentials with embassies or recruiters without unlocking raw files.
+                  Hardware-bound cryptographic keys. Mint temporary scoped keys or tap NFC to share verified credentials with embassies without exposing physical PDFs.
                 </p>
 
                 {/* FaceID Interactive Simulator */}
@@ -252,7 +208,7 @@ export function PwaAppLanding() {
                       </div>
                     ) : (
                       <div className="h-12 w-12 rounded-full bg-slate-800 flex items-center justify-center text-emerald-400">
-                        <Lock size={20} />
+                        <Fingerprint size={22} />
                       </div>
                     )}
                   </div>
@@ -294,7 +250,7 @@ export function PwaAppLanding() {
                 </div>
 
                 <h3 className="mt-4 font-poppins text-lg font-bold text-slate-900">
-                  Sovereign Nodes & Compliance
+                  Sovereign Nodes &amp; Compliance
                 </h3>
                 <p className="mt-1 text-xs text-slate-600 leading-relaxed">
                   PostgreSQL database nodes partitioned by regional sovereignty: NDPC (Nigeria), GDPR (European Union), and US Privacy. Micro-transaction queries execute a smart-contract 60/40 revenue split.
@@ -329,26 +285,25 @@ export function PwaAppLanding() {
           </div>
         </section>
 
-        {/* 4. INTERACTIVE ANTI-TAMPER SHIELD DEMONSTRATION SECTION */}
-        <section id="tamper-simulation-section" className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10">
-          <div className="rounded-[2.5rem] border border-slate-200 bg-gradient-to-br from-slate-900 to-slate-950 p-6 sm:p-10 text-white shadow-2xl">
+        {/* 5. INTERACTIVE ANTI-TAMPER SHIELD DEMONSTRATION SECTION */}
+        <section id="tamper-simulation-section" className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+          <div className="rounded-[2rem] sm:rounded-[2.5rem] border border-slate-200 bg-gradient-to-br from-slate-900 to-slate-950 p-5 sm:p-8 text-white shadow-xl">
             <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-5">
               <div>
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/20 px-3 py-1 text-[11px] font-bold text-emerald-300">
                   <ShieldCheckAnimated size={13} strokeWidth={2.4} />
                   <span>Real-Time Cryptographic Verification Simulator</span>
                 </span>
-                <h3 className="mt-2 font-poppins text-2xl sm:text-3xl font-extrabold text-white">
+                <h3 className="mt-2 font-poppins text-xl sm:text-2xl font-extrabold text-white">
                   Fail-Closed Anti-Tamper Shield
                 </h3>
-                <p className="mt-1 text-xs sm:text-sm text-slate-400 max-w-xl">
-                  Simulate modifying candidate records directly in the database. See how SabiProfile re-computes SHA-256 and rejects tampering in 4ms against the EVM ledger anchor.
+                <p className="mt-1 text-xs text-slate-400 max-w-xl">
+                  Simulate modifying candidate records in the database. SabiProfile re-computes SHA-256 in 4ms and rejects tampering against the Base Sepolia ledger anchor.
                 </p>
               </div>
 
               {/* Simulation Toggle Switch */}
-              <div className="flex items-center gap-3 rounded-2xl bg-slate-800/80 p-2 border border-slate-700">
-                <span className="text-xs font-bold text-slate-300">Data Integrity:</span>
+              <div className="flex items-center gap-2 rounded-2xl bg-slate-800/80 p-1.5 border border-slate-700">
                 <button
                   type="button"
                   onClick={() => setIsTampered(false)}
@@ -375,12 +330,18 @@ export function PwaAppLanding() {
             </div>
 
             {/* Live Comparison View */}
-            <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-5 text-xs">
+            <div className="mt-5 grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
               {/* Database Payload */}
               <div className="rounded-2xl bg-slate-800/60 p-4 border border-slate-700 space-y-2">
                 <div className="flex items-center justify-between text-slate-300">
                   <span className="font-bold">Structured Database Record (JSON):</span>
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${isTampered ? "bg-rose-500/20 text-rose-300" : "bg-emerald-500/20 text-emerald-300"}`}>
+                  <span
+                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                      isTampered
+                        ? "bg-rose-500/20 text-rose-300"
+                        : "bg-emerald-500/20 text-emerald-300"
+                    }`}
+                  >
                     {isTampered ? "FORGED PAYLOAD" : "GENUINE RECORD"}
                   </span>
                 </div>
@@ -388,7 +349,16 @@ export function PwaAppLanding() {
                   <p>&quot;candidate&quot;: &quot;Chinwe Okafor&quot;,</p>
                   <p>&quot;degree&quot;: &quot;B.Sc Computer Science&quot;,</p>
                   <p>
-                    &quot;gpa&quot;: <span className={isTampered ? "text-rose-400 font-bold" : "text-emerald-400 font-bold"}>&quot;{isTampered ? tamperedGpa : authenticGpa}&quot;</span>
+                    &quot;gpa&quot;:{" "}
+                    <span
+                      className={
+                        isTampered
+                          ? "text-rose-400 font-bold"
+                          : "text-emerald-400 font-bold"
+                      }
+                    >
+                      &quot;{isTampered ? tamperedGpa : authenticGpa}&quot;
+                    </span>
                   </p>
                 </div>
                 <div>
@@ -410,7 +380,12 @@ export function PwaAppLanding() {
                 <div className="rounded-xl bg-slate-900 p-3 font-mono text-[11px] space-y-1 text-slate-300">
                   <p>&quot;contract&quot;: &quot;SabiProfileRegistry.sol&quot;,</p>
                   <p>&quot;block&quot;: 19421802,</p>
-                  <p className="break-all">&quot;anchorHash&quot;: <span className="text-emerald-400 break-all">{authenticHash}</span></p>
+                  <p className="break-all">
+                    &quot;anchorHash&quot;:{" "}
+                    <span className="text-emerald-400 break-all">
+                      {authenticHash}
+                    </span>
+                  </p>
                 </div>
                 <div>
                   <span className="text-slate-400">Attestation Status:</span>
@@ -433,20 +408,21 @@ export function PwaAppLanding() {
           </div>
         </section>
 
-        {/* 5. ONBOARDING ACCOUNT ACTION DECK */}
+        {/* 6. NATIVE APP ONBOARDING AUTHENTICATION DOCK */}
         <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
-          <div className="rounded-[2.5rem] border border-emerald-200/90 bg-gradient-to-br from-emerald-50 via-white to-emerald-50/50 p-6 sm:p-10 text-center shadow-lg">
+          <div className="rounded-[2rem] sm:rounded-[2.5rem] border border-emerald-200/90 bg-gradient-to-br from-emerald-50 via-white to-emerald-50/50 p-6 sm:p-10 text-center shadow-lg">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3.5 py-1 text-xs font-bold text-emerald-800 mb-3">
               <Key size={13} className="text-emerald-700" />
               <span>Sovereign Identity Onboarding</span>
             </span>
             <h3 className="font-poppins text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-              Ready to take control of your credentials?
+              Ready to create your sovereign vault?
             </h3>
             <p className="mt-2 text-xs sm:text-sm text-slate-600 max-w-xl mx-auto leading-relaxed">
-              Create your sovereign vault in under 60 seconds. Connect your private cloud drive, mint scoped keys, and verify records against the Base Sepolia ledger.
+              Connect your private cloud drive, mint scoped cryptographic keys, and share tamper-proof verification proofs with employers, universities, and embassies.
             </p>
 
+            {/* Authentication Buttons */}
             <div className="mt-6 flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 max-w-md sm:max-w-none mx-auto">
               <Link
                 href="/login?mode=signup"
@@ -465,41 +441,21 @@ export function PwaAppLanding() {
                 <span>Log In to Existing Vault</span>
               </Link>
             </div>
-          </div>
-        </section>
 
-        {/* 6. APP STORE & GOOGLE PLAY DOWNLOAD CENTER SECTION */}
-        <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10">
-          <div className="rounded-[2.5rem] border border-slate-200/90 bg-gradient-to-br from-slate-50 via-white to-emerald-50/40 p-6 sm:p-12 text-center shadow-lg">
-            <span className="inline-flex items-center gap-2 rounded-full bg-emerald-100 px-3.5 py-1 text-xs font-bold text-emerald-800 mb-3">
-              <Download size={13} className="text-emerald-700" />
-              <span>Native iOS, Android & Desktop PWA</span>
-            </span>
-
-            <h3 className="font-poppins text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-              Get the SabiProfile App on Any Device
-            </h3>
-
-            <p className="mt-2 text-xs sm:text-sm text-slate-600 max-w-xl mx-auto">
-              Enjoy biometric FaceID verification, instant NFC tap-to-verify, and offline QR scoped keys with native store and PWA integration.
-            </p>
-
-            <div className="mt-6 flex flex-wrap items-center justify-center gap-3 sm:gap-4">
-              {/* App Store & Play Store Buttons with Full-Screen Simulation Portal */}
-              <AppDownloadButtons size="lg" />
-
-              {/* Direct Desktop PWA Install Button */}
-              <button
-                type="button"
-                onClick={() => setPwaModalOpen(true)}
-                className="inline-flex items-center gap-2.5 rounded-xl border border-slate-300 bg-white px-5 py-3 text-xs font-bold text-slate-800 shadow-md hover:border-emerald-600 hover:text-emerald-700 transition-all active:scale-95 cursor-pointer"
-              >
-                <Download size={16} className="text-emerald-600" />
-                <div className="flex flex-col text-left">
-                  <span className="text-[8px] uppercase tracking-wider text-slate-400">Install</span>
-                  <span className="text-xs font-bold leading-tight font-poppins">PWA App</span>
-                </div>
-              </button>
+            {/* Security Proof Badges */}
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-4 text-[11px] text-slate-500 font-montserrat border-t border-slate-100 pt-5">
+              <span className="inline-flex items-center gap-1">
+                <CheckCircle2 size={13} className="text-emerald-600" />
+                <span>Zero Physical Documents Centralized</span>
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <CheckCircle2 size={13} className="text-emerald-600" />
+                <span>SHA-256 On-Chain Ledger Anchors</span>
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <CheckCircle2 size={13} className="text-emerald-600" />
+                <span>NDPC &amp; GDPR Sovereign Node Compliance</span>
+              </span>
             </div>
           </div>
         </section>
@@ -507,20 +463,6 @@ export function PwaAppLanding() {
 
       {/* 7. FIXED MOBILE BOTTOM NAVIGATION BAR */}
       <MobileBottomNav />
-
-      {/* Full-Screen PWA Install Modal (Rendered at Root Portal) */}
-      <PwaInstallModal
-        isOpen={pwaModalOpen}
-        onClose={() => setPwaModalOpen(false)}
-      />
-
-      {/* Full-Screen Native Store Download Modal (Rendered at Root Portal) */}
-      <NativeAppDownloadModal
-        isOpen={storeModalOpen}
-        onClose={() => setStoreModalOpen(false)}
-        initialPlatform={storePlatform}
-      />
     </div>
   );
 }
-

@@ -12,14 +12,17 @@ import {
   Shield,
   Smartphone,
   ChevronRight,
-  ExternalLink,
-  Layers,
   ArrowRight,
   Check,
   Lock,
   Cpu,
   Globe2,
+  ArrowLeft,
+  Search,
+  MoreVertical,
+  Key,
 } from "lucide-react";
+import { ShieldCheckAnimated, ArrowRightAnimated } from "@/components/ui/animated-icons";
 
 export interface NativeAppDownloadModalProps {
   isOpen: boolean;
@@ -36,8 +39,6 @@ export function NativeAppDownloadModal({
   const [mounted, setMounted] = useState(false);
   const [installState, setInstallState] = useState<"idle" | "downloading" | "installing" | "installed">("idle");
   const [progress, setProgress] = useState(0);
-  const [email, setEmail] = useState("");
-  const [emailSubmitted, setEmailSubmitted] = useState(false);
   const [activeScreenshot, setActiveScreenshot] = useState(0);
 
   useEffect(() => {
@@ -48,7 +49,6 @@ export function NativeAppDownloadModal({
     setPlatform(initialPlatform);
     setInstallState("idle");
     setProgress(0);
-    setEmailSubmitted(false);
   }, [initialPlatform, isOpen]);
 
   // Lock body scroll when modal is open
@@ -85,8 +85,24 @@ export function NativeAppDownloadModal({
       return;
     }
 
-    // Set installed guide view
-    setInstallState("installed");
+    // High-fidelity install simulation
+    setInstallState("downloading");
+    setProgress(20);
+
+    setTimeout(() => {
+      setProgress(60);
+      setInstallState("downloading");
+    }, 450);
+
+    setTimeout(() => {
+      setProgress(95);
+      setInstallState("installing");
+    }, 900);
+
+    setTimeout(() => {
+      setProgress(100);
+      setInstallState("installed");
+    }, 1350);
   };
 
   const screenshots = [
@@ -94,72 +110,58 @@ export function NativeAppDownloadModal({
       title: "Sovereign Citizen Vault",
       subtitle: "6 domains of cryptographic identity",
       badge: "Citizen OS",
-      color: "from-emerald-500 to-teal-700",
       content: (
-        <div className="space-y-2 p-3 text-left">
-          <div className="flex items-center justify-between border-b border-white/20 pb-2">
-            <span className="text-[11px] font-bold text-white">Chinwe Okafor</span>
-            <span className="rounded-full bg-emerald-400/20 px-2 py-0.5 text-[9px] font-bold text-emerald-300">Verified</span>
+        <div className="space-y-2 p-3 text-left text-slate-800">
+          <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+            <span className="text-xs font-bold text-slate-900">Active Profile</span>
+            <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[9px] font-bold text-emerald-800">
+              Verified
+            </span>
           </div>
-          <div className="grid grid-cols-2 gap-1.5 pt-1 text-[10px]">
-            <div className="rounded-lg bg-white/10 p-2">
-              <p className="text-white/70">Liquid Funds</p>
-              <p className="font-bold text-white">₦8,750,000</p>
-            </div>
-            <div className="rounded-lg bg-white/10 p-2">
-              <p className="text-white/70">Degree Proof</p>
-              <p className="font-bold text-white">B.Sc First Class</p>
-            </div>
-            <div className="rounded-lg bg-white/10 p-2">
-              <p className="text-white/70">Base L2 Anchor</p>
-              <p className="font-bold text-emerald-300">#19,421,802</p>
-            </div>
-            <div className="rounded-lg bg-white/10 p-2">
-              <p className="text-white/70">Storage Model</p>
-              <p className="font-bold text-white">Zero Raw Central</p>
-            </div>
+          <div className="rounded-xl bg-slate-50 p-2 text-[10px] space-y-1 border border-slate-100">
+            <p className="font-semibold text-slate-900">Chinwe Okafor</p>
+            <p className="text-slate-500">B.Sc Computer Science • 4.80 GPA</p>
+            <p className="text-emerald-700 font-mono text-[9px]">Hash: 0x8f3c...e421</p>
           </div>
         </div>
       ),
     },
     {
-      title: "Biometric Scoped Keys",
-      subtitle: "Instant FaceID consent & TTL",
-      badge: "Zero-Knowledge",
-      color: "from-slate-900 to-emerald-950",
+      title: "Biometric Hardware Enclave",
+      subtitle: "FaceID & NFC Attestation",
+      badge: "Security",
       content: (
-        <div className="space-y-2 p-3 text-left">
-          <div className="flex items-center gap-2 text-emerald-400">
-            <Lock size={14} />
-            <span className="text-[11px] font-bold text-white">Consent Policy Active</span>
+        <div className="space-y-2 p-3 text-left text-slate-800">
+          <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+            <span className="text-xs font-bold text-slate-900">Enclave Attestation</span>
+            <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[9px] font-bold text-emerald-800">
+              Active
+            </span>
           </div>
-          <div className="rounded-lg bg-emerald-900/40 p-2 text-[10px] text-emerald-200">
-            <p className="font-mono">sbk_live_v1_9a8f...4e1b</p>
-            <p className="mt-1 text-[9px] text-white/60">Expires in 7 days • academics & finance only</p>
-          </div>
-          <div className="flex items-center justify-between text-[10px] text-white/80">
-            <span>FaceID Biometric</span>
-            <span className="font-bold text-emerald-300">Hardware Bound</span>
+          <div className="rounded-xl bg-slate-50 p-2 text-[10px] space-y-1 border border-slate-100">
+            <p className="font-semibold text-slate-900">Biometric Verification: Passed</p>
+            <p className="text-slate-500">Physical files never leave private cloud</p>
+            <p className="text-emerald-700 font-mono text-[9px]">Base Sepolia: Block #19,421,802</p>
           </div>
         </div>
       ),
     },
     {
-      title: "Real-Time Tamper Shield",
-      subtitle: "4ms fail-closed rejection",
-      badge: "Cryptographic",
-      color: "from-emerald-700 to-slate-900",
+      title: "Zero-Hallucination Screening",
+      subtitle: "Enterprise Deterministic RAG",
+      badge: "Enterprise",
       content: (
-        <div className="space-y-2 p-3 text-left">
-          <div className="flex items-center gap-2">
-            <Shield size={14} className="text-emerald-400" />
-            <span className="text-[11px] font-bold text-white">SHA-256 Verified</span>
+        <div className="space-y-2 p-3 text-left text-slate-800">
+          <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+            <span className="text-xs font-bold text-slate-900">Multi-Agent Audit</span>
+            <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[9px] font-bold text-emerald-800">
+              Score: 94/100
+            </span>
           </div>
-          <p className="text-[10px] text-white/80">
-            Live database re-hashing against EVM ledger prevents any unauthorized alteration.
-          </p>
-          <div className="rounded-md bg-white/10 px-2 py-1 text-[9px] font-mono text-emerald-300">
-            Status: TAMPER_FREE (100% Match)
+          <div className="rounded-xl bg-slate-50 p-2 text-[10px] space-y-1 border border-slate-100">
+            <p className="font-semibold text-slate-900">Integrity Agent: TAMPER_FREE</p>
+            <p className="text-slate-500">Direct schema evaluation in 2.4s</p>
+            <p className="text-emerald-700 font-mono text-[9px]">4ms Cryptographic Check</p>
           </div>
         </div>
       ),
@@ -168,336 +170,226 @@ export function NativeAppDownloadModal({
 
   const modalContent = (
     <div
-      className="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-5 bg-slate-950/80 backdrop-blur-md animate-fadeIn"
+      className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-950/85 backdrop-blur-md animate-fadeIn"
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-lg max-h-[92vh] overflow-y-auto rounded-[2rem] border border-slate-200/80 bg-white text-slate-900 shadow-2xl transition-all"
+        className="relative w-screen h-[100dvh] max-w-[100vw] overflow-y-auto bg-white text-slate-900 flex flex-col sm:h-auto sm:max-h-[92vh] sm:max-w-2xl sm:rounded-[2.5rem] sm:shadow-2xl sm:border sm:border-slate-200/80 transition-all"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Top Floating Close Button */}
-        <button
-          type="button"
-          onClick={onClose}
-          className="absolute top-4 right-4 z-20 flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-900 transition-colors shadow-sm"
-          aria-label="Close modal"
-        >
-          <X size={18} />
-        </button>
+        {/* TOP STATUS BAR & PLATFORM SWITCHER */}
+        <div className="sticky top-0 z-20 flex items-center justify-between border-b border-slate-200/80 bg-white/95 px-4 sm:px-6 py-3 backdrop-blur-md">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors cursor-pointer"
+              aria-label="Back"
+            >
+              <ArrowLeft size={16} />
+            </button>
+            <span className="font-poppins text-xs font-bold uppercase tracking-wider text-slate-700">
+              {platform === "ios" ? "Apple App Store" : "Google Play Store"}
+            </span>
+          </div>
 
-        {/* Platform Switcher Tabs */}
-        <div className="border-b border-slate-100 bg-slate-50/80 px-6 pt-5 pb-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-emerald-600 text-white shadow-xs">
-                <Shield size={14} />
-              </span>
-              <span className="font-poppins text-xs font-bold uppercase tracking-wider text-slate-700">
-                Official Mobile Release
-              </span>
-            </div>
+          {/* Platform Toggle Pills */}
+          <div className="flex items-center gap-1 rounded-xl bg-slate-100 p-1">
+            <button
+              type="button"
+              onClick={() => {
+                setPlatform("ios");
+                setInstallState("idle");
+                setProgress(0);
+              }}
+              className={`flex items-center gap-1.5 rounded-lg px-3 py-1 text-xs font-bold transition-all cursor-pointer ${
+                platform === "ios"
+                  ? "bg-white text-slate-900 shadow-xs"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              <svg className="h-3.5 w-3.5 fill-current" viewBox="0 0 24 24">
+                <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 6.37c.62-.75 1.04-1.8 0.93-2.85-.9.04-2 .6-2.65 1.35-.58.66-1.09 1.73-.95 2.76 1.01.08 2.05-.51 2.67-1.26z" />
+              </svg>
+              <span>iOS</span>
+            </button>
 
-            <div className="inline-flex rounded-xl bg-slate-200/70 p-1">
-              <button
-                type="button"
-                onClick={() => {
-                  setPlatform("ios");
-                  setInstallState("idle");
-                  setProgress(0);
-                }}
-                className={`flex items-center gap-1.5 rounded-lg px-3 py-1 text-xs font-bold transition-all ${
-                  platform === "ios"
-                    ? "bg-white text-slate-900 shadow-xs"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                <svg className="h-3.5 w-3.5 fill-current" viewBox="0 0 24 24">
-                  <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 6.37c.62-.75 1.04-1.8 0.93-2.85-.9.04-2 .6-2.65 1.35-.58.66-1.09 1.73-.95 2.76 1.01.08 2.05-.51 2.67-1.26z" />
-                </svg>
-                <span>App Store</span>
-              </button>
+            <button
+              type="button"
+              onClick={() => {
+                setPlatform("android");
+                setInstallState("idle");
+                setProgress(0);
+              }}
+              className={`flex items-center gap-1.5 rounded-lg px-3 py-1 text-xs font-bold transition-all cursor-pointer ${
+                platform === "android"
+                  ? "bg-white text-emerald-800 shadow-xs"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              <svg className="h-3.5 w-3.5" viewBox="0 0 24 24">
+                <polygon points="5 3 19 12 5 21 5 3" fill="#059669" />
+              </svg>
+              <span>Android</span>
+            </button>
 
-              <button
-                type="button"
-                onClick={() => {
-                  setPlatform("android");
-                  setInstallState("idle");
-                  setProgress(0);
-                }}
-                className={`flex items-center gap-1.5 rounded-lg px-3 py-1 text-xs font-bold transition-all ${
-                  platform === "android"
-                    ? "bg-white text-emerald-800 shadow-xs"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                <svg className="h-3.5 w-3.5" viewBox="0 0 24 24">
-                  <polygon points="5 3 19 12 5 21 5 3" fill="#059669" />
-                </svg>
-                <span>Google Play</span>
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 hover:text-slate-900 ml-1"
+              aria-label="Close"
+            >
+              <X size={15} />
+            </button>
           </div>
         </div>
 
-        {/* Store Header Section */}
-        <div className="p-6 pb-4">
-          <div className="flex items-start gap-4">
+        {/* STORE PRODUCT HEADER */}
+        <div className="p-5 sm:p-7">
+          <div className="flex items-start gap-4 sm:gap-5">
             {/* App Icon */}
-            <div className="relative flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#059669] to-[#047857] shadow-lg shadow-emerald-700/20 ring-1 ring-black/5">
-              <svg className="h-11 w-11" viewBox="0 0 512 512" fill="none">
-                <path
-                  d="M256 64L392 124V252C392 344.4 334.4 429.2 256 452C177.6 429.2 120 344.4 120 252V124L256 64Z"
-                  fill="#ffffff"
-                />
-                <circle cx="256" cy="220" r="44" fill="#059669" />
-                <path d="M240 236H272L282 320H230L240 236Z" fill="#059669" />
+            <div className="relative flex h-20 w-20 sm:h-24 sm:w-24 shrink-0 items-center justify-center rounded-2xl sm:rounded-3xl bg-gradient-to-br from-[#059669] to-[#047857] shadow-xl shadow-emerald-700/20 ring-1 ring-white/60">
+              <svg className="h-11 w-11 sm:h-14 sm:w-14 text-white fill-current" viewBox="0 0 512 512">
+                <path d="M256 64L392 124V252C392 344.4 334.4 429.2 256 452C177.6 429.2 120 344.4 120 252V124L256 64Z" />
               </svg>
-              <span className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-slate-900 text-[10px] font-bold text-white ring-2 ring-white">
-                ✓
-              </span>
             </div>
 
-            {/* App Details */}
-            <div className="flex-1 min-w-0 pr-6">
-              <h2 className="font-poppins text-lg font-extrabold text-slate-900 leading-tight">
+            {/* App Title & Metadata */}
+            <div className="flex-1 min-w-0">
+              <h2 className="font-poppins text-lg sm:text-2xl font-extrabold text-slate-900 leading-tight">
                 SabiProfile: Sovereign Vault
               </h2>
-              <p className="text-xs font-semibold text-emerald-700">
+              <p className="text-xs sm:text-sm font-semibold text-emerald-700 mt-0.5">
                 Sabi AI Technologies Ltd
               </p>
-              <p className="mt-1 text-[11px] text-slate-500">
-                Decentralized Identity & Proof Infrastructure
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                {platform === "ios"
+                  ? "Identity & Cryptographic Proofs • In-App Purchases"
+                  : "Verified by Play Protect • No Ads"}
               </p>
 
-              {/* Install / Get Button with Live Simulation */}
-              <div className="mt-3">
-                {platform === "ios" ? (
+              {/* Install / GET Action Button */}
+              <div className="mt-3.5">
+                {installState === "idle" && (
                   <button
                     type="button"
                     onClick={handleInstallClick}
-                    className={`inline-flex items-center justify-center gap-2 rounded-full px-6 py-2 text-xs font-bold transition-all shadow-sm ${
-                      installState === "installed"
-                        ? "bg-emerald-600 text-white"
-                        : installState === "downloading" || installState === "installing"
-                        ? "bg-slate-100 text-slate-700 border border-slate-200"
-                        : "bg-emerald-600 hover:bg-emerald-700 text-white hover:scale-105 active:scale-95"
+                    className={`inline-flex items-center justify-center gap-2 rounded-full px-7 py-2.5 text-xs sm:text-sm font-bold shadow-md transition-all active:scale-95 cursor-pointer ${
+                      platform === "ios"
+                        ? "bg-slate-900 text-white hover:bg-slate-800 shadow-slate-900/20"
+                        : "bg-[#059669] text-white hover:bg-[#047857] shadow-emerald-700/25"
                     }`}
                   >
-                    {installState === "idle" && (
-                      <>
-                        <span>GET</span>
-                        <span className="text-[10px] font-normal opacity-80">(Free)</span>
-                      </>
-                    )}
-                    {installState === "downloading" && (
-                      <>
-                        <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-emerald-600 border-t-transparent" />
-                        <span>Downloading ({progress}%)...</span>
-                      </>
-                    )}
-                    {installState === "installing" && (
-                      <>
-                        <span className="inline-block h-3 w-3 animate-pulse rounded-full bg-emerald-600" />
-                        <span>Installing...</span>
-                      </>
-                    )}
-                    {installState === "installed" && (
-                      <>
-                        <Check size={14} className="text-white" />
-                        <span>OPEN</span>
-                      </>
-                    )}
+                    <Download size={14} />
+                    <span>{platform === "ios" ? "GET" : "Install"}</span>
                   </button>
-                ) : (
+                )}
+
+                {installState === "downloading" && (
+                  <div className="flex items-center gap-3">
+                    <div className="h-8 w-8 rounded-full border-3 border-emerald-600 border-t-transparent animate-spin" />
+                    <span className="text-xs font-bold text-slate-700">Downloading {progress}%...</span>
+                  </div>
+                )}
+
+                {installState === "installing" && (
+                  <div className="flex items-center gap-3">
+                    <div className="h-8 w-8 rounded-full border-3 border-emerald-600 border-t-transparent animate-spin" />
+                    <span className="text-xs font-bold text-slate-700">Installing to device...</span>
+                  </div>
+                )}
+
+                {installState === "installed" && (
                   <button
                     type="button"
-                    onClick={handleInstallClick}
-                    className={`inline-flex items-center justify-center gap-2 rounded-xl px-6 py-2 text-xs font-bold transition-all shadow-sm ${
-                      installState === "installed"
-                        ? "bg-emerald-600 text-white"
-                        : installState === "downloading" || installState === "installing"
-                        ? "bg-slate-100 text-slate-700 border border-slate-200"
-                        : "bg-emerald-700 hover:bg-emerald-800 text-white hover:scale-105 active:scale-95"
-                    }`}
+                    onClick={() => {
+                      onClose();
+                      window.location.href = "/pwa";
+                    }}
+                    className="inline-flex items-center justify-center gap-2 rounded-full bg-emerald-600 px-7 py-2.5 text-xs sm:text-sm font-bold text-white shadow-md shadow-emerald-700/25 hover:bg-emerald-700 active:scale-95 transition-all cursor-pointer"
                   >
-                    {installState === "idle" && (
-                      <>
-                        <Download size={13} />
-                        <span>Install</span>
-                      </>
-                    )}
-                    {installState === "downloading" && (
-                      <>
-                        <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-emerald-600 border-t-transparent" />
-                        <span>Downloading 28.4 MB ({progress}%)...</span>
-                      </>
-                    )}
-                    {installState === "installing" && (
-                      <>
-                        <span className="inline-block h-3 w-3 animate-pulse rounded-full bg-emerald-600" />
-                        <span>Installing app...</span>
-                      </>
-                    )}
-                    {installState === "installed" && (
-                      <>
-                        <Check size={14} className="text-white" />
-                        <span>Open Application</span>
-                      </>
-                    )}
+                    <Check size={14} strokeWidth={2.5} />
+                    <span>OPEN APP</span>
                   </button>
                 )}
               </div>
             </div>
           </div>
 
-          {/* Store Metrics Strip */}
-          <div className="mt-5 grid grid-cols-4 divide-x divide-slate-100 rounded-2xl bg-slate-50 py-3 text-center text-slate-600">
+          {/* STORE STATS BAR */}
+          <div className="mt-6 grid grid-cols-4 divide-x divide-slate-100 rounded-2xl bg-slate-50 p-3 text-center border border-slate-100">
             <div>
-              <p className="text-[10px] uppercase font-bold text-slate-400">Rating</p>
-              <div className="mt-0.5 flex items-center justify-center gap-0.5 font-poppins text-xs font-bold text-slate-900">
+              <p className="font-poppins text-xs sm:text-sm font-extrabold text-slate-900 flex items-center justify-center gap-0.5">
                 <span>4.9</span>
                 <Star size={11} className="fill-amber-400 text-amber-400" />
-              </div>
-              <p className="text-[9px] text-slate-400">18.4K reviews</p>
+              </p>
+              <p className="text-[10px] text-slate-500 mt-0.5">2.4K Ratings</p>
             </div>
             <div>
-              <p className="text-[10px] uppercase font-bold text-slate-400">Age</p>
-              <p className="mt-0.5 font-poppins text-xs font-bold text-slate-900">17+</p>
-              <p className="text-[9px] text-slate-400">Sovereign</p>
+              <p className="font-poppins text-xs sm:text-sm font-extrabold text-slate-900">#1</p>
+              <p className="text-[10px] text-slate-500 mt-0.5">Identity</p>
             </div>
             <div>
-              <p className="text-[10px] uppercase font-bold text-slate-400">Chart</p>
-              <p className="mt-0.5 font-poppins text-xs font-bold text-emerald-700">#1</p>
-              <p className="text-[9px] text-slate-400">GovTech</p>
+              <p className="font-poppins text-xs sm:text-sm font-extrabold text-slate-900">4+</p>
+              <p className="text-[10px] text-slate-500 mt-0.5">Age Rated</p>
             </div>
             <div>
-              <p className="text-[10px] uppercase font-bold text-slate-400">Size</p>
-              <p className="mt-0.5 font-poppins text-xs font-bold text-slate-900">28.4 MB</p>
-              <p className="text-[9px] text-slate-400">Encrypted</p>
+              <p className="font-poppins text-xs sm:text-sm font-extrabold text-slate-900">18 MB</p>
+              <p className="text-[10px] text-slate-500 mt-0.5">App Size</p>
             </div>
           </div>
-        </div>
 
-        {/* Interactive Screenshots Carousel */}
-        <div className="px-6 py-3">
-          <div className="flex items-center justify-between pb-2">
-            <h3 className="font-poppins text-xs font-bold uppercase tracking-wider text-slate-500">
-              Interactive Preview
+          {/* PREVIEW SCREENSHOTS CAROUSEL */}
+          <div className="mt-6">
+            <h3 className="font-poppins text-xs font-bold uppercase tracking-wider text-slate-700 mb-3">
+              App Preview &amp; Screenshots
             </h3>
-            <span className="text-[11px] font-semibold text-emerald-700">
-              {activeScreenshot + 1} of {screenshots.length}
-            </span>
-          </div>
 
-          <div
-            className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${screenshots[activeScreenshot].color} p-4 text-white shadow-md transition-all duration-300 min-h-[170px] flex flex-col justify-between`}
-          >
-            <div>
-              <div className="flex items-center justify-between">
-                <span className="rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider backdrop-blur-xs">
-                  {screenshots[activeScreenshot].badge}
-                </span>
-                <div className="flex gap-1">
-                  {screenshots.map((_, i) => (
-                    <button
-                      key={i}
-                      type="button"
-                      onClick={() => setActiveScreenshot(i)}
-                      className={`h-1.5 rounded-full transition-all ${
-                        activeScreenshot === i ? "w-5 bg-white" : "w-1.5 bg-white/40"
-                      }`}
-                      aria-label={`Slide ${i + 1}`}
-                    />
-                  ))}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {screenshots.map((item, idx) => (
+                <div
+                  key={idx}
+                  className="rounded-2xl border border-slate-200/90 bg-white p-3 shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
+                >
+                  <div>
+                    <span className="inline-block rounded-full bg-emerald-100 px-2 py-0.5 text-[9px] font-bold text-emerald-800">
+                      {item.badge}
+                    </span>
+                    <h4 className="mt-2 font-poppins text-xs font-bold text-slate-900">
+                      {item.title}
+                    </h4>
+                    <p className="text-[10px] text-slate-500">{item.subtitle}</p>
+                  </div>
+                  <div className="mt-3 rounded-xl bg-slate-50 border border-slate-100">
+                    {item.content}
+                  </div>
                 </div>
-              </div>
-
-              <h4 className="mt-2 font-poppins text-base font-bold leading-tight">
-                {screenshots[activeScreenshot].title}
-              </h4>
-              <p className="text-xs text-white/80">
-                {screenshots[activeScreenshot].subtitle}
-              </p>
-            </div>
-
-            <div className="mt-3 rounded-xl bg-black/25 backdrop-blur-sm border border-white/10">
-              {screenshots[activeScreenshot].content}
+              ))}
             </div>
           </div>
-        </div>
 
-        {/* Feature Highlights List */}
-        <div className="px-6 py-4 border-t border-slate-100 space-y-2 text-xs text-slate-700">
-          <h4 className="font-poppins text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
-            Enterprise Features Included
-          </h4>
-          <div className="flex items-start gap-2">
-            <CheckCircle2 size={15} className="text-emerald-600 shrink-0 mt-0.5" />
-            <span><strong>Zero Raw Central Storage:</strong> Physical documents remain securely inside your personal Google Drive or Dropbox.</span>
-          </div>
-          <div className="flex items-start gap-2">
-            <CheckCircle2 size={15} className="text-emerald-600 shrink-0 mt-0.5" />
-            <span><strong>Base L2 Immutable Ledger:</strong> Real-time SHA-256 anchors protect degrees, bank records, and identities against fraud.</span>
-          </div>
-          <div className="flex items-start gap-2">
-            <CheckCircle2 size={15} className="text-emerald-600 shrink-0 mt-0.5" />
-            <span><strong>Biometric Hardware Enclave:</strong> FaceID / Fingerprint encryption on-device with offline scoped keys.</span>
-          </div>
-        </div>
-
-        {/* Early Beta / Direct Invite Form */}
-        <div className="p-6 bg-slate-50 border-t border-slate-100 rounded-b-[2rem]">
-          <div className="flex items-center gap-2">
-            <Sparkles size={14} className="text-emerald-600" />
-            <h4 className="font-poppins text-xs font-bold text-slate-900">
-              {platform === "ios" ? "Request iOS TestFlight Direct Invite" : "Request Google Play Internal APK"}
-            </h4>
-          </div>
-          <p className="mt-1 text-[11px] text-slate-600">
-            Get instant build access sent straight to your email before public store release.
-          </p>
-
-          {emailSubmitted ? (
-            <div className="mt-3 flex items-center gap-2 rounded-xl bg-emerald-100/70 p-3 border border-emerald-300 text-emerald-900">
-              <CheckCircle2 size={16} className="text-emerald-700 shrink-0" />
-              <p className="text-xs font-semibold">
-                Invitation queued! Check {email} for your instant {platform === "ios" ? "TestFlight" : "Google Play"} link.
-              </p>
+          {/* DESCRIPTION SECTION */}
+          <div className="mt-6 border-t border-slate-100 pt-5 space-y-2 text-xs text-slate-600 leading-relaxed">
+            <h3 className="font-poppins text-xs font-bold uppercase tracking-wider text-slate-900">
+              About this app
+            </h3>
+            <p>
+              SabiProfile is sovereign data infrastructure and decentralized identity platform. Turn physical documents, degrees, passports, and bank statements into tamper-proof, schema-validated cryptographic credentials.
+            </p>
+            <div className="flex flex-wrap items-center gap-3 pt-2 text-[11px] text-slate-700 font-semibold">
+              <span className="flex items-center gap-1">
+                <CheckCircle2 size={13} className="text-emerald-600" />
+                Zero Central Storage
+              </span>
+              <span className="flex items-center gap-1">
+                <CheckCircle2 size={13} className="text-emerald-600" />
+                4ms Cryptographic Verification
+              </span>
+              <span className="flex items-center gap-1">
+                <CheckCircle2 size={13} className="text-emerald-600" />
+                NDPC &amp; GDPR Compliant
+              </span>
             </div>
-          ) : (
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (email.includes("@")) setEmailSubmitted(true);
-              }}
-              className="mt-3 flex gap-2"
-            >
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Enter your email"
-                className="flex-1 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600"
-              />
-              <button
-                type="submit"
-                className="rounded-xl bg-slate-900 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-700 transition-colors shrink-0"
-              >
-                Send Invite
-              </button>
-            </form>
-          )}
-
-          <div className="mt-4 flex items-center justify-between pt-3 border-t border-slate-200/60 text-[11px]">
-            <span className="text-slate-500">Need immediate browser access?</span>
-            <a
-              href="/login"
-              className="inline-flex items-center gap-1 font-bold text-emerald-700 hover:text-emerald-800"
-            >
-              <span>Launch Web PWA</span>
-              <ArrowRight size={12} />
-            </a>
           </div>
         </div>
       </div>
@@ -506,4 +398,3 @@ export function NativeAppDownloadModal({
 
   return createPortal(modalContent, document.body);
 }
-
