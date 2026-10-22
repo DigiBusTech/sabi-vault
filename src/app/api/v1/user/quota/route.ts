@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { authenticateUser } from "@/lib/auth/auth_guard";
 import { globalUserStore } from "@/core/vault/user_store";
 import { STORAGE_TIER_CONFIGS } from "@/types/vault";
+import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +20,18 @@ export async function GET(req: NextRequest) {
         { error: auth.error || "Authentication required" },
         { status: auth.status }
       );
+    }
+
+    // Hydrate admin-assigned tier/allocation from Supabase app_metadata so the
+    // quota is consistent across restarts and serverless instances.
+    try {
+      const admin = createAdminSupabaseClient();
+      const { data } = await admin.auth.admin.getUserById(auth.user.userId);
+      if (data?.user) {
+        globalUserStore.hydrateQuotaFromMetadata(auth.user.userId, data.user.app_metadata);
+      }
+    } catch {
+      // Supabase unconfigured: in-memory quota state is authoritative (dev mode)
     }
 
     const quota = globalUserStore.getUserQuota(auth.user.userId);

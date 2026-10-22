@@ -77,7 +77,7 @@ export class BlockchainLedgerClient {
     sha256Hex: string,
     tier: VerificationTier = VerificationTier.TIER_1_STANDARD_HASHED,
     signerPrivateKey?: string
-  ): Promise<{ txHash: string; timestamp: number; isSimulated?: boolean }> {
+  ): Promise<{ txHash: string; timestamp: number; isSimulated?: boolean; gasUsed?: string }> {
 
     const key = `${vaultId}:${category}`;
     const timestamp = Math.floor(Date.now() / 1000);
@@ -132,7 +132,12 @@ export class BlockchainLedgerClient {
           },
           userId: vaultId,
         });
-        return { txHash: receipt.hash, timestamp, isSimulated: false };
+        return {
+          txHash: receipt.hash,
+          timestamp,
+          isSimulated: false,
+          gasUsed: receipt.gasUsed?.toString(),
+        };
       } catch (err: any) {
         liveTelemetry.record({
           subsystem: "BLOCKCHAIN_LEDGER",

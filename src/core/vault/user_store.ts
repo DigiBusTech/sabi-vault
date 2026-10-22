@@ -303,7 +303,8 @@ class UserVaultMasterStore {
   public addCredential(
     category: VaultCategory,
     itemData: any,
-    userId: string = "usr_chinwe_okafor_7721"
+    userId: string = "usr_chinwe_okafor_7721",
+    commitMeta?: { isSimulated?: boolean; gasUsedUnits?: string }
   ): { success: boolean; hash: string; item: any } {
     const userVault = this.getVault(userId);
     const id = `item_${randomBytes(4).toString("hex")}`;
@@ -347,17 +348,39 @@ class UserVaultMasterStore {
     userVault.lastSyncedAt = new Date().toISOString();
     this.vaults.set(userId, userVault);
 
-    // Increment crypto gas on Base Sepolia commit
+    // Honest on-chain accounting: counters start at zero and only REAL
+    // (non-simulated) Base Sepolia commits increment them. Gas USD is derived
+    // from actual receipt gas units; without a configured price feed it stays 0
+    // rather than displaying a fabricated figure.
     const currentQ = this.userQuotas.get(userId) || {
       tier: "FREE" as StorageTier,
       allocatedMB: STORAGE_TIER_CONFIGS.FREE.defaultAllocatedMB,
-      cryptoGasSpentUSD: 0.16,
-      cryptoTxCount: 4,
+      cryptoGasSpentUSD: 0,
+      cryptoTxCount: 0,
     };
-    currentQ.cryptoGasSpentUSD = Math.round(((currentQ.cryptoGasSpentUSD || 0.16) + 0.04) * 100) / 100;
-    currentQ.cryptoTxCount = (currentQ.cryptoTxCount || 4) + 1;
+    if (commitMeta && commitMeta.isSimulated !== true) {
+      currentQ.cryptoTxCount = (currentQ.cryptoTxCount || 0) + 1;
+      currentQ.cryptoGasSpentUSD = Math.round(
+        ((currentQ.cryptoGasSpentUSD || 0) + this.gasUnitsToUSD(commitMeta.gasUsedUnits)) * 100
+      ) / 100;
+    }
     this.userQuotas.set(userId, currentQ);
     return { success: true, hash, item: enrichedItem };
+  }
+
+  /**
+   * Converts real receipt gas units to USD using configurable price constants.
+   * Returns 0 when no price feed is configured — never fabricates a number.
+   */
+  private gasUnitsToUSD(gasUsedUnits?: string): number {
+    if (!gasUsedUnits) return 0;
+    const gasUnits = Number(gasUsedUnits);
+    if (!Number.isFinite(gasUnits) || gasUnits <= 0) return 0;
+    const gasPriceGwei = Number(process.env.BASE_GAS_PRICE_GWEI);
+    const ethUsdPrice = Number(process.env.ETH_USD_PRICE);
+    if (!Number.isFinite(gasPriceGwei) || gasPriceGwei <= 0) return 0;
+    if (!Number.isFinite(ethUsdPrice) || ethUsdPrice <= 0) return 0;
+    return gasUnits * gasPriceGwei * 1e-9 * ethUsdPrice;
   }
 
   public deleteCredential(category: VaultCategory, itemId: string, userId: string = "usr_chinwe_okafor_7721"): boolean {
@@ -519,8 +542,8 @@ class UserVaultMasterStore {
     const quotaMeta = this.userQuotas.get(userId) || {
       tier: "FREE" as StorageTier,
       allocatedMB: STORAGE_TIER_CONFIGS.FREE.defaultAllocatedMB,
-      cryptoGasSpentUSD: 0.16,
-      cryptoTxCount: 4,
+      cryptoGasSpentUSD: 0,
+      cryptoTxCount: 0,
     };
 
     const tierConfig = STORAGE_TIER_CONFIGS[quotaMeta.tier] || STORAGE_TIER_CONFIGS.FREE;
@@ -532,8 +555,8 @@ class UserVaultMasterStore {
     const totalDocs = this.countTotalDocuments(userId);
     const vault = this.getVault(userId);
 
-    const calculatedGasUSD = quotaMeta.cryptoGasSpentUSD ?? Math.max(1, totalDocs) * 0.04;
-    const calculatedTxCount = quotaMeta.cryptoTxCount ?? Math.max(1, totalDocs);
+    const calculatedGasUSD = quotaMeta.cryptoGasSpentUSD ?? 0;
+    const calculatedTxCount = quotaMeta.cryptoTxCount ?? 0;
 
     return {
       userId,
@@ -563,8 +586,8 @@ class UserVaultMasterStore {
     const current = this.userQuotas.get(userId) || {
       tier: "FREE" as StorageTier,
       allocatedMB: STORAGE_TIER_CONFIGS.FREE.defaultAllocatedMB,
-      cryptoGasSpentUSD: 0.16,
-      cryptoTxCount: 4,
+      cryptoGasSpentUSD: 0,
+      cryptoTxCount: 0,
     };
 
     if (patch.tier) {
@@ -577,8 +600,8 @@ class UserVaultMasterStore {
       current.allocatedMB = patch.allocatedMB;
     }
     if (patch.resetGas) {
-      current.cryptoGasSpentUSD = 0.04;
-      current.cryptoTxCount = 1;
+      current.cryptoGasSpentUSD = 0;
+      current.cryptoTxCount = 0;
     } else if (patch.addGasUSD) {
       current.cryptoGasSpentUSD = (current.cryptoGasSpentUSD || 0) + patch.addGasUSD;
       current.cryptoTxCount = (current.cryptoTxCount || 0) + 1;
@@ -586,6 +609,62 @@ class UserVaultMasterStore {
 
     this.userQuotas.set(userId, current);
     return this.getUserQuota(userId);
+  }
+
+  /**
+   * Hydrates a user's quota meta from Supabase `app_metadata`
+   * (storage_tier / allocated_mb written by the admin PATCH endpoint).
+   * Closes the restart/multi-instance persistence gap: admin-assigned tiers
+   * survive process restarts because they are re-read from Supabase Auth.
+   */
+  public hydrateQuotaFromMetadata(
+    userId: string,
+    appMetadata: Record<string, any> | null | undefined
+  ): void {
+    if (!appMetadata) return;
+    const tier = appMetadata.storage_tier as StorageTier | undefined;
+    const allocatedMB = Number(appMetadata.allocated_mb);
+    const hasTier = tier && tier in STORAGE_TIER_CONFIGS;
+    const hasAllocation = Number.isFinite(allocatedMB) && allocatedMB > 0;
+    if (!hasTier && !hasAllocation) return;
+
+    const current = this.userQuotas.get(userId) || {
+      tier: "FREE" as StorageTier,
+      allocatedMB: STORAGE_TIER_CONFIGS.FREE.defaultAllocatedMB,
+      cryptoGasSpentUSD: 0,
+      cryptoTxCount: 0,
+    };
+    if (hasTier) current.tier = tier;
+    if (hasAllocation) current.allocatedMB = allocatedMB;
+    this.userQuotas.set(userId, current);
+  }
+
+  /**
+   * Enforcement gate for the tiered storage quota. Returns whether a write of
+   * `incomingBytes` would fit within the caller's allocated structured-JSON
+   * capacity. Raw documents never touch this budget (they live in the user's
+   * private cloud); only sovereign structured records are metered.
+   */
+  public checkQuotaAllowance(
+    userId: string,
+    incomingBytes: number
+  ): {
+    allowed: boolean;
+    usedBytes: number;
+    allocatedBytes: number;
+    remainingBytes: number;
+    projectedBytes: number;
+  } {
+    const quota = this.getUserQuota(userId);
+    const safeIncoming = Number.isFinite(incomingBytes) && incomingBytes > 0 ? incomingBytes : 0;
+    const projectedBytes = quota.usedBytes + safeIncoming;
+    return {
+      allowed: projectedBytes <= quota.allocatedBytes,
+      usedBytes: quota.usedBytes,
+      allocatedBytes: quota.allocatedBytes,
+      remainingBytes: Math.max(0, quota.allocatedBytes - quota.usedBytes),
+      projectedBytes,
+    };
   }
 
   // --- SIMULATED ZERO-RAW CLOUD SYNC ---

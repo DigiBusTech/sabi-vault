@@ -1,347 +1,363 @@
 {
-  "version": 1,
-  "skills": {
-    "60fps-animation": {
-      "source": "iart-ai/web-animation-skills",
-      "sourceType": "github",
-      "skillPath": "skills/60fps-animation/SKILL.md",
-      "computedHash": "3750e18ec8049d581f94f0f49a5204bc0b3ba2a6f9c5fcc4e3c1b08757143a46"
-    },
-    "accessible-animation": {
-      "source": "iart-ai/web-animation-skills",
-      "sourceType": "github",
-      "skillPath": "skills/accessible-animation/SKILL.md",
-      "computedHash": "95904f741088363b8073d5399600107becd24f23cf81920d4b00a368a7d78d99"
-    },
-    "after-effects": {
-      "source": "iart-ai/motion-design-skills",
-      "sourceType": "github",
-      "skillPath": "skills/after-effects/SKILL.md",
-      "computedHash": "59837ca57aedc5a49e41bbe9c6f7d4c4defbc1537a924966da03e7b0f101af9c"
-    },
-    "animated-infographic": {
-      "source": "iart-ai/data-animation-skills",
-      "sourceType": "github",
-      "skillPath": "skills/animated-infographic/SKILL.md",
-      "computedHash": "c57ec2e03f4da40f685ebaba18e1c28bfdc684fb7385d465569ae804455bc0ea"
-    },
-    "animation-principles": {
-      "source": "iart-ai/motion-design-skills",
-      "sourceType": "github",
-      "skillPath": "skills/animation-principles/SKILL.md",
-      "computedHash": "0a326d3bf3488aa365077a0a8974205e9dd92a474d4ce0c8f77591c56e831676"
-    },
-    "ascii-animation": {
-      "source": "iart-ai/web-animation-skills",
-      "sourceType": "github",
-      "skillPath": "skills/ascii-animation/SKILL.md",
-      "computedHash": "0e4fa3f778c41e372cdcc1895fb206d0886c4fd5de221f69bfd12788920e8e3a"
-    },
-    "beat-sync-editing": {
-      "source": "iart-ai/motion-design-skills",
-      "sourceType": "github",
-      "skillPath": "skills/beat-sync-editing/SKILL.md",
-      "computedHash": "74264047126b3c80d248dc423b177edc921bcffae27e4cafbf53b08ae882c78d"
-    },
-    "brandkit": {
-      "source": "Leonxlnx/taste-skill",
-      "sourceType": "github",
-      "skillPath": "skills/brandkit/SKILL.md",
-      "computedHash": "6ac5e0a47e54f62d2a52bb15e4fa299a8a552052cdc04d167c5695c8341e3914"
-    },
-    "chart-animation": {
-      "source": "iart-ai/data-animation-skills",
-      "sourceType": "github",
-      "skillPath": "skills/chart-animation/SKILL.md",
-      "computedHash": "4aa51c0432356d74cc8e3e9a7e932bc5b31e90f603f1f744084b6a88a84b635c"
-    },
-    "color-motion": {
-      "source": "iart-ai/motion-design-skills",
-      "sourceType": "github",
-      "skillPath": "skills/color-motion/SKILL.md",
-      "computedHash": "7b0806ecfaf403f40227a524a75eb679f10f399cfd8297a60eec89d5643d74e7"
-    },
-    "design-md": {
-      "source": "google-labs-code/stitch-skills",
-      "sourceType": "github",
-      "skillPath": "plugins/stitch-utilities/skills/design-md/SKILL.md",
-      "computedHash": "44af3e6e89a42a765d9cebf943f1e2ff3cdf43d1958341eb43fb7b74116f6691"
-    },
-    "design-taste-frontend": {
-      "source": "Leonxlnx/taste-skill",
-      "sourceType": "github",
-      "skillPath": "skills/taste-skill/SKILL.md",
-      "computedHash": "52fa30810ae93ef288f8926e27624561ebd2e5b70d35682f4de70cb7131c92d1"
-    },
-    "design-taste-frontend-v1": {
-      "source": "Leonxlnx/taste-skill",
-      "sourceType": "github",
-      "skillPath": "skills/taste-skill-v1/SKILL.md",
-      "computedHash": "6b8732b4b7455aac97ed9c3c3f855c228d75afaac07319ca0eeb7464c2239a84"
-    },
-    "design-taste-frontend-v2-experimental": {
-      "source": "Leonxlnx/taste-skill",
-      "sourceType": "github",
-      "skillPath": "skills/taste-skill-v2-experimental/SKILL.md",
-      "computedHash": "624a1a1d20273874858817bfb750c11e602fbbc42d09ddd95a8dbfc36c695a6c"
-    },
-    "enhance-prompt": {
-      "source": "google-labs-code/stitch-skills",
-      "sourceType": "github",
-      "skillPath": "plugins/stitch-utilities/skills/enhance-prompt/SKILL.md",
-      "computedHash": "28c47bcbc0e8d81f48fbbbe41d227efe4018a32c5d4674b0d052a70d215072d3"
-    },
-    "full-output-enforcement": {
-      "source": "Leonxlnx/taste-skill",
-      "sourceType": "github",
-      "skillPath": "skills/output-skill/SKILL.md",
-      "computedHash": "524f7c7950c3fde726101613f630140411c7d080e63be718687f4b38f919be81"
-    },
-    "glassmorphism": {
-      "source": "iart-ai/web-animation-skills",
-      "sourceType": "github",
-      "skillPath": "skills/glassmorphism/SKILL.md",
-      "computedHash": "c4324b3381b3252afb6644a4ad12facc2226d51a47778fa7f1bb6a1cb800cc2b"
-    },
-    "gpt-taste": {
-      "source": "Leonxlnx/taste-skill",
-      "sourceType": "github",
-      "skillPath": "skills/gpt-tasteskill/SKILL.md",
-      "computedHash": "f1c03a122783ba87e987264ee7a079516a2edc582324d7f35dfb5b34ac1bef07"
-    },
-    "gsap-web": {
-      "source": "iart-ai/web-animation-skills",
-      "sourceType": "github",
-      "skillPath": "skills/gsap-web/SKILL.md",
-      "computedHash": "d32db5fd4c702ca088dd5360da6410f430db1a31885212d6b4b6e265c1ee966e"
-    },
-    "high-end-visual-design": {
-      "source": "Leonxlnx/taste-skill",
-      "sourceType": "github",
-      "skillPath": "skills/soft-skill/SKILL.md",
-      "computedHash": "6d03b1fc1798e13d0b5368b4a6135319503d6b9f39062ecfa0ddf8f6bc333508"
-    },
-    "image-to-code": {
-      "source": "Leonxlnx/taste-skill",
-      "sourceType": "github",
-      "skillPath": "skills/image-to-code-skill/SKILL.md",
-      "computedHash": "795763f81b4945bbe58a636ec22c316eb7e4b6d2ea080393394057f2f38ecfea"
-    },
-    "imagegen-frontend-mobile": {
-      "source": "Leonxlnx/taste-skill",
-      "sourceType": "github",
-      "skillPath": "skills/imagegen-frontend-mobile/SKILL.md",
-      "computedHash": "2b8b59eee1dcbe287a7fdb33a83db1f4a076cd0cd97fb5a8d63525ce79d91c41"
-    },
-    "imagegen-frontend-web": {
-      "source": "Leonxlnx/taste-skill",
-      "sourceType": "github",
-      "skillPath": "skills/imagegen-frontend-web/SKILL.md",
-      "computedHash": "2a442351ec3352d9a1328697a912850cfc938854ad5973c935bb91da26270d1d"
-    },
-    "industrial-brutalist-ui": {
-      "source": "Leonxlnx/taste-skill",
-      "sourceType": "github",
-      "skillPath": "skills/brutalist-skill/SKILL.md",
-      "computedHash": "f5f5fbe2b2a143f0205fad49ce169132921dc19d7cf2d5fa7e31a6295a116c3a"
-    },
-    "javascript-animation": {
-      "source": "iart-ai/javascript-animation-skills",
-      "sourceType": "github",
-      "skillPath": "skills/javascript-animation/SKILL.md",
-      "computedHash": "a3b24c2d543e2ccc58b5b8e02805c0f79f683f90a05fddac69538dd91f2ec1f7"
-    },
-    "kinetic-typography": {
-      "source": "iart-ai/kinetic-typography-skills",
-      "sourceType": "github",
-      "skillPath": "skills/kinetic-typography/SKILL.md",
-      "computedHash": "ee17c621533649e7e56fd7c3aa307c4af42796db437f29701a6beca9e6bebb26"
-    },
-    "logo-animation": {
-      "source": "iart-ai/motion-design-skills",
-      "sourceType": "github",
-      "skillPath": "skills/logo-animation/SKILL.md",
-      "computedHash": "2458d6dd7ddf187c34dd09bf32fa664a97a88e8e190922b51b7280f948b1f3e5"
-    },
-    "lottie-animation": {
-      "source": "iart-ai/web-animation-skills",
-      "sourceType": "github",
-      "skillPath": "skills/lottie-animation/SKILL.md",
-      "computedHash": "d9b5d4c44af9fe24f1479cfee035cf65b816f22443d25a5631d0c3f430462619"
-    },
-    "micro-interaction": {
-      "source": "iart-ai/web-animation-skills",
-      "sourceType": "github",
-      "skillPath": "skills/micro-interaction/SKILL.md",
-      "computedHash": "5da171547f62f04a7c243607f276f8b4d1a8a449150ca5eb1c00aeb6cd15ece4"
-    },
-    "minimalist-ui": {
-      "source": "Leonxlnx/taste-skill",
-      "sourceType": "github",
-      "skillPath": "skills/minimalist-skill/SKILL.md",
-      "computedHash": "230a0028435595fdc5cdbbf046adc57babc31e94da9af39d6553f1d68a34f6f9"
-    },
-    "motion-art-direction": {
-      "source": "iart-ai/motion-design-skills",
-      "sourceType": "github",
-      "skillPath": "skills/motion-art-direction/SKILL.md",
-      "computedHash": "80b93986865759aeeb8b316a9e416eae213f096216ce42b1c1f906e2055f2399"
-    },
-    "motion-background": {
-      "source": "iart-ai/motion-design-skills",
-      "sourceType": "github",
-      "skillPath": "skills/motion-background/SKILL.md",
-      "computedHash": "dab47844cc4ebaef944af96e75f3a9bdb6f11c4453337a145aa2a229e80fbf44"
-    },
-    "page-transition-animation": {
-      "source": "iart-ai/web-animation-skills",
-      "sourceType": "github",
-      "skillPath": "skills/page-transition-animation/SKILL.md",
-      "computedHash": "2ca70040f86cc93643877b9cc1fe16653908b9729e87f5711fd6e74e62a789f4"
-    },
-    "particle-system": {
-      "source": "iart-ai/webgl-animation-skills",
-      "sourceType": "github",
-      "skillPath": "skills/particle-system/SKILL.md",
-      "computedHash": "bb2d3e6716440991b120291191e3836c6cbe0489efc13f7e317ec9a63a434d4f"
-    },
-    "presentation-video": {
-      "source": "iart-ai/data-animation-skills",
-      "sourceType": "github",
-      "skillPath": "skills/presentation-video/SKILL.md",
-      "computedHash": "ec7dabce886cbe9e7566bfe880b21df5d8d1f9cbfdc3f0f5c8695830e5ebc01b"
-    },
-    "react-vite-dashboard": {
-      "source": "google-labs-code/stitch-skills",
-      "sourceType": "github",
-      "skillPath": "plugins/stitch-build/skills/react-vite-dashboard/SKILL.md",
-      "computedHash": "b6f866588eb36baf119a57c529bff89bdce9d1b8d3b608f0e4f8c39e09af5195"
-    },
-    "redesign-existing-projects": {
-      "source": "Leonxlnx/taste-skill",
-      "sourceType": "github",
-      "skillPath": "skills/redesign-skill/SKILL.md",
-      "computedHash": "53d20b546631e3579da1cc581d98061bb1a09fda8f6378d7af3267972796dcc4"
-    },
-    "remotion": {
-      "source": "google-labs-code/stitch-skills",
-      "sourceType": "github",
-      "skillPath": "plugins/stitch-build/skills/remotion/SKILL.md",
-      "computedHash": "86c72dff442c4f725107924f48298391e33eaf9788f0faefe360f3061b25fcec"
-    },
-    "remotion-video": {
-      "source": "iart-ai/motion-design-skills",
-      "sourceType": "github",
-      "skillPath": "skills/remotion-video/SKILL.md",
-      "computedHash": "be476bbf6e2f0e6fe04986d2d7a8387ca4a0c138b32777fce9a64c98e70afa67"
-    },
-    "shadcn-ui": {
-      "source": "google-labs-code/stitch-skills",
-      "sourceType": "github",
-      "skillPath": "plugins/stitch-build/skills/shadcn-ui/SKILL.md",
-      "computedHash": "57e2cc881eb395418d28f1529e2d453b85f1d77a8de000c8af59512fab7b318d"
-    },
-    "shader-glsl": {
-      "source": "iart-ai/webgl-animation-skills",
-      "sourceType": "github",
-      "skillPath": "skills/shader-glsl/SKILL.md",
-      "computedHash": "794d69b1bc1919bcf35ba5880f94cc6160bfb4db427d9c6ea5361d3709a7984d"
-    },
-    "shot-composition": {
-      "source": "iart-ai/motion-design-skills",
-      "sourceType": "github",
-      "skillPath": "skills/shot-composition/SKILL.md",
-      "computedHash": "3a9895bee82e808a9e61b6db08a66b0fc379fcb2442f1cf3760b08a4abbd19d9"
-    },
-    "site-md": {
-      "source": "google-labs-code/stitch-skills",
-      "sourceType": "github",
-      "skillPath": "plugins/stitch-utilities/skills/site-md/SKILL.md",
-      "computedHash": "8661ca3a2a43795296cc66091a2ed16a087521e47ca9b8aa6a2f5e10e609d586"
-    },
-    "soundtrack": {
-      "source": "iart-ai/javascript-animation-skills",
-      "sourceType": "github",
-      "skillPath": "skills/soundtrack/SKILL.md",
-      "computedHash": "ff02391b5ba6f4b21ce2f4d786785fa6d3e36845f70ded196f5b029838d983ae"
-    },
-    "stitch-design-taste": {
-      "source": "Leonxlnx/taste-skill",
-      "sourceType": "github",
-      "skillPath": "skills/stitch-skill/SKILL.md",
-      "computedHash": "bc6a5d5406a4f35ae143939f8e66757c1475dc16c3fe38e750d37bd01e2a3421"
-    },
-    "stitch-loop": {
-      "source": "google-labs-code/stitch-skills",
-      "sourceType": "github",
-      "skillPath": "plugins/stitch-utilities/skills/stitch-loop/SKILL.md",
-      "computedHash": "cf47da05045ce0c11f1a8b21dc4ef9bbfed0122d68548a48786cb1608257d574"
-    },
-    "stitch::code-to-design": {
-      "source": "google-labs-code/stitch-skills",
-      "sourceType": "github",
-      "skillPath": "plugins/stitch-design/skills/code-to-design/SKILL.md",
-      "computedHash": "fc0343ee91bb255ad29b6a02155c1eb77dce58002273f9308bb2ea43be0ffbc3"
-    },
-    "stitch::extract-design-md": {
-      "source": "google-labs-code/stitch-skills",
-      "sourceType": "github",
-      "skillPath": "plugins/stitch-design/skills/extract-design-md/SKILL.md",
-      "computedHash": "73cddd92063421923afbe00b423b0027aecd251a2c84bfda9c31bf992baf006b"
-    },
-    "stitch::extract-static-html": {
-      "source": "google-labs-code/stitch-skills",
-      "sourceType": "github",
-      "skillPath": "plugins/stitch-design/skills/extract-static-html/SKILL.md",
-      "computedHash": "94aa19fa4f7554351bbeef9ef237bd21c982bd9541b6ebd0e7751ab3b9a9d6b5"
-    },
-    "stitch::generate-design": {
-      "source": "google-labs-code/stitch-skills",
-      "sourceType": "github",
-      "skillPath": "plugins/stitch-design/skills/generate-design/SKILL.md",
-      "computedHash": "b854eb1747fbd02220bb7323590030fa644b8de126f8f6311749905ea09d7ae9"
-    },
-    "stitch::manage-design-system": {
-      "source": "google-labs-code/stitch-skills",
-      "sourceType": "github",
-      "skillPath": "plugins/stitch-design/skills/manage-design-system/SKILL.md",
-      "computedHash": "0a2ff4062197344c76c418f0a8ee09b15fb644565825ecbe4fd7598b06fe14e7"
-    },
-    "stitch::react-components": {
-      "source": "google-labs-code/stitch-skills",
-      "sourceType": "github",
-      "skillPath": "plugins/stitch-build/skills/react-components/SKILL.md",
-      "computedHash": "a0dbfa0ed6c0425a175ec25460625f7cdabfdb034b09f523f4d06d8cdb09f5b7"
-    },
-    "stitch::react-native": {
-      "source": "google-labs-code/stitch-skills",
-      "sourceType": "github",
-      "skillPath": "plugins/stitch-build/skills/react-native/SKILL.md",
-      "computedHash": "8fb779a0449a4dd0e9fe4b8b78973033f5977716903c2e291f896bf43c392411"
-    },
-    "stitch::upload-to-stitch": {
-      "source": "google-labs-code/stitch-skills",
-      "sourceType": "github",
-      "skillPath": "plugins/stitch-design/skills/upload-to-stitch/SKILL.md",
-      "computedHash": "956ce2eff922fb56eb4fa04393c4508bd7e393fe368833b3a97b7083887ae975"
-    },
-    "svg-animation": {
-      "source": "iart-ai/web-animation-skills",
-      "sourceType": "github",
-      "skillPath": "skills/svg-animation/SKILL.md",
-      "computedHash": "34619073e227bfb7c4c1daa2487006e7b759116f8f88ec9cde5c2dd0a11dfb96"
-    },
-    "taste-design": {
-      "source": "google-labs-code/stitch-skills",
-      "sourceType": "github",
-      "skillPath": "plugins/stitch-utilities/skills/taste-design/SKILL.md",
-      "computedHash": "3772ea408777070865890e10d693118baa1e1de14ee5bacdf6ab46fdea7359bb"
-    },
-    "threejs-animation": {
-      "source": "iart-ai/webgl-animation-skills",
-      "sourceType": "github",
-      "skillPath": "skills/threejs-animation/SKILL.md",
-      "computedHash": "d9e2a720d4bf403a1f33322f00287e96c64a0911e94d596209dac98c50714a91"
-    }
-  }
+    "version":  1,
+    "skills":  {
+                   "60fps-animation":  {
+                                           "source":  "iart-ai/web-animation-skills",
+                                           "sourceType":  "github",
+                                           "skillPath":  "skills/60fps-animation/SKILL.md",
+                                           "computedHash":  "3750e18ec8049d581f94f0f49a5204bc0b3ba2a6f9c5fcc4e3c1b08757143a46"
+                                       },
+                   "accessible-animation":  {
+                                                "source":  "iart-ai/web-animation-skills",
+                                                "sourceType":  "github",
+                                                "skillPath":  "skills/accessible-animation/SKILL.md",
+                                                "computedHash":  "95904f741088363b8073d5399600107becd24f23cf81920d4b00a368a7d78d99"
+                                            },
+                   "after-effects":  {
+                                         "source":  "iart-ai/motion-design-skills",
+                                         "sourceType":  "github",
+                                         "skillPath":  "skills/after-effects/SKILL.md",
+                                         "computedHash":  "59837ca57aedc5a49e41bbe9c6f7d4c4defbc1537a924966da03e7b0f101af9c"
+                                     },
+                   "animated-infographic":  {
+                                                "source":  "iart-ai/data-animation-skills",
+                                                "sourceType":  "github",
+                                                "skillPath":  "skills/animated-infographic/SKILL.md",
+                                                "computedHash":  "c57ec2e03f4da40f685ebaba18e1c28bfdc684fb7385d465569ae804455bc0ea"
+                                            },
+                   "animation-principles":  {
+                                                "source":  "iart-ai/motion-design-skills",
+                                                "sourceType":  "github",
+                                                "skillPath":  "skills/animation-principles/SKILL.md",
+                                                "computedHash":  "0a326d3bf3488aa365077a0a8974205e9dd92a474d4ce0c8f77591c56e831676"
+                                            },
+                   "ascii-animation":  {
+                                           "source":  "iart-ai/web-animation-skills",
+                                           "sourceType":  "github",
+                                           "skillPath":  "skills/ascii-animation/SKILL.md",
+                                           "computedHash":  "0e4fa3f778c41e372cdcc1895fb206d0886c4fd5de221f69bfd12788920e8e3a"
+                                       },
+                   "beat-sync-editing":  {
+                                             "source":  "iart-ai/motion-design-skills",
+                                             "sourceType":  "github",
+                                             "skillPath":  "skills/beat-sync-editing/SKILL.md",
+                                             "computedHash":  "74264047126b3c80d248dc423b177edc921bcffae27e4cafbf53b08ae882c78d"
+                                         },
+                   "brandkit":  {
+                                    "source":  "Leonxlnx/taste-skill",
+                                    "sourceType":  "github",
+                                    "skillPath":  "skills/brandkit/SKILL.md",
+                                    "computedHash":  "6ac5e0a47e54f62d2a52bb15e4fa299a8a552052cdc04d167c5695c8341e3914"
+                                },
+                   "chart-animation":  {
+                                           "source":  "iart-ai/data-animation-skills",
+                                           "sourceType":  "github",
+                                           "skillPath":  "skills/chart-animation/SKILL.md",
+                                           "computedHash":  "4aa51c0432356d74cc8e3e9a7e932bc5b31e90f603f1f744084b6a88a84b635c"
+                                       },
+                   "color-motion":  {
+                                        "source":  "iart-ai/motion-design-skills",
+                                        "sourceType":  "github",
+                                        "skillPath":  "skills/color-motion/SKILL.md",
+                                        "computedHash":  "7b0806ecfaf403f40227a524a75eb679f10f399cfd8297a60eec89d5643d74e7"
+                                    },
+                   "design-md":  {
+                                     "source":  "google-labs-code/stitch-skills",
+                                     "sourceType":  "github",
+                                     "skillPath":  "plugins/stitch-utilities/skills/design-md/SKILL.md",
+                                     "computedHash":  "44af3e6e89a42a765d9cebf943f1e2ff3cdf43d1958341eb43fb7b74116f6691"
+                                 },
+                   "design-taste-frontend":  {
+                                                 "source":  "Leonxlnx/taste-skill",
+                                                 "sourceType":  "github",
+                                                 "skillPath":  "skills/taste-skill/SKILL.md",
+                                                 "computedHash":  "52fa30810ae93ef288f8926e27624561ebd2e5b70d35682f4de70cb7131c92d1"
+                                             },
+                   "design-taste-frontend-v1":  {
+                                                    "source":  "Leonxlnx/taste-skill",
+                                                    "sourceType":  "github",
+                                                    "skillPath":  "skills/taste-skill-v1/SKILL.md",
+                                                    "computedHash":  "6b8732b4b7455aac97ed9c3c3f855c228d75afaac07319ca0eeb7464c2239a84"
+                                                },
+                   "design-taste-frontend-v2-experimental":  {
+                                                                 "source":  "Leonxlnx/taste-skill",
+                                                                 "sourceType":  "github",
+                                                                 "skillPath":  "skills/taste-skill-v2-experimental/SKILL.md",
+                                                                 "computedHash":  "624a1a1d20273874858817bfb750c11e602fbbc42d09ddd95a8dbfc36c695a6c"
+                                                             },
+                   "enhance-prompt":  {
+                                          "source":  "google-labs-code/stitch-skills",
+                                          "sourceType":  "github",
+                                          "skillPath":  "plugins/stitch-utilities/skills/enhance-prompt/SKILL.md",
+                                          "computedHash":  "28c47bcbc0e8d81f48fbbbe41d227efe4018a32c5d4674b0d052a70d215072d3"
+                                      },
+                   "full-output-enforcement":  {
+                                                   "source":  "Leonxlnx/taste-skill",
+                                                   "sourceType":  "github",
+                                                   "skillPath":  "skills/output-skill/SKILL.md",
+                                                   "computedHash":  "524f7c7950c3fde726101613f630140411c7d080e63be718687f4b38f919be81"
+                                               },
+                   "glassmorphism":  {
+                                         "source":  "iart-ai/web-animation-skills",
+                                         "sourceType":  "github",
+                                         "skillPath":  "skills/glassmorphism/SKILL.md",
+                                         "computedHash":  "c4324b3381b3252afb6644a4ad12facc2226d51a47778fa7f1bb6a1cb800cc2b"
+                                     },
+                   "gpt-taste":  {
+                                     "source":  "Leonxlnx/taste-skill",
+                                     "sourceType":  "github",
+                                     "skillPath":  "skills/gpt-tasteskill/SKILL.md",
+                                     "computedHash":  "f1c03a122783ba87e987264ee7a079516a2edc582324d7f35dfb5b34ac1bef07"
+                                 },
+                   "gsap-web":  {
+                                    "source":  "iart-ai/web-animation-skills",
+                                    "sourceType":  "github",
+                                    "skillPath":  "skills/gsap-web/SKILL.md",
+                                    "computedHash":  "d32db5fd4c702ca088dd5360da6410f430db1a31885212d6b4b6e265c1ee966e"
+                                },
+                   "high-end-visual-design":  {
+                                                  "source":  "Leonxlnx/taste-skill",
+                                                  "sourceType":  "github",
+                                                  "skillPath":  "skills/soft-skill/SKILL.md",
+                                                  "computedHash":  "6d03b1fc1798e13d0b5368b4a6135319503d6b9f39062ecfa0ddf8f6bc333508"
+                                              },
+                   "image-to-code":  {
+                                         "source":  "Leonxlnx/taste-skill",
+                                         "sourceType":  "github",
+                                         "skillPath":  "skills/image-to-code-skill/SKILL.md",
+                                         "computedHash":  "795763f81b4945bbe58a636ec22c316eb7e4b6d2ea080393394057f2f38ecfea"
+                                     },
+                   "imagegen-frontend-mobile":  {
+                                                    "source":  "Leonxlnx/taste-skill",
+                                                    "sourceType":  "github",
+                                                    "skillPath":  "skills/imagegen-frontend-mobile/SKILL.md",
+                                                    "computedHash":  "2b8b59eee1dcbe287a7fdb33a83db1f4a076cd0cd97fb5a8d63525ce79d91c41"
+                                                },
+                   "imagegen-frontend-web":  {
+                                                 "source":  "Leonxlnx/taste-skill",
+                                                 "sourceType":  "github",
+                                                 "skillPath":  "skills/imagegen-frontend-web/SKILL.md",
+                                                 "computedHash":  "2a442351ec3352d9a1328697a912850cfc938854ad5973c935bb91da26270d1d"
+                                             },
+                   "industrial-brutalist-ui":  {
+                                                   "source":  "Leonxlnx/taste-skill",
+                                                   "sourceType":  "github",
+                                                   "skillPath":  "skills/brutalist-skill/SKILL.md",
+                                                   "computedHash":  "f5f5fbe2b2a143f0205fad49ce169132921dc19d7cf2d5fa7e31a6295a116c3a"
+                                               },
+                   "javascript-animation":  {
+                                                "source":  "iart-ai/javascript-animation-skills",
+                                                "sourceType":  "github",
+                                                "skillPath":  "skills/javascript-animation/SKILL.md",
+                                                "computedHash":  "a3b24c2d543e2ccc58b5b8e02805c0f79f683f90a05fddac69538dd91f2ec1f7"
+                                            },
+                   "kinetic-typography":  {
+                                              "source":  "iart-ai/kinetic-typography-skills",
+                                              "sourceType":  "github",
+                                              "skillPath":  "skills/kinetic-typography/SKILL.md",
+                                              "computedHash":  "ee17c621533649e7e56fd7c3aa307c4af42796db437f29701a6beca9e6bebb26"
+                                          },
+                   "logo-animation":  {
+                                          "source":  "iart-ai/motion-design-skills",
+                                          "sourceType":  "github",
+                                          "skillPath":  "skills/logo-animation/SKILL.md",
+                                          "computedHash":  "2458d6dd7ddf187c34dd09bf32fa664a97a88e8e190922b51b7280f948b1f3e5"
+                                      },
+                   "lottie-animation":  {
+                                            "source":  "iart-ai/web-animation-skills",
+                                            "sourceType":  "github",
+                                            "skillPath":  "skills/lottie-animation/SKILL.md",
+                                            "computedHash":  "d9b5d4c44af9fe24f1479cfee035cf65b816f22443d25a5631d0c3f430462619"
+                                        },
+                   "micro-interaction":  {
+                                             "source":  "iart-ai/web-animation-skills",
+                                             "sourceType":  "github",
+                                             "skillPath":  "skills/micro-interaction/SKILL.md",
+                                             "computedHash":  "5da171547f62f04a7c243607f276f8b4d1a8a449150ca5eb1c00aeb6cd15ece4"
+                                         },
+                   "minimalist-ui":  {
+                                         "source":  "Leonxlnx/taste-skill",
+                                         "sourceType":  "github",
+                                         "skillPath":  "skills/minimalist-skill/SKILL.md",
+                                         "computedHash":  "230a0028435595fdc5cdbbf046adc57babc31e94da9af39d6553f1d68a34f6f9"
+                                     },
+                   "motion-art-direction":  {
+                                                "source":  "iart-ai/motion-design-skills",
+                                                "sourceType":  "github",
+                                                "skillPath":  "skills/motion-art-direction/SKILL.md",
+                                                "computedHash":  "80b93986865759aeeb8b316a9e416eae213f096216ce42b1c1f906e2055f2399"
+                                            },
+                   "motion-background":  {
+                                             "source":  "iart-ai/motion-design-skills",
+                                             "sourceType":  "github",
+                                             "skillPath":  "skills/motion-background/SKILL.md",
+                                             "computedHash":  "dab47844cc4ebaef944af96e75f3a9bdb6f11c4453337a145aa2a229e80fbf44"
+                                         },
+                   "page-transition-animation":  {
+                                                     "source":  "iart-ai/web-animation-skills",
+                                                     "sourceType":  "github",
+                                                     "skillPath":  "skills/page-transition-animation/SKILL.md",
+                                                     "computedHash":  "2ca70040f86cc93643877b9cc1fe16653908b9729e87f5711fd6e74e62a789f4"
+                                                 },
+                   "particle-system":  {
+                                           "source":  "iart-ai/webgl-animation-skills",
+                                           "sourceType":  "github",
+                                           "skillPath":  "skills/particle-system/SKILL.md",
+                                           "computedHash":  "bb2d3e6716440991b120291191e3836c6cbe0489efc13f7e317ec9a63a434d4f"
+                                       },
+                   "presentation-video":  {
+                                              "source":  "iart-ai/data-animation-skills",
+                                              "sourceType":  "github",
+                                              "skillPath":  "skills/presentation-video/SKILL.md",
+                                              "computedHash":  "ec7dabce886cbe9e7566bfe880b21df5d8d1f9cbfdc3f0f5c8695830e5ebc01b"
+                                          },
+                   "react-vite-dashboard":  {
+                                                "source":  "google-labs-code/stitch-skills",
+                                                "sourceType":  "github",
+                                                "skillPath":  "plugins/stitch-build/skills/react-vite-dashboard/SKILL.md",
+                                                "computedHash":  "b6f866588eb36baf119a57c529bff89bdce9d1b8d3b608f0e4f8c39e09af5195"
+                                            },
+                   "redesign-existing-projects":  {
+                                                      "source":  "Leonxlnx/taste-skill",
+                                                      "sourceType":  "github",
+                                                      "skillPath":  "skills/redesign-skill/SKILL.md",
+                                                      "computedHash":  "53d20b546631e3579da1cc581d98061bb1a09fda8f6378d7af3267972796dcc4"
+                                                  },
+                   "remotion":  {
+                                    "source":  "google-labs-code/stitch-skills",
+                                    "sourceType":  "github",
+                                    "skillPath":  "plugins/stitch-build/skills/remotion/SKILL.md",
+                                    "computedHash":  "86c72dff442c4f725107924f48298391e33eaf9788f0faefe360f3061b25fcec"
+                                },
+                   "remotion-video":  {
+                                          "source":  "iart-ai/motion-design-skills",
+                                          "sourceType":  "github",
+                                          "skillPath":  "skills/remotion-video/SKILL.md",
+                                          "computedHash":  "be476bbf6e2f0e6fe04986d2d7a8387ca4a0c138b32777fce9a64c98e70afa67"
+                                      },
+                   "shadcn-ui":  {
+                                     "source":  "google-labs-code/stitch-skills",
+                                     "sourceType":  "github",
+                                     "skillPath":  "plugins/stitch-build/skills/shadcn-ui/SKILL.md",
+                                     "computedHash":  "57e2cc881eb395418d28f1529e2d453b85f1d77a8de000c8af59512fab7b318d"
+                                 },
+                   "shader-glsl":  {
+                                       "source":  "iart-ai/webgl-animation-skills",
+                                       "sourceType":  "github",
+                                       "skillPath":  "skills/shader-glsl/SKILL.md",
+                                       "computedHash":  "794d69b1bc1919bcf35ba5880f94cc6160bfb4db427d9c6ea5361d3709a7984d"
+                                   },
+                   "shot-composition":  {
+                                            "source":  "iart-ai/motion-design-skills",
+                                            "sourceType":  "github",
+                                            "skillPath":  "skills/shot-composition/SKILL.md",
+                                            "computedHash":  "3a9895bee82e808a9e61b6db08a66b0fc379fcb2442f1cf3760b08a4abbd19d9"
+                                        },
+                   "site-md":  {
+                                   "source":  "google-labs-code/stitch-skills",
+                                   "sourceType":  "github",
+                                   "skillPath":  "plugins/stitch-utilities/skills/site-md/SKILL.md",
+                                   "computedHash":  "8661ca3a2a43795296cc66091a2ed16a087521e47ca9b8aa6a2f5e10e609d586"
+                               },
+                   "soundtrack":  {
+                                      "source":  "iart-ai/javascript-animation-skills",
+                                      "sourceType":  "github",
+                                      "skillPath":  "skills/soundtrack/SKILL.md",
+                                      "computedHash":  "ff02391b5ba6f4b21ce2f4d786785fa6d3e36845f70ded196f5b029838d983ae"
+                                  },
+                   "stitch-design-taste":  {
+                                               "source":  "Leonxlnx/taste-skill",
+                                               "sourceType":  "github",
+                                               "skillPath":  "skills/stitch-skill/SKILL.md",
+                                               "computedHash":  "bc6a5d5406a4f35ae143939f8e66757c1475dc16c3fe38e750d37bd01e2a3421"
+                                           },
+                   "stitch-loop":  {
+                                       "source":  "google-labs-code/stitch-skills",
+                                       "sourceType":  "github",
+                                       "skillPath":  "plugins/stitch-utilities/skills/stitch-loop/SKILL.md",
+                                       "computedHash":  "cf47da05045ce0c11f1a8b21dc4ef9bbfed0122d68548a48786cb1608257d574"
+                                   },
+                   "stitch::code-to-design":  {
+                                                  "source":  "google-labs-code/stitch-skills",
+                                                  "sourceType":  "github",
+                                                  "skillPath":  "plugins/stitch-design/skills/code-to-design/SKILL.md",
+                                                  "computedHash":  "fc0343ee91bb255ad29b6a02155c1eb77dce58002273f9308bb2ea43be0ffbc3"
+                                              },
+                   "stitch::extract-design-md":  {
+                                                     "source":  "google-labs-code/stitch-skills",
+                                                     "sourceType":  "github",
+                                                     "skillPath":  "plugins/stitch-design/skills/extract-design-md/SKILL.md",
+                                                     "computedHash":  "73cddd92063421923afbe00b423b0027aecd251a2c84bfda9c31bf992baf006b"
+                                                 },
+                   "stitch::extract-static-html":  {
+                                                       "source":  "google-labs-code/stitch-skills",
+                                                       "sourceType":  "github",
+                                                       "skillPath":  "plugins/stitch-design/skills/extract-static-html/SKILL.md",
+                                                       "computedHash":  "94aa19fa4f7554351bbeef9ef237bd21c982bd9541b6ebd0e7751ab3b9a9d6b5"
+                                                   },
+                   "stitch::generate-design":  {
+                                                   "source":  "google-labs-code/stitch-skills",
+                                                   "sourceType":  "github",
+                                                   "skillPath":  "plugins/stitch-design/skills/generate-design/SKILL.md",
+                                                   "computedHash":  "b854eb1747fbd02220bb7323590030fa644b8de126f8f6311749905ea09d7ae9"
+                                               },
+                   "stitch::manage-design-system":  {
+                                                        "source":  "google-labs-code/stitch-skills",
+                                                        "sourceType":  "github",
+                                                        "skillPath":  "plugins/stitch-design/skills/manage-design-system/SKILL.md",
+                                                        "computedHash":  "0a2ff4062197344c76c418f0a8ee09b15fb644565825ecbe4fd7598b06fe14e7"
+                                                    },
+                   "stitch::react-components":  {
+                                                    "source":  "google-labs-code/stitch-skills",
+                                                    "sourceType":  "github",
+                                                    "skillPath":  "plugins/stitch-build/skills/react-components/SKILL.md",
+                                                    "computedHash":  "a0dbfa0ed6c0425a175ec25460625f7cdabfdb034b09f523f4d06d8cdb09f5b7"
+                                                },
+                   "stitch::react-native":  {
+                                                "source":  "google-labs-code/stitch-skills",
+                                                "sourceType":  "github",
+                                                "skillPath":  "plugins/stitch-build/skills/react-native/SKILL.md",
+                                                "computedHash":  "8fb779a0449a4dd0e9fe4b8b78973033f5977716903c2e291f896bf43c392411"
+                                            },
+                   "stitch::upload-to-stitch":  {
+                                                    "source":  "google-labs-code/stitch-skills",
+                                                    "sourceType":  "github",
+                                                    "skillPath":  "plugins/stitch-design/skills/upload-to-stitch/SKILL.md",
+                                                    "computedHash":  "956ce2eff922fb56eb4fa04393c4508bd7e393fe368833b3a97b7083887ae975"
+                                                },
+                   "svg-animation":  {
+                                         "source":  "iart-ai/web-animation-skills",
+                                         "sourceType":  "github",
+                                         "skillPath":  "skills/svg-animation/SKILL.md",
+                                         "computedHash":  "34619073e227bfb7c4c1daa2487006e7b759116f8f88ec9cde5c2dd0a11dfb96"
+                                     },
+                   "taste-design":  {
+                                        "source":  "google-labs-code/stitch-skills",
+                                        "sourceType":  "github",
+                                        "skillPath":  "plugins/stitch-utilities/skills/taste-design/SKILL.md",
+                                        "computedHash":  "3772ea408777070865890e10d693118baa1e1de14ee5bacdf6ab46fdea7359bb"
+                                    },
+                   "threejs-animation":  {
+                                             "source":  "iart-ai/webgl-animation-skills",
+                                             "sourceType":  "github",
+                                             "skillPath":  "skills/threejs-animation/SKILL.md",
+                                             "computedHash":  "d9e2a720d4bf403a1f33322f00287e96c64a0911e94d596209dac98c50714a91"
+                                         },
+                   "prompt-enhancer":  {
+                                           "source":  "krunalkanojiya22/prompt-enhancer",
+                                           "sourceType":  "github",
+                                           "skillPath":  "SKILL.md",
+                                           "computedHash":  "638655f37e30c7fe28373c6b6db5bf82ab5d735560041b66610791d8bcac9a6b",
+                                           "pinnedAt":  "2026-10-22",
+                                           "note":  "Third-party skill; content-pinned. Treat SKILL.md as untrusted agent instructions. Re-verify hash on any update."
+                                       },
+                   "api-skills":  {
+                                      "source":  "apideck-libraries/api-skills",
+                                      "sourceType":  "github",
+                                      "skillPath":  "SKILL.md",
+                                      "computedHash":  "1da0b2af93efdd0760b66841ef294451386d1547fd747aa646d185896120503d",
+                                      "pinnedAt":  "2026-10-22",
+                                      "note":  "Vendor skill containing agent-steering directives; content-pinned. Treat SKILL.md as untrusted agent instructions. Re-verify hash on any update."
+                                  }
+               }
 }

@@ -33,6 +33,9 @@ export async function GET(req: NextRequest) {
     const users = data.users.map((u) => {
       const profile = profileByUserId.get(u.id) as any;
       const storeRecord = globalAdminStore.getUser(u.id);
+      // Hydrate admin-assigned tier/allocation from Supabase app_metadata so
+      // quota state survives restarts and is consistent across instances.
+      globalUserStore.hydrateQuotaFromMetadata(u.id, u.app_metadata);
       const quota = globalUserStore.getUserQuota(u.id);
       return {
         id: u.id,
@@ -126,13 +129,23 @@ export async function PATCH(req: NextRequest) {
         { status: 400 }
       );
     }
+    // Strict numeric validation: reject NaN, non-finite, non-positive or absurd allocations
+    if (allocatedMB !== undefined) {
+      const parsedMB = Number(allocatedMB);
+      if (!Number.isFinite(parsedMB) || parsedMB <= 0 || parsedMB > 1048576) {
+        return NextResponse.json(
+          { error: "Invalid allocatedMB. Expected a positive finite number of megabytes (max 1048576)." },
+          { status: 400 }
+        );
+      }
+    }
 
     // Update storage quota and crypto gas in globalUserStore
     let updatedQuota = null;
     if (storageTier || allocatedMB !== undefined || resetCryptoGas) {
       updatedQuota = globalUserStore.updateUserQuota(userId, {
         tier: storageTier as StorageTier,
-        allocatedMB: allocatedMB ? Number(allocatedMB) : undefined,
+        allocatedMB: allocatedMB !== undefined ? Number(allocatedMB) : undefined,
         resetGas: !!resetCryptoGas,
       });
     } else {
@@ -154,7 +167,7 @@ export async function PATCH(req: NextRequest) {
           ...(role ? { role } : {}),
           ...(status ? { account_status: status } : {}),
           ...(storageTier ? { storage_tier: storageTier } : {}),
-          ...(allocatedMB ? { allocated_mb: Number(allocatedMB) } : {}),
+          ...(allocatedMB !== undefined ? { allocated_mb: Number(allocatedMB) } : {}),
         };
 
         await admin.auth.admin.updateUserById(userId, {

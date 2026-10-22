@@ -91,7 +91,52 @@ assert(superAdminViewContent.includes("openQuotaModal"), "SuperAdmin must have o
 assert(superAdminViewContent.includes("handleSaveQuota"), "SuperAdmin must have handleSaveQuota handler");
 console.log("  ✓ Super Admin Storage Quota Management modal, table columns, and CRUD handlers verified.");
 
+// [Test 8] Verify Entry #064 audit remediations: honest gas metrics, persistence hydration, enforcement
+console.log("\n[Test 8] Verifying Audit Remediations: Honest Gas, Quota Persistence & Enforcement...");
+
+// 8a: Honest gas metrics — no fabricated defaults anywhere in the quota engine
+assert(!userStoreContent.includes("cryptoGasSpentUSD: 0.16"), "Fabricated 0.16 gas default must be removed");
+assert(!userStoreContent.includes("cryptoTxCount: 4"), "Fabricated tx-count default of 4 must be removed");
+assert(!userStoreContent.includes("Math.max(1, totalDocs)"), "Document-count-derived fake gas fallback must be removed");
+assert(userStoreContent.includes("gasUnitsToUSD"), "Real gas-units-to-USD conversion must exist");
+console.log("  ✓ Fabricated gas metrics eliminated; real receipt-gas accounting in place.");
+
+// 8b: Quota persistence hydration (admin tiers survive restarts via app_metadata)
+assert(userStoreContent.includes("hydrateQuotaFromMetadata"), "user_store must expose hydrateQuotaFromMetadata");
+assert(adminUsersRouteContent.includes("hydrateQuotaFromMetadata"), "Admin GET must hydrate quotas from app_metadata");
+assert(quotaRouteContent.includes("hydrateQuotaFromMetadata"), "User quota route must hydrate from app_metadata");
+console.log("  ✓ Quota hydration from Supabase app_metadata wired into admin + user endpoints.");
+
+// 8c: Quota enforcement on ingestion paths
+assert(userStoreContent.includes("checkQuotaAllowance"), "user_store must expose checkQuotaAllowance");
+const scanRoutePath = path.join(process.cwd(), "src", "app", "api", "v1", "vault", "scan", "route.ts");
+const scanRouteContent = fs.readFileSync(scanRoutePath, "utf8");
+const syncRoutePath = path.join(process.cwd(), "src", "app", "api", "v1", "vault", "sync", "route.ts");
+const syncRouteContent = fs.readFileSync(syncRoutePath, "utf8");
+assert(scanRouteContent.includes("checkQuotaAllowance") && scanRouteContent.includes("QUOTA_EXCEEDED"), "Scan route must enforce quota with 413 QUOTA_EXCEEDED");
+assert(syncRouteContent.includes("checkQuotaAllowance") && syncRouteContent.includes("QUOTA_EXCEEDED"), "Sync route must enforce quota with 413 QUOTA_EXCEEDED");
+assert(scanRouteContent.includes("gasUsedUnits"), "Scan route must pass real commit gas into the store");
+assert(syncRouteContent.includes("gasUsedUnits"), "Sync route must pass real commit gas into the store");
+console.log("  ✓ Quota enforcement active on both ingestion paths with honest commit metadata.");
+
+// 8d: allocatedMB finite/positive validation in admin PATCH
+assert(adminUsersRouteContent.includes("Number.isFinite(parsedMB)"), "Admin PATCH must reject NaN/non-finite allocatedMB");
+console.log("  ✓ allocatedMB strictly validated (no NaN/negative quota corruption).");
+
+// 8e: Skills provenance pinning in skills-lock.json
+const lockPath = path.join(process.cwd(), "skills-lock.json");
+const lockContent = fs.readFileSync(lockPath, "utf8");
+const lock = JSON.parse(lockContent);
+assert(lock.skills["prompt-enhancer"], "skills-lock.json must pin prompt-enhancer");
+assert(lock.skills["api-skills"], "skills-lock.json must pin api-skills");
+const crypto = await import("crypto");
+const peHash = crypto.createHash("sha256").update(fs.readFileSync(promptEnhancerPath)).digest("hex");
+const apiHash = crypto.createHash("sha256").update(fs.readFileSync(apiSkillsPath)).digest("hex");
+assert.strictEqual(lock.skills["prompt-enhancer"].computedHash, peHash, "prompt-enhancer lock hash must match installed file");
+assert.strictEqual(lock.skills["api-skills"].computedHash, apiHash, "api-skills lock hash must match installed file");
+console.log("  ✓ Third-party skills content-pinned in skills-lock.json (hashes verified against installed files).");
+
 console.log("\n=======================================================");
-console.log("ALL 7 STORAGE QUOTA, DASHBOARD OVERVIEW & SKILL SUITES PASSED (100%)!");
+console.log("ALL 8 STORAGE QUOTA, DASHBOARD OVERVIEW & SKILL SUITES PASSED (100%)!");
 console.log("=======================================================\n");
 

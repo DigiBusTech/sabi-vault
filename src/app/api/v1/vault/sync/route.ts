@@ -129,17 +129,51 @@ export async function POST(req: NextRequest) {
         }
       : undefined;
 
-    // 5. Update structured vault state in sovereign store
+    // 5. Update structured vault state in sovereign store (quota-enforced)
+    const structuredRecord = {
+      ...parsedResult.structuredData,
+      documentName: parsedResult.documentName,
+      hashRef: parsedResult.sha256Hash,
+      tier: parsedResult.tier,
+      cloudFileRef,
+    };
+
+    const incomingBytes = Buffer.byteLength(JSON.stringify(structuredRecord), "utf8");
+    const allowance = globalUserStore.checkQuotaAllowance(targetVaultId, incomingBytes);
+    if (!allowance.allowed) {
+      liveTelemetry.record({
+        subsystem: "API_ROUTER",
+        level: "WARN",
+        action: "POST /api/v1/vault/sync",
+        durationMs: Date.now() - startTime,
+        statusCode: 413,
+        errorCode: "QUOTA_EXCEEDED",
+        message: `Quota exceeded for ${targetVaultId}: ${allowance.usedBytes}+${incomingBytes} > ${allowance.allocatedBytes} bytes.`,
+        userId: targetVaultId,
+      });
+      return NextResponse.json(
+        {
+          error: "Storage quota exceeded for your tier. Upgrade your storage tier or remove existing records.",
+          code: "QUOTA_EXCEEDED",
+          quota: {
+            usedBytes: allowance.usedBytes,
+            allocatedBytes: allowance.allocatedBytes,
+            remainingBytes: allowance.remainingBytes,
+            requiredBytes: incomingBytes,
+          },
+        },
+        { status: 413 }
+      );
+    }
+
     globalUserStore.addCredential(
       parsedResult.category,
+      structuredRecord,
+      targetVaultId,
       {
-        ...parsedResult.structuredData,
-        documentName: parsedResult.documentName,
-        hashRef: parsedResult.sha256Hash,
-        tier: parsedResult.tier,
-        cloudFileRef,
-      },
-      targetVaultId
+        isSimulated: commitResult.isSimulated === true,
+        gasUsedUnits: commitResult.gasUsed,
+      }
     );
 
     const durationMs = Date.now() - startTime;

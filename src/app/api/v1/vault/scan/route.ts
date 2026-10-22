@@ -257,9 +257,35 @@ export async function POST(req: NextRequest) {
       verifiedAt: new Date().toISOString(),
     };
 
-    globalUserStore.addCredential(effectiveCategory, structuredRecord, targetUserId);
+    // 4. Quota Enforcement: structured JSON records are metered against the
+    // citizen's allocated tier capacity (raw files never touch this budget —
+    // they live in the citizen's private cloud).
+    const incomingBytes = Buffer.byteLength(JSON.stringify(structuredRecord), "utf8");
+    const allowance = globalUserStore.checkQuotaAllowance(targetUserId, incomingBytes);
+    if (!allowance.allowed) {
+      if (fileBuffer.length > 0) fileBuffer.fill(0);
+      if (scanId) scanPreviewCache.delete(scanId);
+      return NextResponse.json(
+        {
+          error: "Storage quota exceeded for your tier. Upgrade your storage tier or remove existing records.",
+          code: "QUOTA_EXCEEDED",
+          quota: {
+            usedBytes: allowance.usedBytes,
+            allocatedBytes: allowance.allocatedBytes,
+            remainingBytes: allowance.remainingBytes,
+            requiredBytes: incomingBytes,
+          },
+        },
+        { status: 413 }
+      );
+    }
 
-    // 4. Invariant Compliance: Zero ephemeral buffer
+    globalUserStore.addCredential(effectiveCategory, structuredRecord, targetUserId, {
+      isSimulated: commitResult.isSimulated === true,
+      gasUsedUnits: commitResult.gasUsed,
+    });
+
+    // 5. Invariant Compliance: Zero ephemeral buffer
     if (fileBuffer.length > 0) {
       fileBuffer.fill(0);
     }
