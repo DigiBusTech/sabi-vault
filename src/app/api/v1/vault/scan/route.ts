@@ -100,10 +100,11 @@ export async function POST(req: NextRequest) {
 
       // Run Gemini Vision Extractor
       const extractor = new VisionExtractor();
+      const categoryHint = category === "auto_detect" ? undefined : (category as VaultCategory | undefined);
       const result = await extractor.extractDocumentFields(
         fileBase64,
         mimeType,
-        category as VaultCategory | undefined,
+        categoryHint,
         fileName
       );
 

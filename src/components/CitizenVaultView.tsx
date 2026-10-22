@@ -30,6 +30,8 @@ import {
   ArrowRight,
   ShieldCheck,
   Cloud,
+  Scale,
+  Receipt,
 } from "lucide-react";
 import { CameraScannerModal } from "@/components/dashboard/CameraScannerModal";
 import { VaultCategory, FullUserVault } from "@/types/vault";
@@ -48,6 +50,9 @@ const CATEGORIES: {
   label: string;
   icon: React.ComponentType<{ className?: string }>;
 }[] = [
+  { id: "identification", label: "Personal IDs", icon: ShieldCheck },
+  { id: "legal", label: "Legal Instruments", icon: Scale },
+  { id: "receipts", label: "Receipts & Bills", icon: Receipt },
   { id: "academics", label: "Academics", icon: GraduationCap },
   { id: "finance", label: "Finance", icon: Wallet },
   { id: "experience", label: "Experience", icon: Briefcase },
@@ -310,6 +315,9 @@ export function CitizenVaultView({ onMintKeyForDemo, viewMode = "all" }: Citizen
 
   const getCategoryCount = (cat: VaultCategory): number => {
     if (!vault) return 0;
+    if (cat === "identification") return vault.identification?.identifications?.length || 0;
+    if (cat === "legal") return vault.legal?.instruments?.length || 0;
+    if (cat === "receipts") return vault.receipts?.receipts?.length || 0;
     if (cat === "academics") return vault.academics?.degrees?.length || 0;
     if (cat === "finance") return vault.finance?.bankRecords?.length || 0;
     if (cat === "experience") return vault.experience?.experiences?.length || 0;
@@ -355,6 +363,102 @@ export function CitizenVaultView({ onMintKeyForDemo, viewMode = "all" }: Citizen
   );
 
   const renderCategoryBody = () => {
+    if (activeCategory === "identification") {
+      return (
+        <div className="space-y-3">
+          {vault?.identification?.identifications?.map((idDoc: any) => (
+            <div
+              key={idDoc.id}
+              className="flex items-start justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4 transition-all duration-200 hover:border-slate-300 hover:shadow-sm"
+            >
+              <div className="space-y-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-sm font-bold text-slate-900">
+                    {idDoc.idType ? idDoc.idType.replace(/_/g, " ").toUpperCase() : "IDENTIFICATION"} · {idDoc.documentNumber}
+                  </span>
+                  {tierBadge(idDoc.tier || 2, "Tier 2 Notarized Identity")}
+                </div>
+                <p className="text-xs text-slate-600">
+                  {idDoc.fullName} ({idDoc.nationality}) · Issued by {idDoc.issuingAuthority}
+                  {idDoc.expiryDate ? ` · Exp: ${idDoc.expiryDate}` : ""}
+                </p>
+                {idDoc.mrzCode && (
+                  <pre className="max-w-md overflow-x-auto rounded bg-slate-50 p-1.5 font-mono text-[9px] text-slate-500">
+                    {idDoc.mrzCode}
+                  </pre>
+                )}
+                {hashLine(idDoc.hashRef)}
+              </div>
+              {deleteButton(() => handleDeleteCredential("identification", idDoc.id))}
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    if (activeCategory === "legal") {
+      return (
+        <div className="space-y-3">
+          {vault?.legal?.instruments?.map((inst: any) => (
+            <div
+              key={inst.id}
+              className="flex items-start justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4 transition-all duration-200 hover:border-slate-300 hover:shadow-sm"
+            >
+              <div className="space-y-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-sm font-bold text-slate-900">{inst.title}</span>
+                  {tierBadge(2, "Tier 2 Legal Notarization")}
+                </div>
+                <p className="text-xs text-slate-600">
+                  {inst.instrumentType?.replace(/_/g, " ").toUpperCase()} · {inst.jurisdiction} ({inst.executionDate})
+                </p>
+                {inst.partiesInvolved && inst.partiesInvolved.length > 0 && (
+                  <p className="text-[11px] text-slate-500">
+                    Parties: {inst.partiesInvolved.join(" & ")}
+                  </p>
+                )}
+                {inst.notarySealReference && (
+                  <p className="text-[10px] font-medium text-emerald-700">
+                    Seal: {inst.notarySealReference}
+                  </p>
+                )}
+                {hashLine(inst.hashRef)}
+              </div>
+              {deleteButton(() => handleDeleteCredential("legal", inst.id))}
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    if (activeCategory === "receipts") {
+      return (
+        <div className="space-y-3">
+          {vault?.receipts?.receipts?.map((rec: any) => (
+            <div
+              key={rec.id}
+              className="flex items-start justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4 transition-all duration-200 hover:border-slate-300 hover:shadow-sm"
+            >
+              <div className="space-y-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-sm font-bold text-slate-900">
+                    {rec.currency} {rec.totalAmount?.toLocaleString()} · {rec.vendorOrIssuer}
+                  </span>
+                  {tierBadge(1, "Tier 1 Hashed")}
+                </div>
+                <p className="text-xs text-slate-600">
+                  Ref: {rec.receiptNumber} · Date: {rec.transactionDate} {rec.paymentMethod ? `(${rec.paymentMethod})` : ""}
+                </p>
+                <p className="text-[11px] text-slate-500">{rec.descriptionOrItems}</p>
+                {hashLine(rec.hashRef)}
+              </div>
+              {deleteButton(() => handleDeleteCredential("receipts", rec.id))}
+            </div>
+          ))}
+        </div>
+      );
+    }
+
     if (activeCategory === "academics") {
       return (
         <div className="space-y-3">

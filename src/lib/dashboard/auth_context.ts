@@ -48,3 +48,4 @@ export async function getDashboardAuthContext(requiredRole?: UserRole | UserRole
 
   return { user, role, organization };
 }
+

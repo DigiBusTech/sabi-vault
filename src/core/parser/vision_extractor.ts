@@ -95,6 +95,44 @@ Extract personal resume, bio, or portfolio summary fields:
   "personalStatement": string or null,
   "summary": string
 }`,
+  identification: `
+Extract identity document, passport, or national ID fields:
+{
+  "idType": "international_passport" | "national_id" | "drivers_license" | "voters_card" | "residence_permit" | "portrait_photograph" | "other",
+  "documentNumber": string (e.g. passport number or NIN),
+  "fullName": string,
+  "dateOfBirth": "YYYY-MM-DD" or null,
+  "nationality": string,
+  "issuingAuthority": string (e.g. "Nigeria Immigration Service", "NIMC"),
+  "issueDate": "YYYY-MM-DD",
+  "expiryDate": "YYYY-MM-DD" or null,
+  "mrzCode": string or null,
+  "summary": string
+}`,
+  legal: `
+Extract legal instrument, contract, affidavit, or sworn declaration fields:
+{
+  "instrumentType": "mou" | "partnership_agreement" | "affidavit" | "power_of_attorney" | "deed_of_assignment" | "court_order" | "marriage_certificate" | "birth_certificate" | "other_legal",
+  "title": string,
+  "partiesInvolved": string[],
+  "executionDate": "YYYY-MM-DD",
+  "jurisdiction": string,
+  "notarized": boolean,
+  "notarySealReference": string or null,
+  "summary": string
+}`,
+  receipts: `
+Extract purchase receipt, bill, tuition slip, or payment confirmation fields:
+{
+  "receiptNumber": string,
+  "vendorOrIssuer": string,
+  "totalAmount": number,
+  "currency": string (e.g. "USD", "NGN", "EUR"),
+  "transactionDate": "YYYY-MM-DD",
+  "descriptionOrItems": string,
+  "paymentMethod": string or null,
+  "summary": string
+}`,
 };
 
 export class VisionExtractor {
@@ -210,7 +248,7 @@ Return a single JSON object with the exact keys:
       const parsed = JSON.parse(contentText);
       const category: VaultCategory = parsed.inferredCategory || categoryHint || "portfolio";
       const tier =
-        category === "academics"
+        category === "academics" || category === "identification" || category === "legal"
           ? VerificationTier.TIER_2_AUTHENTICATED_LEGALIZED
           : VerificationTier.TIER_1_STANDARD_HASHED;
 
@@ -239,11 +277,17 @@ Return a single JSON object with the exact keys:
     let category: VaultCategory = categoryHint || "portfolio";
 
     if (!categoryHint) {
-      if (lower.includes("bank") || lower.includes("statement") || lower.includes("tax") || lower.includes("salary")) {
+      if (lower.includes("passport") || lower.includes("nin") || lower.includes("identity") || lower.includes("license") || lower.includes("voter") || lower.includes("id_card") || lower.includes("photo")) {
+        category = "identification";
+      } else if (lower.includes("mou") || lower.includes("affidavit") || lower.includes("contract") || lower.includes("agreement") || lower.includes("deed") || lower.includes("court") || lower.includes("power_of_attorney") || lower.includes("sworn")) {
+        category = "legal";
+      } else if (lower.includes("receipt") || lower.includes("invoice") || lower.includes("bill") || lower.includes("tuition") || lower.includes("payment")) {
+        category = "receipts";
+      } else if (lower.includes("bank") || lower.includes("statement") || lower.includes("tax") || lower.includes("salary") || lower.includes("balance")) {
         category = "finance";
       } else if (lower.includes("degree") || lower.includes("transcript") || lower.includes("diploma")) {
         category = "academics";
-      } else if (lower.includes("cert") || lower.includes("license") || lower.includes("aws")) {
+      } else if (lower.includes("cert") || lower.includes("aws") || lower.includes("license")) {
         category = "certifications";
       } else if (lower.includes("cv") || lower.includes("resume") || lower.includes("employment")) {
         category = "experience";
@@ -253,11 +297,42 @@ Return a single JSON object with the exact keys:
     }
 
     const tier =
-      category === "academics"
+      category === "academics" || category === "identification" || category === "legal"
         ? VerificationTier.TIER_2_AUTHENTICATED_LEGALIZED
         : VerificationTier.TIER_1_STANDARD_HASHED;
 
     const mockFields: Record<VaultCategory, Record<string, any>> = {
+      identification: {
+        idType: "international_passport",
+        documentNumber: "A10984122",
+        fullName: "Verified Citizen",
+        nationality: "Nigerian",
+        issuingAuthority: "Nigeria Immigration Service",
+        issueDate: "2023-01-10",
+        expiryDate: "2033-01-09",
+        mrzCode: "P<NGROKAFOR<<CHINWE<<<<<<<<<<<<<<<<<<<<<<<<<<\nA109841220NGA9605158F3301098<<<<<<<<<<<<<<02",
+        summary: "Verified high-security biometric international passport.",
+      },
+      legal: {
+        instrumentType: "affidavit",
+        title: "Sworn Legal Declaration & Attested Instrument",
+        partiesInvolved: ["Verified Citizen", "High Court Notary Division"],
+        executionDate: "2023-05-18",
+        jurisdiction: "Federal Republic of Nigeria",
+        notarized: true,
+        notarySealReference: "NOTARY-PUB-2023-7749",
+        summary: "Notarized sworn affidavit and legally authenticated declaration.",
+      },
+      receipts: {
+        receiptNumber: "REC-2026-88194",
+        vendorOrIssuer: "Federal Technology Institute / Bursary",
+        totalAmount: 1250.0,
+        currency: "USD",
+        transactionDate: "2026-03-15",
+        descriptionOrItems: "Professional Equipment & Laboratory Certification License",
+        paymentMethod: "Electronic Wire Transfer",
+        summary: "Authentic financial purchase receipt and transaction record.",
+      },
       finance: {
         institutionName: "Verified Financial Institution",
         currency: "NGN",

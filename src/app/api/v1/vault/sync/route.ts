@@ -53,7 +53,8 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "Missing required file in multipart form data." }, { status: 400 });
       }
       fileName = file.name || "uploaded_document";
-      category = (formData.get("category") as string) || undefined;
+      const rawCat = (formData.get("category") as string) || undefined;
+      category = rawCat === "auto_detect" ? undefined : rawCat;
       cloudProvider = formData.get("cloudProvider") || undefined;
       cloudFileId = (formData.get("cloudFileId") as string) || undefined;
       cloudWebViewLink = (formData.get("cloudWebViewLink") as string) || undefined;
@@ -76,7 +77,7 @@ export async function POST(req: NextRequest) {
       }
 
       fileName = jsonFileName;
-      category = jsonCat;
+      category = jsonCat === "auto_detect" ? undefined : jsonCat;
       cloudProvider = cp;
       cloudFileId = cfId;
       cloudWebViewLink = cLink;

@@ -17,6 +17,9 @@ export const DocumentMetadataSchema = z.object({
     "academics",
     "experience",
     "achievements",
+    "identification",
+    "legal",
+    "receipts",
   ]),
   sha256Hash: z.string().length(64),
   tier: z.nativeEnum(VerificationTier),
@@ -200,6 +203,108 @@ export const AchievementsSchema = z.object({
 });
 export type AchievementsData = z.infer<typeof AchievementsSchema>;
 
+// --- 7. IDENTIFICATION CATEGORY SCHEMA ---
+export const IdentificationItemSchema = z.object({
+  id: z.string(),
+  documentType: z.enum([
+    "international_passport",
+    "national_id",
+    "drivers_license",
+    "passport_photograph",
+    "voters_card",
+    "residence_permit",
+    "other_id",
+  ]).optional().default("other_id"),
+  idNumber: z.string().optional().default(""),
+  documentNumber: z.string().optional(),
+  idType: z.string().optional(),
+  fullName: z.string(),
+  nationality: z.string().optional(),
+  issuingAuthority: z.string().optional().default(""),
+  expiryDate: z.string().optional(),
+  dateOfBirth: z.string().optional(),
+  issueDate: z.string().optional(),
+  mrzCode: z.string().optional(),
+  tier: z.nativeEnum(VerificationTier).optional(),
+  hashRef: z.string(),
+  cloudFileRef: z
+    .object({
+      provider: z.string(),
+      fileId: z.string(),
+      webViewLink: z.string().optional(),
+      uploadedAt: z.string().optional(),
+    })
+    .optional(),
+});
+
+export const IdentificationSchema = z.object({
+  userId: z.string(),
+  identifications: z.array(IdentificationItemSchema),
+});
+export type IdentificationData = z.infer<typeof IdentificationSchema>;
+
+// --- 8. LEGAL INSTRUMENTS CATEGORY SCHEMA ---
+export const LegalItemSchema = z.object({
+  id: z.string(),
+  instrumentType: z.enum([
+    "mou",
+    "contract",
+    "affidavit",
+    "power_of_attorney",
+    "deed",
+    "court_order",
+    "marriage_certificate",
+    "birth_certificate",
+    "other_legal",
+  ]),
+  title: z.string(),
+  partiesInvolved: z.array(z.string()),
+  executionDate: z.string(),
+  jurisdiction: z.string(),
+  notarized: z.boolean().default(true),
+  notarySealReference: z.string().optional(),
+  hashRef: z.string(),
+  cloudFileRef: z
+    .object({
+      provider: z.string(),
+      fileId: z.string(),
+      webViewLink: z.string().optional(),
+    })
+    .optional(),
+});
+
+export const LegalSchema = z.object({
+  userId: z.string(),
+  instruments: z.array(LegalItemSchema),
+});
+export type LegalData = z.infer<typeof LegalSchema>;
+
+// --- 9. RECEIPTS & PURCHASES CATEGORY SCHEMA ---
+export const ReceiptItemSchema = z.object({
+  id: z.string(),
+  receiptNumber: z.string(),
+  vendorOrIssuer: z.string(),
+  totalAmount: z.number(),
+  currency: z.string().default("USD"),
+  transactionDate: z.string(),
+  descriptionOrItems: z.string(),
+  paymentMethod: z.string().optional(),
+  hashRef: z.string(),
+  cloudFileRef: z
+    .object({
+      provider: z.string(),
+      fileId: z.string(),
+      webViewLink: z.string().optional(),
+    })
+    .optional(),
+});
+
+export const ReceiptsSchema = z.object({
+  userId: z.string(),
+  receipts: z.array(ReceiptItemSchema),
+});
+export type ReceiptsData = z.infer<typeof ReceiptsSchema>;
+
 // --- COMPLETE VAULT AGGREGATE ---
 export const VaultCategoryEnum = z.enum([
   "finance",
@@ -208,6 +313,9 @@ export const VaultCategoryEnum = z.enum([
   "academics",
   "experience",
   "achievements",
+  "identification",
+  "legal",
+  "receipts",
 ]);
 export type VaultCategory = z.infer<typeof VaultCategoryEnum>;
 
@@ -221,6 +329,9 @@ export interface FullUserVault {
   academics?: AcademicsData;
   experience?: ExperienceData;
   achievements?: AchievementsData;
+  identification?: IdentificationData;
+  legal?: LegalData;
+  receipts?: ReceiptsData;
   lastSyncedAt: string;
 }
 

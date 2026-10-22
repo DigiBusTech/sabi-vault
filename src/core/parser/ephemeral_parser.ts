@@ -1,4 +1,4 @@
-﻿import { computeSha256 } from "@/core/crypto/hasher";
+import { computeSha256 } from "@/core/crypto/hasher";
 import { VaultCategory, VerificationTier } from "@/types/vault";
 import { MultiLLMGateway } from "@/agents/gateway/llm_gateway";
 
@@ -49,9 +49,9 @@ export class EphemeralDocumentParser {
       // 4. Structure data into target JSON schema via Multi-LLM Gateway
       const structuredData = await this.structureTextToJson(extractedText, category, fileName);
 
-      // 5. Determine default verification tier (Tier 1 standard, Tier 2 for academics/legal)
+      // 5. Determine default verification tier (Tier 1 standard, Tier 2 for academics/legal/identity)
       const tier =
-        category === "academics"
+        category === "academics" || category === "identification" || category === "legal"
           ? VerificationTier.TIER_2_AUTHENTICATED_LEGALIZED
           : VerificationTier.TIER_1_STANDARD_HASHED;
 
@@ -83,6 +83,39 @@ export class EphemeralDocumentParser {
 
   private classifyCategory(fileName: string, text: string): VaultCategory {
     const lower = (fileName + " " + text).toLowerCase();
+    if (
+      lower.includes("passport") ||
+      lower.includes("nin") ||
+      lower.includes("national id") ||
+      lower.includes("identity") ||
+      lower.includes("driver") ||
+      lower.includes("license") ||
+      lower.includes("voter") ||
+      lower.includes("portrait")
+    ) {
+      return "identification";
+    }
+    if (
+      lower.includes("mou") ||
+      lower.includes("affidavit") ||
+      lower.includes("contract") ||
+      lower.includes("agreement") ||
+      lower.includes("deed") ||
+      lower.includes("court") ||
+      lower.includes("sworn") ||
+      lower.includes("attorney")
+    ) {
+      return "legal";
+    }
+    if (
+      lower.includes("receipt") ||
+      lower.includes("invoice") ||
+      lower.includes("bill") ||
+      lower.includes("tuition") ||
+      lower.includes("payment slip")
+    ) {
+      return "receipts";
+    }
     if (lower.includes("statement") || lower.includes("bank") || lower.includes("tax") || lower.includes("balance")) {
       return "finance";
     }
@@ -92,7 +125,7 @@ export class EphemeralDocumentParser {
     if (lower.includes("resume") || lower.includes("engineer") || lower.includes("employment") || lower.includes("work")) {
       return "experience";
     }
-    if (lower.includes("certificate") || lower.includes("license") || lower.includes("aws") || lower.includes("certified")) {
+    if (lower.includes("certificate") || lower.includes("aws") || lower.includes("certified")) {
       return "certifications";
     }
     if (lower.includes("award") || lower.includes("hackathon") || lower.includes("grant") || lower.includes("prize")) {

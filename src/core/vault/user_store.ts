@@ -143,6 +143,71 @@ class UserVaultMasterStore {
         personalStatement:
           "Committed to building sovereign digital rails that eliminate fraud and liberate global talent.",
       },
+      identification: {
+        userId: "usr_chinwe_okafor_7721",
+        identifications: [
+          {
+            id: "id_passport_01",
+            documentType: "international_passport",
+            idType: "international_passport",
+            idNumber: "A10894523",
+            documentNumber: "A10894523",
+            fullName: "Chinwe Nkechi Okafor",
+            nationality: "Nigerian",
+            issuingAuthority: "Nigeria Immigration Service (NIS)",
+            issueDate: "2023-04-12",
+            expiryDate: "2033-04-11",
+            mrzCode: "P<NGROKAFOR<<CHINWE<NKECHI<<<<<<<<<<<<<<<<<<<\nA108945230NGA9605158F3304118<<<<<<<<<<<<<<04",
+            tier: VerificationTier.TIER_2_AUTHENTICATED_LEGALIZED,
+            hashRef: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            cloudFileRef: {
+              provider: "google_drive",
+              fileId: "drive_passport_mock_01",
+              uploadedAt: "2026-10-12T10:00:00Z",
+            },
+          },
+        ],
+      },
+      legal: {
+        userId: "usr_chinwe_okafor_7721",
+        instruments: [
+          {
+            id: "legal_affidavit_01",
+            instrumentType: "affidavit",
+            title: "Sworn Affidavit of Declaration of Age and Lineage",
+            partiesInvolved: ["Chinwe Nkechi Okafor", "High Court of Lagos State"],
+            executionDate: "2022-01-15",
+            jurisdiction: "Lagos State Judiciary, Federal Republic of Nigeria",
+            notarized: true,
+            notarySealReference: "NOTARY-PUBLIC-LGS-2022-8871",
+            hashRef: "f4a1c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852c921",
+            cloudFileRef: {
+              provider: "google_drive",
+              fileId: "drive_affidavit_mock_01",
+            },
+          },
+        ],
+      },
+      receipts: {
+        userId: "usr_chinwe_okafor_7721",
+        receipts: [
+          {
+            id: "rec_tuition_01",
+            receiptNumber: "UNILAG-REC-2022-99120",
+            vendorOrIssuer: "University of Lagos Bursary",
+            totalAmount: 185000,
+            currency: "NGN",
+            transactionDate: "2022-02-10",
+            descriptionOrItems: "Final Year Tuition & Engineering Laboratory Clearance Fee",
+            paymentMethod: "Remita Retrieval Reference",
+            hashRef: "d2e3c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852a104",
+            cloudFileRef: {
+              provider: "google_drive",
+              fileId: "drive_receipt_mock_01",
+            },
+          },
+        ],
+      },
     };
 
     this.vaults.set("usr_chinwe_okafor_7721", defaultVault);
@@ -259,6 +324,15 @@ class UserVaultMasterStore {
         publicLinks: itemData.publicLinks || userVault.portfolio?.publicLinks || [],
         personalStatement: itemData.personalStatement || userVault.portfolio?.personalStatement,
       };
+    } else if (category === "identification") {
+      userVault.identification = userVault.identification || { userId, identifications: [] };
+      userVault.identification.identifications.push(enrichedItem);
+    } else if (category === "legal") {
+      userVault.legal = userVault.legal || { userId, instruments: [] };
+      userVault.legal.instruments.push(enrichedItem);
+    } else if (category === "receipts") {
+      userVault.receipts = userVault.receipts || { userId, receipts: [] };
+      userVault.receipts.receipts.push(enrichedItem);
     }
 
     userVault.lastSyncedAt = new Date().toISOString();
@@ -269,15 +343,21 @@ class UserVaultMasterStore {
   public deleteCredential(category: VaultCategory, itemId: string, userId: string = "usr_chinwe_okafor_7721"): boolean {
     const userVault = this.getVault(userId);
     if (category === "academics" && userVault.academics) {
-      userVault.academics.degrees = userVault.academics.degrees.filter((d) => d.id !== itemId);
+      userVault.academics.degrees = userVault.academics.degrees.filter((d) => d.id !== itemId && (d as any).hashRef !== itemId);
     } else if (category === "finance" && userVault.finance) {
-      userVault.finance.bankRecords = userVault.finance.bankRecords.filter((b) => (b as any).hashRef !== itemId && (b as any).institutionName !== itemId);
+      userVault.finance.bankRecords = userVault.finance.bankRecords.filter((b) => (b as any).hashRef !== itemId && (b as any).institutionName !== itemId && (b as any).id !== itemId);
     } else if (category === "experience" && userVault.experience) {
-      userVault.experience.experiences = userVault.experience.experiences.filter((e) => e.id !== itemId);
+      userVault.experience.experiences = userVault.experience.experiences.filter((e) => e.id !== itemId && (e as any).hashRef !== itemId);
     } else if (category === "certifications" && userVault.certifications) {
-      userVault.certifications.certifications = userVault.certifications.certifications.filter((c) => c.id !== itemId);
+      userVault.certifications.certifications = userVault.certifications.certifications.filter((c) => c.id !== itemId && (c as any).hashRef !== itemId);
     } else if (category === "achievements" && userVault.achievements) {
-      userVault.achievements.achievements = userVault.achievements.achievements.filter((a) => a.id !== itemId);
+      userVault.achievements.achievements = userVault.achievements.achievements.filter((a) => a.id !== itemId && (a as any).hashRef !== itemId);
+    } else if (category === "identification" && userVault.identification) {
+      userVault.identification.identifications = userVault.identification.identifications.filter((i) => i.id !== itemId && (i as any).hashRef !== itemId);
+    } else if (category === "legal" && userVault.legal) {
+      userVault.legal.instruments = userVault.legal.instruments.filter((l) => l.id !== itemId && (l as any).hashRef !== itemId);
+    } else if (category === "receipts" && userVault.receipts) {
+      userVault.receipts.receipts = userVault.receipts.receipts.filter((r) => r.id !== itemId && (r as any).hashRef !== itemId);
     }
     userVault.lastSyncedAt = new Date().toISOString();
     this.vaults.set(userId, userVault);

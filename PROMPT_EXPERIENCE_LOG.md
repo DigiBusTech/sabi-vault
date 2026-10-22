@@ -2019,3 +2019,64 @@
   - `node tests/test_device_management.mjs`: 5/5 suites PASSED.
   - `node tests/test_full_suite.mjs`: 8/8 master integration suites PASSED.
   - `npx tsc --noEmit`: 100% PASSED (0 errors).
+
+
+---
+
+### Entry #057 - Universal 9-Category Vault Spectrum, Human Profile, Persona Niche Studio (Zero-CV Engine), AI Sovereign Target Advisor & Enterprise Multi-Track Screening Pipeline
+- **Date & Time:** 2026-10-22 14:15:00 (Local)
+- **Author:** SabiProfile Core Architecture AI
+- **User Prompt / Intent:**
+  > "There should be a profile setup for user in user dashboard, which includes social links, hobbies, languages spoken and level, skills and level, all human details which will be relvant for employers and universities and immigrations. with different profile niche the users profile and documents plus experince and work hsitory fit, there will be no need for users writting different cover letters, and cv each for different role and positions etc, they system maps that automatically during query by empyer also grounded by what user allows using the mint scope api etc. ... aslo never forget the AI guide and alerts suggestions based on user choosing a target Job, travel/relocation, studies, and multiple selected options allow, and AI agent guides users with updates and suggestions to build his or her account to meet target requirements, though that features will be for pro users but implement it now, we will decide what goes to pro etc when we introduce the business model. for now no bsuiness model. let get all the features and technologies, systems and flows working perfectly and live. ... nice place to start but i need these categories to increase to fit all documents types, passport photograph, Personal ID's, purchase reciepts, MOU/legals, etc also the system too can auto detect during scanning documents. let the multi AI agentic orchestration clearly show and act to make this project and system one the world can not do without. ... also do not forget the organization dashbaord to make it rich with selection tools, immigration query, academic admission query, employement selection query etc, with multi stage set by org, add different stage of screening based on the org need and final is interview which will be handled by them with whatever means, also add option AI Smart onterviewer to handle everything till end, but clicking that will show coming soon as that is a future upgrade. this section must have its multi agent or seperate agent adding to already schedule agent for the system to handle this processes."
+- **Architectural Solutions & Invariants Upheld:**
+  1. **Universal 9-Category Vault Spectrum + Auto-Detect:**
+     - Extended the 6 core categories (`finance`, `academics`, `experience`, `certifications`, `achievements`, `portfolio`) to 9 universal domains by adding:
+       - `identification`: Passports, portrait photographs, National IDs (NIN), driver's licenses, residence permits (Tier-2 Notarized).
+       - `legal`: MOUs, affidavits, sworn declarations, partnership contracts, deeds, court orders (Tier-2 Notarized).
+       - `receipts`: Purchase receipts, vendor invoices, tuition payment slips, asset acquisition bills (Tier-1 Hashed).
+     - Built **✨ Auto-Detect (AI Classification)**: In `DocumentIntake.tsx` and `ScanPipeline.tsx`, Sentinel Classifier Agent autonomously identifies layout, stamps, seals, and text keywords to categorize documents into target domains with zero manual selection required.
+  2. **Multi-AI Agentic Orchestration:**
+     - Made the multi-agent squad explicitly visible in real-time across intake:
+       - 🛡️ *Sentinel Classifier Agent* (layout, seals & document domain).
+       - 🔬 *Forensic Integrity Radar* (cryptographic authenticity & notary tier).
+       - ⚙️ *Schema Normalizer* (zero-hallucination NDPC/GDPR structured JSON).
+       - ⛓️ *Base Sepolia Anchor* (mathematical SHA-256 hash commit on-chain).
+       - 🧭 *Sovereign Target Advisor* (target gaps & zero-CV dossier synthesis).
+  3. **Human Profile & Verified Attributes (`/dashboard/profile`):**
+     - Built `src/types/profile.ts`, `src/core/vault/profile_store.ts`, `src/app/api/v1/user/profile/route.ts`, `src/components/profile/HumanProfileEditor.tsx`, and `src/app/dashboard/profile/page.tsx`.
+     - Standardized CEFR language proficiencies (`A1`, `A2`, `B1`, `B2`, `C1`, `C2`, `NATIVE`) with native toggles and official exam attestation links.
+     - Implemented categorized skills matrix with 4 mastery tiers (Beginner, Intermediate, Advanced, Expert) and verified years of experience.
+     - Added cultural hobbies and community interests critical for holistic admissions and visa reviews.
+     - Integrated social & verification presence (LinkedIn, GitHub, X, Portfolio).
+  4. **Persona Niche Studio & Zero-CV Grounding (`/dashboard/niches`):**
+     - Built `src/app/api/v1/user/niches/route.ts`, `src/components/profile/NicheStudio.tsx`, and `src/app/dashboard/niches/page.tsx`.
+     - Enables citizens to configure targeted profiles (e.g. *Senior Distributed Systems Engineer (FinTech)*, *EU Chancenkarte Relocation*, *Chevening Academic Fellowship*).
+     - Eliminates the need for manual CV drafting or custom cover letters: during enterprise queries, the engine auto-synthesizes a tailored, tamper-proof dossier grounded strictly in the candidate's verified vault records and scoped permissions.
+  5. **AI Sovereign Target Advisor (`/dashboard/advisor`):**
+     - Built `src/app/api/v1/user/advisor/route.ts`, `src/components/advisor/SovereignAdvisorView.tsx`, and `src/app/dashboard/advisor/page.tsx`.
+     - Multi-target goal tracking across Visas/Relocation, Jobs, Scholarships, and Procurement.
+     - Live Sovereign Readiness Radar (0-100%) dynamically calculated against vault credentials and prerequisites.
+     - Proactive Gap Alerts categorized by Critical blockers (e.g., missing international passport or missing Tier-2 legalization), Warnings (e.g., language booster), and Recommendations with one-click resolution shortcuts.
+  6. **Enterprise Multi-Track Query & 5-Stage Screening Pipeline (`/dashboard/enterprise/screening`):**
+     - In `EnterpriseScreeningView.tsx`, introduced 4 specialized query tracks:
+       - 🛂 *Immigration & Border* (visa proof of funds minimums, Tier-2 legal notarization, ID biometric integrity).
+       - 🎓 *Academic Admissions* (transcript GPAs, degree accreditation attestation, language scores).
+       - 💼 *Talent & Employment* (verified employment tenure, reference integrity, technical skill mastery).
+       - ⚖️ *Legal Due Diligence & Procurement* (corporate MOUs, tax compliance, sworn declarations).
+     - Deployed 5-Stage Evaluation Pipeline visualizer:
+       - Stage 1: Cryptographic Ledger & Hash Check (Base Sepolia L2).
+       - Stage 2: Track Prerequisite & Threshold Filter.
+       - Stage 3: Multi-Agent Deep Semantic Audit (Zero-hallucination RAG).
+       - Stage 4: Organization Human Review & Shortlisting.
+       - Stage 5: Final Interview Stage:
+         - *Org Direct Interview:* Instant encrypted video conference link generation.
+         - *🤖 AI Smart Interviewer:* Interactive modal detailing autonomous adaptive voice/video probing, real-time code/liveness attestation, and early access notifications.
+  7. **Database Migration & Navigation Integration:**
+     - Created `supabase/migrations/20261023000000_profile_and_ai_advisor.sql` defining RLS-protected tables for `user_human_profiles`, `user_profile_niches`, and `user_target_goals`.
+     - Updated `src/lib/dashboard/nav.ts` with route-aware sidebar items for `/dashboard/profile`, `/dashboard/niches`, and `/dashboard/advisor`.
+- **Validation:**
+  - `node tests/test_profile_and_ai_advisor.mjs`: 100% Passed (all 5 suites verifying 9-category hashing, CEFR standards, readiness scoring, zero-CV grounding, and 5-stage pipeline).
+  - `node tests/test_document_scan_and_cloud.mjs`: 26/26 tests PASSED.
+  - `node tests/test_device_management.mjs`: 5/5 suites PASSED.
+  - `node tests/test_full_suite.mjs`: 8/8 master integration suites PASSED.
+  - `npx tsc --noEmit`: 100% PASSED (0 errors).

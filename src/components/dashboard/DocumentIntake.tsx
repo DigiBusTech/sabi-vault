@@ -25,13 +25,17 @@ interface CloudIntegrationInfo {
   drive_folder_id?: string | null;
 }
 
-const CATEGORY_OPTIONS: { value: VaultCategory; label: string }[] = [
-  { value: "academics", label: "Academics" },
-  { value: "finance", label: "Finance" },
-  { value: "experience", label: "Experience" },
-  { value: "certifications", label: "Certifications" },
-  { value: "achievements", label: "Achievements" },
-  { value: "portfolio", label: "Portfolio" },
+const CATEGORY_OPTIONS: { value: string; label: string }[] = [
+  { value: "auto_detect", label: "✨ Auto-Detect (AI Multi-Agent Classification)" },
+  { value: "identification", label: "🪪 Personal IDs & Passports" },
+  { value: "legal", label: "⚖️ MOUs, Contracts & Legal Instruments" },
+  { value: "receipts", label: "🧾 Purchase Receipts & Invoices" },
+  { value: "finance", label: "🏦 Finance & Bank Statements" },
+  { value: "academics", label: "🎓 Academics & Transcripts" },
+  { value: "experience", label: "💼 Experience & Employment" },
+  { value: "certifications", label: "📜 Certifications & Licenses" },
+  { value: "achievements", label: "🏆 Achievements & Awards" },
+  { value: "portfolio", label: "🌐 Portfolio & Case Studies" },
 ];
 
 interface SyncResult {
@@ -67,7 +71,7 @@ function readFileAsBase64(file: File): Promise<string> {
  */
 export function DocumentIntake({ onSynced }: DocumentIntakeProps) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const [category, setCategory] = useState<VaultCategory>("certifications");
+  const [category, setCategory] = useState<string>("auto_detect");
   const [dragOver, setDragOver] = useState<boolean>(false);
   const [uploading, setUploading] = useState<boolean>(false);
   const [activeFileName, setActiveFileName] = useState<string>("");

@@ -1,4 +1,4 @@
-> **Status:** Pre-production; Complete Multi-Page Modular Dashboard Architecture active across all 4 roles (Citizen, Enterprise, Government, Super Admin) with zero single-page scrolling, real Next.js sub-routes, and route-aware sidebar navigation (Entry #056). Enterprise Live Telemetry Mission Control active under `/dashboard/admin/telemetry` tracking API routes, Gemini/Groq agents, Base Sepolia L2 commits, and SHA-256 digests in real-time with 500-event circular ring buffer. Full-Fidelity Ingestion active with native multipart `FormData` streaming (zero downscaling, zero Base64 memory expansion, 60s timeout budget). Base Sepolia private key validation with 42-char public address detection and transparent error rendering. Google Drive/Dropbox live connection status badge with one-click disconnect action active. Complete Sovereign Document Scanning & AI Extraction Suite active with Zero-Manual-Entry Trust Model, Gemini 2.5/2.0/1.5 Flash Vision Document Parser, AES-256-GCM Cloud OAuth Storage, Base Sepolia Blockchain Anchoring, and 4-Step Intake Modal (Entry #055). All Next.js routes compiled cleanly, 0 errors (100% Passed Test Suites). Enforces pure white background, strict 3-color palette (Pure White #ffffff, Slate Dark #0f172a, Sabi Emerald #059669), Poppins & Montserrat fonts. Dev server: http://localhost:3000.
+> **Status:** Pre-production; Universal 9-Category Vault Spectrum (identification, legal, receipts, finance, academics, experience, certs, achievements, portfolio + AI Auto-Detect), Human Profile Suite (`/dashboard/profile`), Persona Niche Studio & Zero-CV Engine (`/dashboard/niches`), AI Sovereign Target Advisor (`/dashboard/advisor`), and Enterprise 4-Track Multi-Stage Evaluation Pipeline with AI Smart Interviewer active (Entry #057). Complete Multi-Page Modular Dashboard Architecture active across all 4 roles (Citizen, Enterprise, Government, Super Admin) with zero single-page scrolling, real Next.js sub-routes, and route-aware sidebar navigation. Enterprise Live Telemetry Mission Control active under `/dashboard/admin/telemetry`. Full-Fidelity Ingestion with native multipart `FormData` streaming. Base Sepolia blockchain anchoring with private key validation. Google Drive/Dropbox OAuth status and disconnect active. All Next.js routes compiled cleanly, 0 errors (100% Passed Test Suites). Enforces pure white background, strict 3-color palette (Pure White #ffffff, Slate Dark #0f172a, Sabi Emerald #059669), Poppins & Montserrat fonts. Dev server: http://localhost:3000.
 
 
 > **Rule:** This file MUST be read at the beginning of any session by any AI agent, developer, or IDE before inspecting or modifying code. It MUST be updated during every commit or major milestone.
@@ -39,16 +39,25 @@ Traditional systems rely on static PDF resumes, forged paperwork, fragmented por
 | **Tier 1: Standard Hashed** | Bank statements, proof of funds, utility bills, receipts, standard portfolios. | Automatic SHA-256 cryptographic hashing upon OAuth cloud sync. Proves file existence at a specific timestamp and prevents post-upload alteration. |
 | **Tier 2: Authenticated / Legalized** | Academic degrees, university transcripts, marriage certificates, sworn affidavits, professional licenses. | Requires institutional attestation or authorized human notary verification before hashing. The notary digital seal, credential metadata, and cryptographic hash are permanently bound on-chain. |
 
-### C. Six Standardized B2C Vault Categories
-Every citizen vault organizes extracted structured data into 6 schema-validated domains:
-1. `finance` — Bank statements, proof of funds, tax clearance, transaction histories.
-2. `portfolio` — Professional summary, bio, public links, personal statements.
-3. `certifications` — Professional licenses, technical certifications, industry credentials.
-4. `academics` — Degrees, diplomas, transcripts, secondary school certificates.
-5. `experience` — Detailed employment history, verified references, project logs.
-6. `achievements` — Awards, grants, hackathon placements, recognitions, publications.
+### C. Nine Universal Standardized Vault Categories (+ Auto-Detect)
+Every citizen vault organizes extracted structured data into 9 schema-validated domains:
+1. `identification` — International passports, passport photographs, national IDs (NIN), driver's licenses, residence permits (Tier-2 Notarized).
+2. `legal` — MOUs, affidavits, sworn declarations, partnership contracts, deeds, court orders (Tier-2 Notarized).
+3. `receipts` — Purchase receipts, vendor invoices, tuition payment slips, asset acquisition bills (Tier-1 Hashed).
+4. `finance` — Bank statements, proof of funds, tax clearance, transaction histories.
+5. `portfolio` — Professional summary, bio, public links, personal statements.
+6. `certifications` — Professional licenses, technical certifications, industry credentials.
+7. `academics` — Degrees, diplomas, transcripts, secondary school certificates.
+8. `experience` — Detailed employment history, verified references, project logs.
+9. `achievements` — Awards, grants, hackathon placements, recognitions, publications.
+*✨ Auto-Detect (AI Classification):* Sentinel Classifier Agent autonomously identifies document layout, seals, and text keywords to categorize into target domains without manual user selection.
 
-### D. Scoped Programmable API Key Engine
+### D. Human Profile Setup & Persona Niche Studio (Zero-CV Engine)
+- **Human Identity (`/dashboard/profile`):** Verified attributes including CEFR language proficiency scale (A1 to C2 / Native), categorized skill mastery matrix with evaluated tenure, cultural hobbies, and target roles.
+- **Persona Niches (`/dashboard/niches`):** Eliminates custom CV drafting and cover letter writing. Users create targeted personas (e.g. *Senior Distributed Systems Engineer*, *EU Chancenkarte Relocation*, *Chevening Fellowship*). When queried by organizations via Scoped API keys, the engine autonomously synthesizes an authentic dossier grounded strictly in on-chain verified records.
+- **AI Sovereign Target Advisor (`/dashboard/advisor`):** Autonomous guidance engine monitoring multi-target goals across visas, careers, and scholarships. Evaluates real-time readiness (0-100%) and raises proactive gap alerts (critical blockers, language score boosters, missing tenure records) before applications are submitted.
+
+### E. Scoped Programmable API Key Engine
 - Users never send raw PDFs. Instead, they generate a cryptographically signed, scoped API key with fine-grained access policies:
   - **Category Scoping:** e.g., only `["academics", "finance"]`.
   - **TTL / Expiration:** e.g., 7 days, 14 days, or 30 days.

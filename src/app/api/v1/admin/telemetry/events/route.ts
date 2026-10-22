@@ -93,3 +93,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid telemetry payload", details: err.message }, { status: 400 });
   }
 }
+

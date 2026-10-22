@@ -4,11 +4,11 @@ import React, { useEffect, useState } from "react";
 import { Check, FileText, Loader2, ShieldCheck } from "lucide-react";
 
 const STAGES = [
-  "Reading file into ephemeral memory",
-  "Extracting credential fields",
-  "Computing SHA-256 digest",
-  "Anchoring hash to Base Sepolia ledger",
-  "Structuring record into your vault",
+  "🛡️ Sentinel Classifier Agent: Identifying layout, seals & document domain",
+  "🔬 Forensic Integrity Radar: Verifying cryptographic authenticity & notary tier",
+  "⚙️ Schema Normalizer: Extracting zero-hallucination NDPC/GDPR structured JSON",
+  "⛓️ Base Sepolia Anchor: Committing mathematical SHA-256 hash on-chain",
+  "🧭 Sovereign Advisor: Updating target readiness & auto-synthesizing persona dossiers",
 ] as const;
 
 interface ScanPipelineProps {

@@ -3,6 +3,9 @@ import { ShellNavItem } from "@/components/dashboard/DashboardShell";
 export const NAV_BY_ROLE: Record<string, ShellNavItem[]> = {
   citizen: [
     { id: "overview", label: "Overview", href: "/dashboard" },
+    { id: "profile", label: "Human profile", href: "/dashboard/profile" },
+    { id: "niches", label: "Persona niches", href: "/dashboard/niches" },
+    { id: "advisor", label: "Target advisor", href: "/dashboard/advisor" },
     { id: "documents", label: "Add documents", href: "/dashboard/documents" },
     { id: "vault", label: "Vault", href: "/dashboard/vault" },
     { id: "keys", label: "Scoped keys", href: "/dashboard/keys" },
@@ -48,3 +51,4 @@ export const ROLE_HEADLINES: Record<string, { title: string; sub: string }> = {
     sub: "Manage users, organizations, live telemetry, and runtime configuration from one place.",
   },
 };
+

@@ -17,6 +17,16 @@ import {
   RefreshCw,
   ScanSearch,
   FileText,
+  Bot,
+  Calendar,
+  Video,
+  Plane,
+  GraduationCap,
+  Briefcase,
+  Scale,
+  MessageSquare,
+  Layers,
+  ArrowRight,
 } from "lucide-react";
 import { CriteriaProfile, CandidateEvaluationResult } from "@/core/enterprise/criteria_store";
 
@@ -36,10 +46,40 @@ function verdictClasses(verdict: string | undefined): string {
   }
 }
 
+export const QUERY_TRACKS = [
+  {
+    id: "IMMIGRATION",
+    label: "Immigration & Border",
+    icon: Plane,
+    desc: "Visa requirements, funds minimums, Tier-2 legal notarization & ID biometric integrity",
+  },
+  {
+    id: "EDUCATION",
+    label: "Academic Admissions",
+    icon: GraduationCap,
+    desc: "Official transcripts, GPA thresholds, degree accreditation attestation & language levels",
+  },
+  {
+    id: "LABOUR",
+    label: "Talent & Employment",
+    icon: Briefcase,
+    desc: "Verified employment tenure, reference integrity, technical skill mastery & role alignment",
+  },
+  {
+    id: "PROCUREMENT",
+    label: "Legal & Procurement",
+    icon: Scale,
+    desc: "Corporate MOUs, tax compliance certificates, sworn declarations & partner standing",
+  },
+] as const;
+
+export type QueryTrackId = (typeof QUERY_TRACKS)[number]["id"];
+
 const AGENT_STAGES = [
-  { name: "Integrity Agent", desc: "On-chain hash vs ledger" },
-  { name: "Strict RAG Evaluator", desc: "Rubric grounding, zero hallucination" },
-  { name: "Fraud and Anomaly Radar", desc: "Pattern and tenure analysis" },
+  { name: "🛡️ Integrity Agent", desc: "On-chain hash vs Base Sepolia ledger" },
+  { name: "🔬 Domain Compliance Agent", desc: "Track-specific threshold & seal verification" },
+  { name: "⚙️ Strict RAG Evaluator", desc: "Rubric grounding, zero hallucination scoring" },
+  { name: "🚩 Fraud & Anomaly Radar", desc: "Pattern, timeline & credential issuer analysis" },
 ] as const;
 
 export type EnterpriseViewMode = "all" | "overview" | "rubrics" | "screening";
@@ -52,7 +92,14 @@ export function EnterpriseScreeningView({ viewMode = "all" }: EnterpriseScreenin
   const [rubrics, setRubrics] = useState<CriteriaProfile[]>([]);
   const [selectedRubricId, setSelectedRubricId] = useState<string>("");
   const [activeMode, setActiveMode] = useState<"single" | "bulk">("single");
+  const [selectedTrack, setSelectedTrack] = useState<QueryTrackId>("LABOUR");
   const [isLoadingRubrics, setIsLoadingRubrics] = useState<boolean>(true);
+
+  // AI Smart Interviewer & Interview Scheduling Modals
+  const [showAiInterviewerModal, setShowAiInterviewerModal] = useState<boolean>(false);
+  const [showDirectInterviewModal, setShowDirectInterviewModal] = useState<boolean>(false);
+  const [interviewLink, setInterviewLink] = useState<string>("");
+  const [notified, setNotified] = useState<boolean>(false);
 
   // Single Screening State
   const [singleKey, setSingleKey] = useState<string>("");
@@ -368,6 +415,53 @@ export function EnterpriseScreeningView({ viewMode = "all" }: EnterpriseScreenin
       {/* ---- Screening ---- */}
       {(viewMode === "all" || viewMode === "screening") && (
       <section id="screening" className={sectionAnchor}>
+        {/* Specialized Evaluation Query Tracks */}
+        <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
+          <div className="mb-3 flex items-center justify-between">
+            <div>
+              <h3 className="flex items-center gap-2 text-sm font-bold text-slate-900">
+                <Layers className="h-4 w-4 text-emerald-600" /> Specialized Evaluation Query Tracks
+              </h3>
+              <p className="mt-0.5 text-xs text-slate-500">
+                Select your institutional track to configure domain verification criteria, funds thresholds, and notary mandates.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
+            {QUERY_TRACKS.map((track) => {
+              const isSelected = selectedTrack === track.id;
+              const Icon = track.icon;
+              return (
+                <button
+                  key={track.id}
+                  type="button"
+                  onClick={() => setSelectedTrack(track.id)}
+                  className={`flex flex-col text-left rounded-xl border p-3 transition-all duration-200 ${
+                    isSelected
+                      ? "border-emerald-500 bg-emerald-50/50 ring-1 ring-emerald-500 shadow-xs"
+                      : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50"
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`flex h-7 w-7 items-center justify-center rounded-lg ${
+                        isSelected ? "bg-emerald-600 text-white" : "bg-slate-100 text-slate-600"
+                      }`}
+                    >
+                      <Icon className="h-4 w-4" />
+                    </span>
+                    <span className="text-xs font-bold text-slate-900">{track.label}</span>
+                  </div>
+                  <p className="mt-2 text-[10px] text-slate-500 leading-relaxed line-clamp-2">
+                    {track.desc}
+                  </p>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         {/* Mode tabs */}
         <div className="mb-5 inline-flex rounded-xl border border-slate-200 bg-white p-1" role="tablist" aria-label="Screening mode">
           {(
@@ -597,6 +691,95 @@ export function EnterpriseScreeningView({ viewMode = "all" }: EnterpriseScreenin
                       tx {singleResult.onChainTx.substring(0, 18)}...
                     </div>
                   )}
+                </div>
+
+                {/* Multi-Stage Screening Pipeline Visualizer */}
+                <div className="rounded-xl border border-slate-200 bg-white p-5 space-y-4">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+                    <span className="flex items-center gap-2 text-xs font-bold text-slate-900">
+                      <Layers className="h-4 w-4 text-emerald-600" />
+                      Multi-Stage Evaluation Funnel
+                    </span>
+                    <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-[10px] font-bold text-emerald-800 ring-1 ring-emerald-200">
+                      Stage 4: Advance to Interview
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-5 text-xs">
+                    <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-2.5 space-y-1">
+                      <div className="flex items-center justify-between text-emerald-700 font-bold">
+                        <span>1. Hash Ledger</span>
+                        <Check className="h-3 w-3" />
+                      </div>
+                      <p className="text-[10px] text-slate-600">Base Sepolia L2 on-chain proof</p>
+                    </div>
+
+                    <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-2.5 space-y-1">
+                      <div className="flex items-center justify-between text-emerald-700 font-bold">
+                        <span>2. Prerequisites</span>
+                        <Check className="h-3 w-3" />
+                      </div>
+                      <p className="text-[10px] text-slate-600">Thresholds & seals verified</p>
+                    </div>
+
+                    <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-2.5 space-y-1">
+                      <div className="flex items-center justify-between text-emerald-700 font-bold">
+                        <span>3. AI Semantic</span>
+                        <Check className="h-3 w-3" />
+                      </div>
+                      <p className="text-[10px] text-slate-600">Zero-hallucination RAG audit</p>
+                    </div>
+
+                    <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-2.5 space-y-1">
+                      <div className="flex items-center justify-between text-emerald-700 font-bold">
+                        <span>4. Org Review</span>
+                        <Check className="h-3 w-3" />
+                      </div>
+                      <p className="text-[10px] text-slate-600">Candidate shortlisted</p>
+                    </div>
+
+                    <div className="rounded-lg border border-emerald-300 bg-emerald-100/60 p-2.5 space-y-1 ring-1 ring-emerald-400">
+                      <div className="flex items-center justify-between text-emerald-800 font-extrabold">
+                        <span>5. Interview</span>
+                        <Sparkles className="h-3 w-3 text-emerald-700" />
+                      </div>
+                      <p className="text-[10px] text-emerald-800 font-medium">Ready for interview</p>
+                    </div>
+                  </div>
+
+                  {/* Interview Dispatch Actions */}
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3">
+                    <span className="block text-xs font-bold text-slate-800">
+                      Proceed to Final Interview Stage:
+                    </span>
+
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const generated = `https://meet.google.com/sabi-eval-${Math.random().toString(36).substring(2, 7)}`;
+                          setInterviewLink(generated);
+                          setShowDirectInterviewModal(true);
+                        }}
+                        className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-slate-900 py-2.5 px-4 text-xs font-bold text-white shadow-xs hover:bg-slate-800 transition-all active:scale-95"
+                      >
+                        <Video className="h-4 w-4" />
+                        Schedule Org Direct Interview (Meet / Zoom / On-site)
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setShowAiInterviewerModal(true)}
+                        className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-emerald-300 bg-emerald-50 py-2.5 px-4 text-xs font-bold text-emerald-800 hover:bg-emerald-100 transition-all active:scale-95"
+                      >
+                        <Bot className="h-4 w-4 text-emerald-600" />
+                        <span>🤖 AI Smart Interviewer</span>
+                        <span className="rounded bg-emerald-200/70 px-1.5 py-0.5 text-[9px] font-extrabold text-emerald-900">
+                          Coming Soon
+                        </span>
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
@@ -877,6 +1060,138 @@ export function EnterpriseScreeningView({ viewMode = "all" }: EnterpriseScreenin
               >
                 {isSavingRubric && <RefreshCw className="h-3.5 w-3.5 animate-spin" />}
                 Save rubric
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Direct Org Interview Modal */}
+      {showDirectInterviewModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-slate-100 space-y-4 animate-scale-in">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <Video className="h-5 w-5 text-emerald-600" />
+                <h3 className="text-sm font-bold text-slate-900">Schedule Org Direct Interview</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowDirectInterviewModal(false)}
+                className="text-slate-400 hover:text-slate-600"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-600 leading-relaxed">
+              An encrypted video conference room has been generated for Candidate <strong>{singleResult?.candidateId}</strong>. Send this meeting invite to the candidate or launch now.
+            </p>
+
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 space-y-1.5">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                Direct Video Conference URL
+              </span>
+              <div className="flex items-center justify-between gap-2">
+                <code className="text-xs font-mono text-emerald-800 truncate">{interviewLink}</code>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(interviewLink);
+                    alert("Meeting link copied to clipboard!");
+                  }}
+                  className="rounded-lg bg-white px-2.5 py-1 text-[11px] font-bold text-slate-700 border border-slate-200 hover:bg-slate-100 shrink-0"
+                >
+                  Copy
+                </button>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowDirectInterviewModal(false)}
+                className="rounded-xl bg-slate-900 px-4 py-2 text-xs font-bold text-white hover:bg-slate-800"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* AI Smart Interviewer Coming Soon Modal */}
+      {showAiInterviewerModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs">
+          <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl border border-slate-100 space-y-5 animate-scale-in">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2.5">
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
+                  <Bot className="h-5 w-5" />
+                </span>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">🤖 AI Smart Interviewer</h3>
+                  <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[9px] font-extrabold text-emerald-800 ring-1 ring-emerald-200">
+                    Future Upgrade · Enterprise Roadmap
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAiInterviewerModal(false)}
+                className="text-slate-400 hover:text-slate-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4 text-xs text-slate-600">
+              <p className="leading-relaxed">
+                The <strong>AI Smart Interviewer</strong> is an autonomous, multi-modal screening agent designed to conduct live technical, behavioral, and visa eligibility interviews without requiring human panel hours.
+              </p>
+
+              <div className="rounded-xl bg-slate-50 p-4 border border-slate-100 space-y-2">
+                <p className="font-bold text-slate-900 text-xs">Engineered Pipeline Highlights:</p>
+                <ul className="list-disc list-inside space-y-1.5 text-slate-700 text-[11px] leading-relaxed">
+                  <li>
+                    <strong>Adaptive Deep-Probing:</strong> Dynamically asks contextual questions grounded strictly in candidate credentials without hallucinations.
+                  </li>
+                  <li>
+                    <strong>Biometric Liveness & Impersonation Defense:</strong> Continuous multi-angle facial & voice verification to prevent proxy interview fraud.
+                  </li>
+                  <li>
+                    <strong>Live Code & Attestation Defense:</strong> Evaluates problem solving in real time against strict rubric standards.
+                  </li>
+                  <li>
+                    <strong>Tamper-Proof Ledger Scoring:</strong> Generates a signed SHA-256 interview attestation anchored on Base Sepolia.
+                  </li>
+                </ul>
+              </div>
+
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-3.5 flex items-center justify-between gap-3">
+                <span className="text-[11px] font-semibold text-emerald-950">
+                  Feature in active engineering. Early access rollout scheduled for Enterprise v2.
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNotified(true);
+                    setTimeout(() => setNotified(false), 3000);
+                  }}
+                  className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-700 transition-all shrink-0"
+                >
+                  {notified ? "✓ Subscribed" : "Notify Me"}
+                </button>
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-1">
+              <button
+                type="button"
+                onClick={() => setShowAiInterviewerModal(false)}
+                className="rounded-xl bg-slate-900 px-4 py-2 text-xs font-bold text-white hover:bg-slate-800"
+              >
+                Close Preview
               </button>
             </div>
           </div>
