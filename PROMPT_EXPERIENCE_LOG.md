@@ -2318,3 +2318,33 @@
   - `node tests/test_storage_quota_and_skills.mjs`: 8/8 PASSED (100%).
   - `node tests/test_full_suite.mjs`: 8/8 PASSED (100%).
 - **Note:** Committed without Copilot trailer per user instruction.
+
+---
+
+## Entry #067 — Honeypot Autofill Immunity, Google Search Console Verification & Drive Scopes Hardening
+- **User Prompt:**
+  > "this only link works for auth 'https://sabi-vault.vercel.app/dashboard/admin' this one shows bot 'https://sabiprofile.com/dashboard/admin' bot triggered,
+  > 2. i am facing verification issues with google auth too for drive."
+- **Root Cause Analysis:**
+  1. **Bot Trap Triggered on Custom Domain:** On `https://sabiprofile.com/login`, Google Chrome and password managers have saved credentials. Chrome's autofill heuristic matched the input field named `security_auth_check_website` (matching keyword `website`) and automatically injected `https://sabiprofile.com` into the invisible honeypot. Server-side `verifyBotDefense()` unconditionally treated any non-empty honeypot as a malicious bot, locking out legitimate human users using password autofill.
+  2. **Google Cloud Branding Verification Warning:** In Google Cloud Console (`console.cloud.google.com/auth/branding`), the user submitted `https://sabiprofile.com` with an uploaded App Logo. Google's automated check failed with: *"The website of your homepage URL 'https://sabiprofile.com' is not registered to you. Verify ownership of your home page, then wait 24 hours before retrying to allow our systems to update."* This requires domain ownership verification via Google Search Console.
+  3. **Google Drive CASA Restricted Scope Warning:** `/api/v1/integrations/[provider]/connect/route.ts` was requesting `https://www.googleapis.com/auth/drive.readonly` in addition to `drive.file`. Google categorizes `drive.readonly` as a Restricted Scope requiring CASA Tier 2/3 third-party audits, whereas `drive.file` is Non-Sensitive and requires zero third-party audit.
+- **Remediations Implemented:**
+  1. **Autofill-Immune Honeypots (`LoginForm.tsx`, `organization/page.tsx`):**
+     - Renamed honeypots to `sabi_aux_chk` and `sabi_org_aux_chk` (removing `website` and `trap` triggers).
+     - Applied `style={{ display: "none" }}` (Chromium's form autofill engine explicitly excludes `display: none` elements).
+     - Added `data-lpignore="true"`, `data-1p-ignore="true"`, `data-form-type="other"`, and `autoComplete="new-password"`.
+  2. **Intelligent Autofill Disambiguation (`src/lib/security/bot_defense.ts`):**
+     - Updated `verifyBotDefense()` to detect browser autofill artifacts: if the honeypot contains the origin domain (`sabiprofile.com`, `vercel.app`, `localhost`) or the user's submitted email, and the request exhibits human telemetry (`interactionTimeMs >= 350`), it is forgiven as an autofill collision.
+     - Malicious bots (spam payloads, external links, superhuman speed) continue to be strictly rejected.
+  3. **Google Search Console Verification (`src/app/layout.tsx`, `platform_config.ts`):**
+     - Added `auth.google_site_verification` configuration key.
+     - Wired dynamic `<meta name="google-site-verification" content="..." />` into Next.js `generateMetadata()` via `NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION` or Super Admin runtime config.
+  4. **Scoped Google Drive to Non-Sensitive `drive.file` (`connect/route.ts`):**
+     - Defaulted OAuth scope to `https://www.googleapis.com/auth/drive.file` (access to SabiProfile vault folder and uploaded files only), bypassing Google's restricted scope CASA Tier-3 audits.
+- **Validation:**
+  - `tests/test_bot_autofill_and_google_verification.mjs`: 5/5 passed (100%).
+  - `tests/test_enterprise_security.mjs`: 6/6 passed (100%).
+  - `tests/test_camera_upload_telemetry.mjs`: 6/6 passed (100%).
+  - `npx tsc --noEmit`: 0 errors.
+- **Note:** Committed without Copilot trailer per user instruction.

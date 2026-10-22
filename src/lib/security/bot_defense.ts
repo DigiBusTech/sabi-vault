@@ -81,19 +81,38 @@ export interface BotDefensePayload {
   mouseMovements?: number; // Count of mouse/touch moves recorded
   keystrokes?: number; // Count of keystrokes
   interactionTimeMs?: number; // Active interaction duration
+  userEmail?: string; // Optional user email to detect browser autofill duplication
+  currentHost?: string; // Optional request host to detect browser URL autofill
 }
 
 /**
  * Validate anti-bot honeypot and behavioral interaction indicators.
  */
 export function verifyBotDefense(payload: BotDefensePayload): BotVerificationResult {
-  // 1. Invisible Honeypot check: if filled, guaranteed bot
+  // 1. Invisible Honeypot check:
+  // If filled, check whether it is a legitimate browser autofill artifact (e.g. Chrome / Password Managers
+  // autofilling the website domain or user email into hidden fields) or an actual automated scraper bot.
   if (payload.honeypot && payload.honeypot.trim().length > 0) {
-    return {
-      isBot: true,
-      reason: "Bot trap triggered (honeypot field filled).",
-      score: 0.0,
-    };
+    const rawVal = payload.honeypot.trim().toLowerCase();
+    const interactionTime = payload.interactionTimeMs ?? 0;
+
+    const isAutofillArtifact =
+      interactionTime >= 350 &&
+      (
+        (payload.userEmail && rawVal.includes(payload.userEmail.toLowerCase())) ||
+        rawVal.includes("sabiprofile.com") ||
+        rawVal.includes("vercel.app") ||
+        rawVal.includes("localhost") ||
+        (payload.currentHost && rawVal.includes(payload.currentHost.toLowerCase()))
+      );
+
+    if (!isAutofillArtifact) {
+      return {
+        isBot: true,
+        reason: "Bot trap triggered (honeypot field filled).",
+        score: 0.0,
+      };
+    }
   }
 
   // 2. Interaction time check: superhuman submission (< 350ms)

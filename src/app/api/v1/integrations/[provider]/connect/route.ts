@@ -69,10 +69,15 @@ export async function GET(
     authorizeUrl.searchParams.set("client_id", clientId);
     authorizeUrl.searchParams.set("redirect_uri", redirectUri);
     authorizeUrl.searchParams.set("response_type", "code");
-    authorizeUrl.searchParams.set(
-      "scope",
-      "https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.readonly"
-    );
+    // Google Drive Scopes:
+    // Default to non-sensitive 'https://www.googleapis.com/auth/drive.file' to bypass
+    // Google's restricted-scope CASA Tier 3 security audit and unverified app blockers.
+    const includeReadonly = (await getConfigValue("integrations.google_drive_include_readonly")) === "true";
+    const driveScope = includeReadonly
+      ? "https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.readonly"
+      : "https://www.googleapis.com/auth/drive.file";
+
+    authorizeUrl.searchParams.set("scope", driveScope);
     authorizeUrl.searchParams.set("access_type", "offline");
     authorizeUrl.searchParams.set("prompt", "consent");
     authorizeUrl.searchParams.set("state", auth.user.userId);

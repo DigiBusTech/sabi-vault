@@ -68,6 +68,8 @@ export async function POST(req: NextRequest) {
       mouseMovements,
       keystrokes,
       interactionTimeMs,
+      userEmail: email,
+      currentHost: req.headers.get("host") || undefined,
     });
     if (botCheck.isBot) {
       recordIpFailure(ipAddress);

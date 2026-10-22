@@ -195,24 +195,19 @@ export default function OrganizationLoginPage() {
             onTouchMove={() => (mouseMovesRef.current += 1)}
             onKeyDown={() => (keystrokesRef.current += 1)}
           >
-            {/* Invisible Bot Trap */}
+            {/* Invisible Bot Trap (Hardened against browser autofill false-positives) */}
             <input
               type="text"
-              name="security_org_website_trap"
+              name="sabi_org_aux_chk"
               value={honeypot}
               onChange={(e) => setHoneypot(e.target.value)}
               tabIndex={-1}
-              autoComplete="off"
+              autoComplete="new-password"
               aria-hidden="true"
-              style={{
-                opacity: 0,
-                position: "absolute",
-                top: 0,
-                left: "-9999px",
-                height: "1px",
-                width: "1px",
-                pointerEvents: "none",
-              }}
+              data-lpignore="true"
+              data-1p-ignore="true"
+              data-form-type="other"
+              style={{ display: "none" }}
             />
 
             <label className="block text-sm font-semibold text-slate-800">

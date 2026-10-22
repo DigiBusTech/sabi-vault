@@ -3,6 +3,7 @@ import "./globals.css";
 import { Preloader } from "@/components/Preloader";
 import { PwaRegister } from "@/components/pwa/PwaRegister";
 import { getDynamicSEO } from "@/lib/seo";
+import { getConfigValueSync } from "@/core/config/platform_config";
 
 export const viewport: Viewport = {
   themeColor: "#059669",
@@ -15,8 +16,15 @@ export const viewport: Viewport = {
 export async function generateMetadata(): Promise<Metadata> {
   const seo = await getDynamicSEO();
 
+  const googleVerification =
+    getConfigValueSync("auth.google_site_verification") ||
+    process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION ||
+    process.env.GOOGLE_SITE_VERIFICATION ||
+    undefined;
+
   return {
     metadataBase: new URL(seo.siteUrl),
+    verification: googleVerification ? { google: googleVerification } : undefined,
     title: {
       default: seo.metaTitle,
       template: "%s | SabiProfile",

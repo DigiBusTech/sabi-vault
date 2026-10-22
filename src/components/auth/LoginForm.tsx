@@ -486,24 +486,19 @@ export function LoginForm() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-5" noValidate>
-        {/* Invisible Bot Honeypot */}
+        {/* Invisible Bot Honeypot (Hardened against browser autofill false-positives) */}
         <input
           type="text"
-          name="security_auth_check_website"
+          name="sabi_aux_chk"
           value={honeypot}
           onChange={(e) => setHoneypot(e.target.value)}
           tabIndex={-1}
-          autoComplete="off"
+          autoComplete="new-password"
           aria-hidden="true"
-          style={{
-            opacity: 0,
-            position: "absolute",
-            top: 0,
-            left: "-9999px",
-            height: "1px",
-            width: "1px",
-            pointerEvents: "none",
-          }}
+          data-lpignore="true"
+          data-1p-ignore="true"
+          data-form-type="other"
+          style={{ display: "none" }}
         />
 
         {/* Username/Email with Granular Autofill Control */}

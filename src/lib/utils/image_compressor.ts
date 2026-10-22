@@ -154,3 +154,4 @@ export async function optimizeDocumentForUpload(file: File): Promise<Compression
     reader.readAsDataURL(file);
   });
 }
+

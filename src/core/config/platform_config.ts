@@ -344,6 +344,15 @@ export const CONFIG_REGISTRY: ConfigKeyMeta[] = [
     envVar: "NEXT_PUBLIC_GOOGLE_REDIRECT_URI",
     defaultValue: "https://sabiprofile.com/auth/callback",
   },
+  {
+    key: "auth.google_site_verification",
+    label: "Google Site Verification Token",
+    description: "Verification token from Google Search Console (e.g. google-site-verification meta tag content) to prove domain ownership for sabiprofile.com.",
+    category: "auth",
+    sensitive: false,
+    envVar: "NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION",
+    defaultValue: "",
+  },
 ];
 
 const REGISTRY_BY_KEY = new Map(CONFIG_REGISTRY.map((m) => [m.key, m]));
