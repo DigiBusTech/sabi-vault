@@ -42,9 +42,12 @@ export async function GET(
 
   if (provider === "google_drive") {
     const clientId = await getConfigValue("integrations.google_drive_client_id");
+    const rawRedirectUri = await getConfigValue("integrations.google_drive_redirect_uri");
+    // Defensive guard: if user accidentally pasted an auth scope (e.g. googleapis.com/auth/...) or left blank, use origin callback
     const redirectUri =
-      (await getConfigValue("integrations.google_drive_redirect_uri")) ||
-      `${req.nextUrl.origin}/api/v1/integrations/google_drive/callback`;
+      (rawRedirectUri && !rawRedirectUri.includes("googleapis.com/auth/") && rawRedirectUri.startsWith("http"))
+        ? rawRedirectUri
+        : `${req.nextUrl.origin}/api/v1/integrations/google_drive/callback`;
 
     if (!clientId) {
       return NextResponse.json(
@@ -79,9 +82,11 @@ export async function GET(
 
   // dropbox
   const clientId = await getConfigValue("integrations.dropbox_client_id");
+  const rawDropboxUri = await getConfigValue("integrations.dropbox_redirect_uri");
   const redirectUri =
-    (await getConfigValue("integrations.dropbox_redirect_uri")) ||
-    `${req.nextUrl.origin}/api/v1/integrations/dropbox/callback`;
+    (rawDropboxUri && rawDropboxUri.startsWith("http") && !rawDropboxUri.includes("dropbox.com/oauth"))
+      ? rawDropboxUri
+      : `${req.nextUrl.origin}/api/v1/integrations/dropbox/callback`;
 
   if (!clientId) {
     return NextResponse.json(

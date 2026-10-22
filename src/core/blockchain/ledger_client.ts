@@ -57,8 +57,8 @@ export class BlockchainLedgerClient {
       "0x0987654321098765432109876543210987654321"
   ) {
     this.rpcUrl = rpcUrl;
-    this.registryAddress = registryAddress;
-    this.splitterAddress = splitterAddress;
+    this.registryAddress = (registryAddress || "").trim().toLowerCase();
+    this.splitterAddress = (splitterAddress || "").trim().toLowerCase();
 
     try {
       this.provider = new ethers.JsonRpcProvider(this.rpcUrl);
