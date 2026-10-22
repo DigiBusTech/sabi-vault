@@ -57,7 +57,7 @@ interface ConfigEntry {
   key: string;
   label: string;
   description: string;
-  category: "security" | "blockchain" | "ai" | "integrations" | "billing" | "nodes" | "seo";
+  category: "security" | "blockchain" | "ai" | "integrations" | "billing" | "nodes" | "seo" | "auth";
   sensitive: boolean;
   maskedValue: string;
   source: "dashboard" | "environment" | "default" | "unset";
@@ -68,6 +68,7 @@ interface ConfigEntry {
 const ROLES = ["citizen", "enterprise_admin", "notary", "govt_auditor", "super_admin"] as const;
 
 const CATEGORY_META: Record<string, { label: string; icon: React.ComponentType<{ className?: string }> }> = {
+  auth: { label: "Google Auth & SSO", icon: KeyRound },
   security: { label: "Security and signing", icon: Shield },
   blockchain: { label: "Blockchain ledger", icon: Landmark },
   ai: { label: "AI gateways", icon: Activity },
@@ -349,7 +350,7 @@ export function SuperAdminView({ viewMode = "all" }: SuperAdminViewProps = {}) {
   };
 
   const sectionAnchor = "scroll-mt-24 lg:scroll-mt-8";
-  const configCategories = ["security", "blockchain", "ai", "integrations", "billing", "nodes", "seo"];
+  const configCategories = ["auth", "security", "blockchain", "ai", "integrations", "billing", "nodes", "seo"];
   const summary = telemetry?.telemetry || {};
   const revenue = telemetry?.revenueModel || {};
 

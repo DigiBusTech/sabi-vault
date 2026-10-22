@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authenticateUser } from "@/lib/auth/auth_guard";
-import { VisionExtractor } from "@/core/parser/vision_extractor";
+import { VisionExtractor, VisionExtractionUnavailableError } from "@/core/parser/vision_extractor";
 import { computeSha256 } from "@/core/crypto/hasher";
 import { BlockchainLedgerClient } from "@/core/blockchain/ledger_client";
 import { globalUserStore } from "@/core/vault/user_store";
@@ -98,15 +98,31 @@ export async function POST(req: NextRequest) {
       const fileBuffer = Buffer.from(fileBase64, "base64");
       const sha256Hash = computeSha256(fileBuffer);
 
-      // Run Gemini Vision Extractor
+      // Run Gemini Vision Extractor (FAIL CLOSED: no extraction, no preview, no commit)
       const extractor = new VisionExtractor();
       const categoryHint = category === "auto_detect" ? undefined : (category as VaultCategory | undefined);
-      const result = await extractor.extractDocumentFields(
-        fileBase64,
-        mimeType,
-        categoryHint,
-        fileName
-      );
+      let result;
+      try {
+        result = await extractor.extractDocumentFields(
+          fileBase64,
+          mimeType,
+          categoryHint,
+          fileName
+        );
+      } catch (err: any) {
+        // Zero ephemeral buffer before bailing out
+        fileBuffer.fill(0);
+        if (err instanceof VisionExtractionUnavailableError || err?.code === "VISION_EXTRACTION_UNAVAILABLE") {
+          return NextResponse.json(
+            {
+              error: "AI extraction service is currently unavailable. No data was extracted, stored, or anchored. Please retry shortly.",
+              code: "VISION_EXTRACTION_UNAVAILABLE",
+            },
+            { status: 503 }
+          );
+        }
+        throw err;
+      }
 
       // Clean preview cache & store
       cleanExpiredPreviews();
@@ -150,6 +166,14 @@ export async function POST(req: NextRequest) {
     }
 
     const cachedPreview = scanId ? scanPreviewCache.get(scanId) : undefined;
+
+    // Ownership binding: a scan preview can only be confirmed by the user who created it
+    if (cachedPreview && cachedPreview.userId !== targetUserId) {
+      return NextResponse.json(
+        { error: "Scan preview does not belong to the authenticated user" },
+        { status: 403 }
+      );
+    }
     const effectiveFileName = fileName || cachedPreview?.fileName || "scanned_credential.jpg";
     const effectiveCategory: VaultCategory =
       (category as VaultCategory) || cachedPreview?.category || "portfolio";

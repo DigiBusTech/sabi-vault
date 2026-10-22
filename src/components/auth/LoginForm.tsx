@@ -17,6 +17,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { PasswordInput } from "@/components/auth/PasswordInput";
+import { GoogleAuthButton } from "@/components/auth/GoogleAuthButton";
 import { getDeviceFingerprint } from "@/lib/security/fingerprint.client";
 import { setStoredAccessToken } from "@/lib/security/silent_refresh.client";
 import { evaluatePasswordComplexity, PasswordValidationResult } from "@/lib/security/password";
@@ -466,7 +467,25 @@ export function LoginForm() {
           </div>
         </div>
       ) : (
-        <form onSubmit={handleSubmit} className="mt-8 space-y-5" noValidate>
+        <div className="mt-8 space-y-6">
+          {mode !== "forgot" && (
+            <div className="space-y-4">
+              <GoogleAuthButton
+                mode={mode === "signup" ? "signup" : "signin"}
+                role="citizen"
+                next="/dashboard"
+              />
+
+              <div className="relative flex items-center justify-center">
+                <div className="w-full border-t border-slate-200" />
+                <span className="relative bg-white px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                  Or continue with email
+                </span>
+              </div>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-5" noValidate>
         {/* Invisible Bot Honeypot */}
         <input
           type="text"
@@ -623,6 +642,7 @@ export function LoginForm() {
             : "Send reset link"}
         </button>
       </form>
+      </div>
       )}
 
       {!deviceChallenge && (

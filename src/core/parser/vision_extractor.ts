@@ -8,7 +8,7 @@
  */
 
 import { getConfigValueSync } from "@/core/config/platform_config";
-import { VaultCategory, VerificationTier } from "@/types/vault";
+import { VaultCategory, VaultCategoryEnum, VerificationTier } from "@/types/vault";
 
 export interface VisionExtractionResult {
   extractedFields: Record<string, any>;
@@ -17,6 +17,20 @@ export interface VisionExtractionResult {
   confidence: number;
   rawTextSnippet: string;
   extractedAt: string;
+}
+
+/**
+ * Raised when the vision AI backend is unavailable or returns unusable output.
+ * The extractor FAILS CLOSED: it never fabricates credential fields, never
+ * invents identity data, and never assigns a verification tier to data that
+ * was not genuinely extracted by the AI from the actual document.
+ */
+export class VisionExtractionUnavailableError extends Error {
+  public readonly code = "VISION_EXTRACTION_UNAVAILABLE";
+  constructor(message: string) {
+    super(message);
+    this.name = "VisionExtractionUnavailableError";
+  }
 }
 
 const CATEGORY_SCHEMAS: Record<VaultCategory, string> = {
@@ -165,7 +179,9 @@ export class VisionExtractor {
       : mimeType || "image/jpeg";
 
     if (!this.apiKey) {
-      return this.generateDeterministicFallback(fileName || "scanned_doc", categoryHint);
+      throw new VisionExtractionUnavailableError(
+        "Gemini Vision API key is not configured; cannot perform zero-hallucination extraction."
+      );
     }
 
     const categoryRule = categoryHint
@@ -230,27 +246,40 @@ Return a single JSON object with the exact keys:
         break;
       }
       if (!response) {
-        return this.generateDeterministicFallback(fileName || "scanned_doc", categoryHint);
+        throw new VisionExtractionUnavailableError(
+          "No Gemini vision model endpoint was reachable for document extraction."
+        );
       }
 
       if (!response.ok) {
         const errText = await response.text();
         console.warn(`[VisionExtractor] Gemini API error (${response.status}): ${errText}`);
-        return this.generateDeterministicFallback(fileName || "scanned_doc", categoryHint);
+        throw new VisionExtractionUnavailableError(
+          `Gemini Vision API returned ${response.status}; extraction aborted without fallback data.`
+        );
       }
 
       const json = await response.json();
       const contentText = json.candidates?.[0]?.content?.parts?.[0]?.text;
       if (!contentText) {
-        return this.generateDeterministicFallback(fileName || "scanned_doc", categoryHint);
+        throw new VisionExtractionUnavailableError(
+          "Gemini Vision returned an empty extraction payload."
+        );
       }
 
       const parsed = JSON.parse(contentText);
-      const category: VaultCategory = parsed.inferredCategory || categoryHint || "portfolio";
-      const tier =
-        category === "academics" || category === "identification" || category === "legal"
-          ? VerificationTier.TIER_2_AUTHENTICATED_LEGALIZED
-          : VerificationTier.TIER_1_STANDARD_HASHED;
+
+      // The inferred category is derived from untrusted document content via an
+      // LLM. Strictly allowlist it against the VaultCategory enum before use.
+      const categoryParse = VaultCategoryEnum.safeParse(parsed.inferredCategory);
+      const category: VaultCategory = categoryParse.success
+        ? categoryParse.data
+        : categoryHint || "portfolio";
+
+      // SECURITY INVARIANT: AI/heuristic classification can NEVER grant Tier-2.
+      // Tier-2 (Authenticated/Legalized) is only assignable by the notary /
+      // institutional attestation flow. AI extraction always lands at Tier-1.
+      const tier = VerificationTier.TIER_1_STANDARD_HASHED;
 
       return {
         extractedFields: parsed.extractedFields || {},
@@ -261,147 +290,13 @@ Return a single JSON object with the exact keys:
         extractedAt: new Date().toISOString(),
       };
     } catch (err: any) {
-      console.warn("[VisionExtractor] Gemini parsing failed, using deterministic fallback:", err.message);
-      return this.generateDeterministicFallback(fileName || "scanned_doc", categoryHint);
-    }
-  }
-
-  /**
-   * Deterministic extraction fallback when AI API key is pending or network is offline.
-   */
-  private generateDeterministicFallback(
-    fileName: string,
-    categoryHint?: VaultCategory
-  ): VisionExtractionResult {
-    const lower = fileName.toLowerCase();
-    let category: VaultCategory = categoryHint || "portfolio";
-
-    if (!categoryHint) {
-      if (lower.includes("passport") || lower.includes("nin") || lower.includes("identity") || lower.includes("license") || lower.includes("voter") || lower.includes("id_card") || lower.includes("photo")) {
-        category = "identification";
-      } else if (lower.includes("mou") || lower.includes("affidavit") || lower.includes("contract") || lower.includes("agreement") || lower.includes("deed") || lower.includes("court") || lower.includes("power_of_attorney") || lower.includes("sworn")) {
-        category = "legal";
-      } else if (lower.includes("receipt") || lower.includes("invoice") || lower.includes("bill") || lower.includes("tuition") || lower.includes("payment")) {
-        category = "receipts";
-      } else if (lower.includes("bank") || lower.includes("statement") || lower.includes("tax") || lower.includes("salary") || lower.includes("balance")) {
-        category = "finance";
-      } else if (lower.includes("degree") || lower.includes("transcript") || lower.includes("diploma")) {
-        category = "academics";
-      } else if (lower.includes("cert") || lower.includes("aws") || lower.includes("license")) {
-        category = "certifications";
-      } else if (lower.includes("cv") || lower.includes("resume") || lower.includes("employment")) {
-        category = "experience";
-      } else if (lower.includes("award") || lower.includes("grant") || lower.includes("prize")) {
-        category = "achievements";
+      if (err instanceof VisionExtractionUnavailableError) {
+        throw err;
       }
+      console.warn("[VisionExtractor] Gemini extraction failed:", err.message);
+      throw new VisionExtractionUnavailableError(
+        `Document extraction failed: ${err.message}`
+      );
     }
-
-    const tier =
-      category === "academics" || category === "identification" || category === "legal"
-        ? VerificationTier.TIER_2_AUTHENTICATED_LEGALIZED
-        : VerificationTier.TIER_1_STANDARD_HASHED;
-
-    const mockFields: Record<VaultCategory, Record<string, any>> = {
-      identification: {
-        idType: "international_passport",
-        documentNumber: "A10984122",
-        fullName: "Verified Citizen",
-        nationality: "Nigerian",
-        issuingAuthority: "Nigeria Immigration Service",
-        issueDate: "2023-01-10",
-        expiryDate: "2033-01-09",
-        mrzCode: "P<NGROKAFOR<<CHINWE<<<<<<<<<<<<<<<<<<<<<<<<<<\nA109841220NGA9605158F3301098<<<<<<<<<<<<<<02",
-        summary: "Verified high-security biometric international passport.",
-      },
-      legal: {
-        instrumentType: "affidavit",
-        title: "Sworn Legal Declaration & Attested Instrument",
-        partiesInvolved: ["Verified Citizen", "High Court Notary Division"],
-        executionDate: "2023-05-18",
-        jurisdiction: "Federal Republic of Nigeria",
-        notarized: true,
-        notarySealReference: "NOTARY-PUB-2023-7749",
-        summary: "Notarized sworn affidavit and legally authenticated declaration.",
-      },
-      receipts: {
-        receiptNumber: "REC-2026-88194",
-        vendorOrIssuer: "Federal Technology Institute / Bursary",
-        totalAmount: 1250.0,
-        currency: "USD",
-        transactionDate: "2026-03-15",
-        descriptionOrItems: "Professional Equipment & Laboratory Certification License",
-        paymentMethod: "Electronic Wire Transfer",
-        summary: "Authentic financial purchase receipt and transaction record.",
-      },
-      finance: {
-        institutionName: "Verified Financial Institution",
-        currency: "NGN",
-        currentLiquidBalance: 2450000.0,
-        averageThreeMonthBalance: 2180000.0,
-        statementPeriod: { from: "2026-01-01", to: "2026-03-31" },
-        accountHolderName: "Verified Citizen",
-        summary: "Verified financial account statement and proof of liquid funds.",
-      },
-      academics: {
-        institution: "Federal University / Accredited Institution",
-        degreeType: "BSc",
-        fieldOfStudy: "Computer Engineering",
-        graduationYear: 2024,
-        gpa: 4.62,
-        maxGpa: 5.0,
-        honors: "First Class Honours",
-        isNotarized: true,
-        summary: "Accredited Bachelor of Science degree certificate.",
-      },
-      certifications: {
-        title: "Professional Cloud Architect / Security Attestation",
-        issuingOrganization: "Global Accreditation Board",
-        issueDate: "2025-06-15",
-        expiryDate: "2028-06-15",
-        credentialId: "SABI-CERT-884920",
-        verificationUrl: "https://verify.example.org/SABI-CERT-884920",
-        summary: "Verified technical accreditation credential.",
-      },
-      experience: {
-        company: "Apex Tech Innovations Ltd",
-        jobTitle: "Senior Systems Engineer",
-        employmentType: "Full-time",
-        startDate: "2023-02-01",
-        endDate: null,
-        isCurrent: true,
-        location: "Lagos, Nigeria",
-        responsibilities: [
-          "Architected sovereign data pipelines adhering to NDPC protocols",
-          "Engineered multi-agent verification services",
-        ],
-        summary: "Verified employment record with tenure and title attestation.",
-      },
-      achievements: {
-        title: "National FinTech Innovation Grant Award",
-        issuer: "National Technology Development Agency",
-        date: "2025-11-20",
-        recipientName: "Verified Citizen",
-        grantAmount: 5000000,
-        description: "Awarded top honor for sovereign identity infrastructure design.",
-        summary: "Recognized national achievement and funding grant.",
-      },
-      portfolio: {
-        headline: "Decentralized Systems Architect & Full-Stack Engineer",
-        bio: "Specializing in sovereign identity architectures, cryptography, and multi-agent AI verification pipelines.",
-        fullName: "Verified Citizen",
-        primarySkills: ["TypeScript", "Solidity", "Next.js", "Cryptographic Verification"],
-        summary: "Comprehensive professional portfolio attestation.",
-      },
-    };
-
-    return {
-      extractedFields: mockFields[category] || {},
-      inferredCategory: category,
-      tier,
-      confidence: 0.94,
-      rawTextSnippet: `Verified document scan: ${fileName}. Authenticated credential data extracted with cryptographic SHA-256 integrity guarantee.`,
-      extractedAt: new Date().toISOString(),
-    };
   }
 }
-

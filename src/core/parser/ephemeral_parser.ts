@@ -49,11 +49,11 @@ export class EphemeralDocumentParser {
       // 4. Structure data into target JSON schema via Multi-LLM Gateway
       const structuredData = await this.structureTextToJson(extractedText, category, fileName);
 
-      // 5. Determine default verification tier (Tier 1 standard, Tier 2 for academics/legal/identity)
-      const tier =
-        category === "academics" || category === "identification" || category === "legal"
-          ? VerificationTier.TIER_2_AUTHENTICATED_LEGALIZED
-          : VerificationTier.TIER_1_STANDARD_HASHED;
+      // 5. SECURITY INVARIANT: keyword/AI classification NEVER grants Tier-2.
+      // All heuristic extractions are Tier-1 Standard Hashed. Tier-2
+      // (Authenticated/Legalized) requires the notary / institutional
+      // attestation flow with a human or institutional trust anchor.
+      const tier = VerificationTier.TIER_1_STANDARD_HASHED;
 
       return {
         documentName: fileName,

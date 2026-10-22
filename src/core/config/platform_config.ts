@@ -18,7 +18,7 @@ import { createAdminSupabaseClient } from "@/lib/supabase/admin";
  * secret ever needs to live outside the dashboard.
  */
 
-export type ConfigCategory = "security" | "blockchain" | "ai" | "integrations" | "billing" | "nodes" | "seo";
+export type ConfigCategory = "security" | "blockchain" | "ai" | "integrations" | "billing" | "nodes" | "seo" | "auth";
 
 export interface ConfigKeyMeta {
   key: string;
@@ -307,6 +307,42 @@ export const CONFIG_REGISTRY: ConfigKeyMeta[] = [
     category: "seo",
     sensitive: false,
     defaultValue: "@SabiProfile",
+  },
+
+  // --- Authentication & Google SSO ---
+  {
+    key: "auth.google_oauth_enabled",
+    label: "Google Fast Auth Enabled",
+    description: "Enables one-click 'Continue with Google' fast sign-up and sign-in for citizens and organizations.",
+    category: "auth",
+    sensitive: false,
+    envVar: "GOOGLE_OAUTH_ENABLED",
+    defaultValue: "true",
+  },
+  {
+    key: "auth.google_client_id",
+    label: "Google Auth Client ID",
+    description: "OAuth 2.0 Web Client ID registered in Google Cloud Console for User Authentication and Supabase Auth.",
+    category: "auth",
+    sensitive: false,
+    envVar: "GOOGLE_CLIENT_ID",
+  },
+  {
+    key: "auth.google_client_secret",
+    label: "Google Auth Client Secret",
+    description: "OAuth 2.0 Client Secret for Google Social Login and fast token exchange.",
+    category: "auth",
+    sensitive: true,
+    envVar: "GOOGLE_CLIENT_SECRET",
+  },
+  {
+    key: "auth.google_redirect_uri",
+    label: "Google Auth Authorized Redirect URI",
+    description: "OAuth redirect URI to whitelist in Google Cloud Console Credentials (e.g. https://sabiprofile.com/auth/callback).",
+    category: "auth",
+    sensitive: false,
+    envVar: "NEXT_PUBLIC_GOOGLE_REDIRECT_URI",
+    defaultValue: "https://sabiprofile.com/auth/callback",
   },
 ];
 

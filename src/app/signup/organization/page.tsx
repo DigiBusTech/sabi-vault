@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { PasswordInput } from "@/components/auth/PasswordInput";
+import { GoogleAuthButton } from "@/components/auth/GoogleAuthButton";
 import { evaluatePasswordComplexity } from "@/lib/security/password";
 
 const inputClasses =
@@ -263,7 +264,22 @@ function OrganizationSignupForm() {
         </div>
 
         {phase === "account" && (
-          <>
+          <div className="space-y-5 pt-2">
+            <div className="space-y-4">
+              <GoogleAuthButton
+                mode="signup"
+                role="enterprise_admin"
+                next="/signup/organization"
+              />
+
+              <div className="relative flex items-center justify-center">
+                <div className="w-full border-t border-slate-200" />
+                <span className="relative bg-white px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                  Or register with work email
+                </span>
+              </div>
+            </div>
+
             <label className="block text-sm font-semibold text-slate-800">
               Work email
               <input
@@ -342,7 +358,7 @@ function OrganizationSignupForm() {
               </div>
             )}
 
-          </>
+          </div>
         )}
 
         {error && (
