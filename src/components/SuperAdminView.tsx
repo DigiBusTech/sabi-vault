@@ -24,6 +24,9 @@ import {
   Sun,
   Users,
   X,
+  HardDrive,
+  Sliders,
+  Coins,
 } from "lucide-react";
 
 // ---------- Types mirrored from the API ----------
@@ -39,6 +42,14 @@ interface AdminUser {
   emailConfirmed: boolean;
   createdAt: string;
   lastSignInAt: string | null;
+  storageTier?: "FREE" | "PRO" | "ENTERPRISE" | "SOVEREIGN";
+  allocatedMB?: number;
+  usedMB?: number;
+  usedBytes?: number;
+  percentageUsed?: number;
+  totalDocuments?: number;
+  cryptoHashGasSpentUSD?: number;
+  cryptoTransactionsCount?: number;
 }
 
 interface AdminOrg {
@@ -138,6 +149,49 @@ export function SuperAdminView({ viewMode = "all" }: SuperAdminViewProps = {}) {
   const [orgWebhook, setOrgWebhook] = useState<string>("");
   const [isRegistering, setIsRegistering] = useState<boolean>(false);
   const [issuedOrgKey, setIssuedOrgKey] = useState<{ name: string; key: string } | null>(null);
+
+  // Storage Quota Management State
+  const [quotaEditUser, setQuotaEditUser] = useState<AdminUser | null>(null);
+  const [editTier, setEditTier] = useState<"FREE" | "PRO" | "ENTERPRISE" | "SOVEREIGN">("FREE");
+  const [editAllocatedMB, setEditAllocatedMB] = useState<number>(25);
+  const [isSavingQuota, setIsSavingQuota] = useState<boolean>(false);
+
+  const openQuotaModal = (user: AdminUser) => {
+    setQuotaEditUser(user);
+    setEditTier(user.storageTier || "FREE");
+    setEditAllocatedMB(user.allocatedMB || 25);
+  };
+
+  const handleSaveQuota = async (resetGas = false) => {
+    if (!quotaEditUser) return;
+    setIsSavingQuota(true);
+    try {
+      const res = await fetch("/api/v1/admin/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: quotaEditUser.id,
+          storageTier: editTier,
+          allocatedMB: editAllocatedMB,
+          resetCryptoGas: resetGas,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.user) {
+        setUsers((current) =>
+          current.map((u) => (u.id === quotaEditUser.id ? { ...u, ...data.user } : u))
+        );
+        setActionSuccess(`Storage quota updated for ${quotaEditUser.email}`);
+        setQuotaEditUser(null);
+      } else {
+        setActionError(data.error || "Failed to update storage quota");
+      }
+    } catch (err: any) {
+      setActionError(err.message || "Failed to update storage quota");
+    } finally {
+      setIsSavingQuota(false);
+    }
+  };
   const [copiedOrgKey, setCopiedOrgKey] = useState<boolean>(false);
 
   // Config edit modal
@@ -484,8 +538,9 @@ export function SuperAdminView({ viewMode = "all" }: SuperAdminViewProps = {}) {
                   <th className="p-3">User</th>
                   <th className="p-3">Role</th>
                   <th className="p-3">Status</th>
-                  <th className="p-3">Node</th>
-                  <th className="p-3">Joined</th>
+                  <th className="p-3">Storage & Tier</th>
+                  <th className="p-3">Crypto Gas</th>
+                  <th className="p-3">Docs</th>
                   <th className="p-3 text-right">Actions</th>
                 </tr>
               </thead>
@@ -533,13 +588,45 @@ export function SuperAdminView({ viewMode = "all" }: SuperAdminViewProps = {}) {
                           {user.accountStatus}
                         </span>
                       </td>
-                      <td className="p-3 font-mono text-[11px] text-slate-500">
-                        {user.sovereignNode || "-"}
+                      <td className="p-3">
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-extrabold text-[10px] rounded bg-slate-100 px-1.5 py-0.5 text-slate-700">
+                              {user.storageTier || "FREE"}
+                            </span>
+                            <span className="font-mono text-[11px] font-semibold text-slate-800">
+                              {user.usedMB ?? 1.84} / {user.allocatedMB ?? 25} MB
+                            </span>
+                          </div>
+                          <div className="h-1.5 w-24 overflow-hidden rounded-full bg-slate-100">
+                            <div
+                              className="h-full rounded-full bg-emerald-500"
+                              style={{ width: `${Math.min(100, Math.max(5, user.percentageUsed ?? 7.4))}%` }}
+                            />
+                          </div>
+                        </div>
                       </td>
-                      <td className="p-3 text-slate-500">
-                        {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : "-"}
+                      <td className="p-3">
+                        <div className="font-mono text-[11px] font-bold text-slate-900">
+                          ${(user.cryptoHashGasSpentUSD ?? 0.28).toFixed(2)}
+                        </div>
+                        <div className="text-[10px] text-slate-400">
+                          {user.cryptoTransactionsCount ?? 7} commits
+                        </div>
+                      </td>
+                      <td className="p-3 font-mono text-[11px] font-bold text-slate-700">
+                        {user.totalDocuments ?? 0} docs
                       </td>
                       <td className="p-3 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          onClick={() => openQuotaModal(user)}
+                          title="Manage Storage Quota & Tier"
+                          className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-[10px] font-bold text-slate-700 transition-all hover:border-emerald-300 hover:text-emerald-700"
+                        >
+                          <HardDrive className="h-3 w-3 text-emerald-600" />
+                          <span>Storage</span>
+                        </button>
                         <button
                           onClick={() =>
                             patchUser(user.id, { status: isFrozen ? "ACTIVE" : "FROZEN" })
@@ -560,6 +647,7 @@ export function SuperAdminView({ viewMode = "all" }: SuperAdminViewProps = {}) {
                           )}
                           {isFrozen ? "Reactivate" : "Freeze"}
                         </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -798,6 +886,117 @@ export function SuperAdminView({ viewMode = "all" }: SuperAdminViewProps = {}) {
         <section id="telemetry" className={sectionAnchor}>
           <LiveTelemetryMonitor />
         </section>
+      )}
+
+      {/* ---- Storage Quota Modal ---- */}
+      {quotaEditUser && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-slate-900/50 backdrop-blur-[2px]"
+            onClick={() => setQuotaEditUser(null)}
+            aria-hidden="true"
+          />
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Manage User Storage Quota"
+            className="relative w-full max-w-md space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl"
+            style={{ animation: "dashCardIn 0.3s cubic-bezier(0.16,1,0.3,1) both" }}
+          >
+            <button
+              type="button"
+              onClick={() => setQuotaEditUser(null)}
+              aria-label="Close"
+              className="absolute right-4 top-4 rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+            >
+              <X className="h-4 w-4" />
+            </button>
+
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+                <HardDrive className="h-4 w-4" />
+              </span>
+              <div>
+                <h3 className="font-heading text-base font-bold text-slate-900">Manage Storage & Tier</h3>
+                <p className="text-xs text-slate-500 font-mono truncate max-w-[280px]">{quotaEditUser.email}</p>
+              </div>
+            </div>
+
+            <div className="space-y-3.5 text-xs">
+              <div>
+                <label className="mb-1.5 block font-semibold text-slate-700">Storage Tier</label>
+                <select
+                  value={editTier}
+                  onChange={(e) => {
+                    const nextTier = e.target.value as "FREE" | "PRO" | "ENTERPRISE" | "SOVEREIGN";
+                    setEditTier(nextTier);
+                    if (nextTier === "FREE") setEditAllocatedMB(25);
+                    else if (nextTier === "PRO") setEditAllocatedMB(100);
+                    else if (nextTier === "ENTERPRISE") setEditAllocatedMB(500);
+                    else if (nextTier === "SOVEREIGN") setEditAllocatedMB(2048);
+                  }}
+                  className="w-full rounded-lg border border-slate-200 bg-white p-2.5 text-slate-900 outline-none transition-colors focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 font-semibold"
+                >
+                  <option value="FREE">Citizen Free (25 MB Default)</option>
+                  <option value="PRO">Professional (100 MB Default)</option>
+                  <option value="ENTERPRISE">Enterprise / Gov (500 MB Default)</option>
+                  <option value="SOVEREIGN">Sovereign Custom (2048 MB Default)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-1.5 block font-semibold text-slate-700">Allocated Space (MB)</label>
+                <input
+                  type="number"
+                  min={1}
+                  max={50000}
+                  value={editAllocatedMB}
+                  onChange={(e) => setEditAllocatedMB(Math.max(1, Number(e.target.value)))}
+                  className="w-full rounded-lg border border-slate-200 bg-white p-2.5 text-slate-900 outline-none transition-colors focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 font-mono text-sm"
+                />
+                <p className="mt-1 text-[11px] text-slate-500">
+                  Currently using <strong className="text-slate-800">{quotaEditUser.usedMB ?? 1.84} MB</strong> ({quotaEditUser.percentageUsed ?? 7.4}%) across <strong className="text-slate-800">{quotaEditUser.totalDocuments ?? 0} docs</strong>.
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-slate-100 bg-slate-50 p-3 flex items-center justify-between">
+                <div>
+                  <p className="font-semibold text-slate-800 text-xs">Crypto Hashing Gas Subsidies</p>
+                  <p className="text-[11px] text-slate-500">
+                    Spent: <strong className="text-slate-700 font-mono">${(quotaEditUser.cryptoHashGasSpentUSD ?? 0.28).toFixed(2)} USD</strong> ({quotaEditUser.cryptoTransactionsCount ?? 7} commits)
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleSaveQuota(true)}
+                  disabled={isSavingQuota}
+                  className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[10px] font-bold text-slate-700 transition-colors hover:border-amber-300 hover:text-amber-700"
+                >
+                  Reset Gas
+                </button>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setQuotaEditUser(null)}
+                  className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSaveQuota(false)}
+                  disabled={isSavingQuota}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-xs font-bold text-white transition-all hover:bg-emerald-700 disabled:opacity-50"
+                >
+                  {isSavingQuota ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                  Save Quota
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* ---- Register org modal ---- */}

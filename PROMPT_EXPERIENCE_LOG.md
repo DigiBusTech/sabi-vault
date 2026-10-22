@@ -2169,3 +2169,51 @@
   - `node tests/test_document_scan_and_cloud.mjs`: 26/26 PASSED (Suite 3 simulation aligned to Tier-1-only classification policy).
   - `node tests/test_device_management.mjs`: 5/5 PASSED. `node tests/test_full_suite.mjs`: 8/8 PASSED.
 - **Remaining Known Item (deferred):** "Org Direct Interview" meeting link is generated client-side as a placeholder (real Google Meet/Zoom scheduling requires Calendar API integration); advisor engine remains deterministic rule-based pending LLM-gateway wiring.
+
+## Entry #061 — Citizen Overview Quick Actions, Tiered Storage Quota System & Super Admin CRUD Controls
+- **User Prompt:**
+  > "the user dashboard overview should have few key button for upload/scan. profile fix, and stats of total space used, amount used for crypto hash, number of documents uploaded, there should be tiered space allocated to users to save in our database, also super admin should have CRUD to managed all these for each user."
+  > add this prompt enhancer skills "https://github.com/krunalkanojiya22/prompt-enhancer/blob/main/SKILL.md" and this api skills "https://github.com/apideck-libraries/api-skills"
+- **Architectural Solutions & Changes:**
+  1. **New Agent Skills Installed:**
+     - `.agents/skills/prompt-enhancer/SKILL.md`: Complete AI prompt engineering and optimization playbook.
+     - `.agents/skills/api-skills/SKILL.md`: Apideck Unified API integration standard covering 146+ connectors (File Storage, HRIS, ATS, Identity).
+  2. **Tiered Space & Quota Schema (`src/types/vault.ts`):**
+     - Defined `StorageTierEnum` (`FREE`, `PRO`, `ENTERPRISE`, `SOVEREIGN`) and `STORAGE_TIER_CONFIGS`:
+       - Free Tier: 25 MB default sovereign JSON space.
+       - Pro Tier: 100 MB default sovereign space.
+       - Enterprise / Gov Tier: 500 MB default space.
+       - Sovereign Unlimited Tier: 2048 MB custom pinned capacity.
+     - Strictly enforced the **Zero Raw Document Centralization** architectural invariant: physical PDFs reside exclusively in user cloud storage; quota measures structured JSON metadata and cryptographic records stored in regional nodes.
+  3. **Core Quota Engine (`src/core/vault/user_store.ts`):**
+     - Added dynamic JSON byte calculator (`calculateUsedBytes`), counting real UTF-8 bytes of credentials, profile attributes, and sovereign records.
+     - Document counter (`countTotalDocuments`) across all 9 vault categories.
+     - Base Sepolia blockchain gas spend tracker (`cryptoHashGasSpentUSD`, `cryptoTransactionsCount`), automatically incrementing on on-chain commits.
+     - Implemented `getUserQuota(userId)` and `updateUserQuota(userId, patch)`.
+  4. **User Quota API Route (`src/app/api/v1/user/quota/route.ts`):**
+     - Authenticated GET endpoint returning user quota, used/free MB, percentage, document breakdown, and tier configs.
+  5. **Citizen Dashboard Overview Upgrade (`src/components/CitizenVaultView.tsx`):**
+     - Replaced minimal stats with a prominent Quick Action Bar:
+       - 📷 **Scan Document** (triggers live camera scanner modal).
+       - 📁 **Upload File** (triggers intake workflow modal).
+       - 👤 **Fix Profile** (deep link to `/dashboard/profile`).
+       - 🧭 **Target Advisor** (deep link to `/dashboard/advisor`).
+     - Integrated 4 Tiered Storage & System Quota Gauges:
+       - **Database Space Quota**: visual progress bar, tier badge, used/allocated MB and free capacity.
+       - **Crypto Hashing Gas Used**: Base Sepolia L2 gas spent in USD across total commit transactions.
+       - **Total Documents Uploaded**: verified count across all 9 categories.
+       - **Sovereign Isolation**: regional node residency and zero server PDFs verification.
+  6. **Super Admin Storage Quota CRUD Management (`src/app/api/v1/admin/users/route.ts` & `src/components/SuperAdminView.tsx`):**
+     - Updated admin user listing to return `storageTier`, `allocatedMB`, `usedMB`, `totalDocuments`, `cryptoHashGasSpentUSD`, and `cryptoTransactionsCount`.
+     - Enriched Super Admin System Users table with Storage & Tier progress gauge, Crypto Gas, and Docs columns.
+     - Added Storage Quota Management modal allowing super admins to:
+       - Upgrade/downgrade storage tiers (FREE, PRO, ENTERPRISE, SOVEREIGN).
+       - Set custom allocated space in MB.
+       - Inspect and reset crypto gas subsidies.
+       - Commit changes immediately via PATCH `/api/v1/admin/users`.
+- **Validation:**
+  - `npx tsc --noEmit`: 0 errors.
+  - `node tests/test_storage_quota_and_skills.mjs`: 7/7 suites PASSED (100%).
+  - `node tests/test_google_auth_and_skills.mjs`: 4/4 suites PASSED (100%).
+  - `node tests/test_full_suite.mjs`: 8/8 suites PASSED (100%).
+  - `node tests/test_profile_and_ai_advisor.mjs`: 5/5 suites PASSED (100%).

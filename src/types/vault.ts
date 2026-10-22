@@ -335,3 +335,62 @@ export interface FullUserVault {
   lastSyncedAt: string;
 }
 
+
+// --- USER STORAGE QUOTA & TIER ALLOCATION ---
+export const StorageTierEnum = z.enum(["FREE", "PRO", "ENTERPRISE", "SOVEREIGN"]);
+export type StorageTier = z.infer<typeof StorageTierEnum>;
+
+export interface StorageTierDefinition {
+  tier: StorageTier;
+  label: string;
+  defaultAllocatedMB: number;
+  description: string;
+  features: string[];
+}
+
+export const STORAGE_TIER_CONFIGS: Record<StorageTier, StorageTierDefinition> = {
+  FREE: {
+    tier: "FREE",
+    label: "Citizen Free",
+    defaultAllocatedMB: 25,
+    description: "25 MB sovereign JSON space · Base Sepolia hashing",
+    features: ["25 MB JSON Storage", "SHA-256 Immutability", "Regional Node Isolation", "Standard RAG"],
+  },
+  PRO: {
+    tier: "PRO",
+    label: "Professional",
+    defaultAllocatedMB: 100,
+    description: "100 MB sovereign JSON space · Priority Base commits · AI Target Advisor",
+    features: ["100 MB JSON Storage", "Fast AI Vision Scans", "Unlimited Scoped Minting", "Advanced Niche Customization"],
+  },
+  ENTERPRISE: {
+    tier: "ENTERPRISE",
+    label: "Enterprise / Gov",
+    defaultAllocatedMB: 500,
+    description: "500 MB high-throughput space · Multi-stage screening · Dedicated Node",
+    features: ["500 MB JSON Storage", "Multi-Stage Candidate Pipelines", "Custom Sovereign Isolation", "Automated Compliance Audits"],
+  },
+  SOVEREIGN: {
+    tier: "SOVEREIGN",
+    label: "Sovereign Unlimited",
+    defaultAllocatedMB: 2048,
+    description: "Custom sovereign allocated capacity with dedicated regional node pinning",
+    features: ["Custom Quota (Up to 2 GB+)", "Direct Sovereign Node Pinning", "Full Ledger Export", "Priority Support"],
+  },
+};
+
+export const UserStorageQuotaSchema = z.object({
+  userId: z.string(),
+  tier: StorageTierEnum,
+  allocatedBytes: z.number(),
+  usedBytes: z.number(),
+  allocatedMB: z.number(),
+  usedMB: z.number(),
+  percentageUsed: z.number(),
+  totalDocumentsCount: z.number(),
+  cryptoHashGasSpentUSD: z.number(),
+  cryptoTransactionsCount: z.number(),
+  sovereignNode: z.string(),
+  lastCalculatedAt: z.string(),
+});
+export type UserStorageQuota = z.infer<typeof UserStorageQuotaSchema>;

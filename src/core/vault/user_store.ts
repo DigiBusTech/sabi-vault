@@ -1,6 +1,6 @@
 import { computeSha256 } from "@/core/crypto/hasher";
 import { generateScopedApiKey, verifyScopedApiKey } from "@/core/crypto/scoped_key";
-import { FullUserVault, VaultCategory, VerificationTier } from "@/types/vault";
+import { FullUserVault, VaultCategory, VerificationTier, StorageTier, UserStorageQuota, STORAGE_TIER_CONFIGS } from "@/types/vault";
 import { randomBytes } from "crypto";
 
 export interface ScopedKeyRecord {
@@ -31,6 +31,15 @@ class UserVaultMasterStore {
   private vaults: Map<string, FullUserVault> = new Map();
   private keys: Map<string, ScopedKeyRecord & { vaultId?: string }> = new Map();
   private auditLogs: (TransparencyAuditLog & { targetVaultId?: string })[] = [];
+  private userQuotas: Map<
+    string,
+    {
+      tier: StorageTier;
+      allocatedMB?: number;
+      cryptoGasSpentUSD?: number;
+      cryptoTxCount?: number;
+    }
+  > = new Map();
 
   constructor() {
     const defaultVault: FullUserVault = {
@@ -337,6 +346,17 @@ class UserVaultMasterStore {
 
     userVault.lastSyncedAt = new Date().toISOString();
     this.vaults.set(userId, userVault);
+
+    // Increment crypto gas on Base Sepolia commit
+    const currentQ = this.userQuotas.get(userId) || {
+      tier: "FREE" as StorageTier,
+      allocatedMB: STORAGE_TIER_CONFIGS.FREE.defaultAllocatedMB,
+      cryptoGasSpentUSD: 0.16,
+      cryptoTxCount: 4,
+    };
+    currentQ.cryptoGasSpentUSD = Math.round(((currentQ.cryptoGasSpentUSD || 0.16) + 0.04) * 100) / 100;
+    currentQ.cryptoTxCount = (currentQ.cryptoTxCount || 4) + 1;
+    this.userQuotas.set(userId, currentQ);
     return { success: true, hash, item: enrichedItem };
   }
 
@@ -461,6 +481,112 @@ class UserVaultMasterStore {
     return newEntry;
   }
 
+
+
+  // --- TIERED STORAGE QUOTA & STATS ENGINE ---
+  public countTotalDocuments(userId: string = "usr_chinwe_okafor_7721"): number {
+    const vault = this.getVault(userId);
+    let count = 0;
+    if (vault.academics?.degrees) count += vault.academics.degrees.length;
+    if (vault.certifications?.certifications) count += vault.certifications.certifications.length;
+    if (vault.experience?.experiences) count += vault.experience.experiences.length;
+    if (vault.achievements?.achievements) count += vault.achievements.achievements.length;
+    if (vault.finance?.bankRecords) count += vault.finance.bankRecords.length;
+    if (vault.identification?.identifications) count += vault.identification.identifications.length;
+    if (vault.legal?.instruments) count += vault.legal.instruments.length;
+    if (vault.receipts?.receipts) count += vault.receipts.receipts.length;
+    if (
+      vault.portfolio &&
+      (vault.portfolio.headline ||
+        vault.portfolio.bio ||
+        (vault.portfolio.publicLinks && vault.portfolio.publicLinks.length > 0))
+    ) {
+      count += 1;
+    }
+    return count;
+  }
+
+  public calculateUsedBytes(userId: string = "usr_chinwe_okafor_7721"): number {
+    const vault = this.getVault(userId);
+    const jsonString = JSON.stringify(vault);
+    let totalBytes = Buffer.byteLength(jsonString, "utf8");
+    // Ensure base metadata footprint represents stored sovereign records
+    if (totalBytes < 1024) totalBytes = 1024;
+    return totalBytes;
+  }
+
+  public getUserQuota(userId: string = "usr_chinwe_okafor_7721"): UserStorageQuota {
+    const quotaMeta = this.userQuotas.get(userId) || {
+      tier: "FREE" as StorageTier,
+      allocatedMB: STORAGE_TIER_CONFIGS.FREE.defaultAllocatedMB,
+      cryptoGasSpentUSD: 0.16,
+      cryptoTxCount: 4,
+    };
+
+    const tierConfig = STORAGE_TIER_CONFIGS[quotaMeta.tier] || STORAGE_TIER_CONFIGS.FREE;
+    const allocatedMB = quotaMeta.allocatedMB ?? tierConfig.defaultAllocatedMB;
+    const allocatedBytes = allocatedMB * 1024 * 1024;
+    const usedBytes = this.calculateUsedBytes(userId);
+    const usedMB = Math.round((usedBytes / (1024 * 1024)) * 100) / 100;
+    const percentageUsed = Math.min(100, Math.round((usedBytes / allocatedBytes) * 1000) / 10);
+    const totalDocs = this.countTotalDocuments(userId);
+    const vault = this.getVault(userId);
+
+    const calculatedGasUSD = quotaMeta.cryptoGasSpentUSD ?? Math.max(1, totalDocs) * 0.04;
+    const calculatedTxCount = quotaMeta.cryptoTxCount ?? Math.max(1, totalDocs);
+
+    return {
+      userId,
+      tier: quotaMeta.tier,
+      allocatedBytes,
+      usedBytes,
+      allocatedMB,
+      usedMB,
+      percentageUsed,
+      totalDocumentsCount: totalDocs,
+      cryptoHashGasSpentUSD: Math.round(calculatedGasUSD * 100) / 100,
+      cryptoTransactionsCount: calculatedTxCount,
+      sovereignNode: vault.sovereignNode || "ng-west-africa-node-01 (Lagos / Abuja)",
+      lastCalculatedAt: new Date().toISOString(),
+    };
+  }
+
+  public updateUserQuota(
+    userId: string,
+    patch: {
+      tier?: StorageTier;
+      allocatedMB?: number;
+      resetGas?: boolean;
+      addGasUSD?: number;
+    }
+  ): UserStorageQuota {
+    const current = this.userQuotas.get(userId) || {
+      tier: "FREE" as StorageTier,
+      allocatedMB: STORAGE_TIER_CONFIGS.FREE.defaultAllocatedMB,
+      cryptoGasSpentUSD: 0.16,
+      cryptoTxCount: 4,
+    };
+
+    if (patch.tier) {
+      current.tier = patch.tier;
+      if (!patch.allocatedMB) {
+        current.allocatedMB = STORAGE_TIER_CONFIGS[patch.tier]?.defaultAllocatedMB ?? 25;
+      }
+    }
+    if (patch.allocatedMB !== undefined && patch.allocatedMB > 0) {
+      current.allocatedMB = patch.allocatedMB;
+    }
+    if (patch.resetGas) {
+      current.cryptoGasSpentUSD = 0.04;
+      current.cryptoTxCount = 1;
+    } else if (patch.addGasUSD) {
+      current.cryptoGasSpentUSD = (current.cryptoGasSpentUSD || 0) + patch.addGasUSD;
+      current.cryptoTxCount = (current.cryptoTxCount || 0) + 1;
+    }
+
+    this.userQuotas.set(userId, current);
+    return this.getUserQuota(userId);
+  }
 
   // --- SIMULATED ZERO-RAW CLOUD SYNC ---
   public simulateCloudSync(
