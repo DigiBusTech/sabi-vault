@@ -17,6 +17,7 @@ import {
   Trash2,
   Lock,
   CheckCircle2,
+  CheckCircle,
   History,
   Check,
   ExternalLink,
@@ -38,6 +39,7 @@ import {
   UserCheck,
 } from "lucide-react";
 import { CameraScannerModal } from "@/components/dashboard/CameraScannerModal";
+import { optimizeDocumentForUpload } from "@/lib/utils/image_compressor";
 import { VaultCategory, FullUserVault, UserStorageQuota } from "@/types/vault";
 import { DocumentIntake } from "@/components/dashboard/DocumentIntake";
 import { DeviceManager } from "@/components/dashboard/DeviceManager";
@@ -244,6 +246,10 @@ export function CitizenVaultView({ onMintKeyForDemo, viewMode = "all" }: Citizen
     setAddDocStep("extracting");
 
     try {
+      // 1. Client-side smart pre-compression (reduces 10MB camera photo to ~500KB)
+      const { file: optimizedFile, wasCompressed } = await optimizeDocumentForUpload(file);
+      setCapturedFile(optimizedFile);
+
       const reader = new FileReader();
       reader.onload = async () => {
         try {
@@ -255,15 +261,55 @@ export function CitizenVaultView({ onMintKeyForDemo, viewMode = "all" }: Citizen
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               confirmed: false,
-              fileName: file.name,
-              mimeType: file.type || "image/jpeg",
+              fileName: optimizedFile.name,
+              mimeType: optimizedFile.type || "image/jpeg",
               category: activeCategory,
               fileBase64: base64Data,
             }),
           });
 
-          const data = await res.json();
+          const resText = await res.text();
+          let data: any = null;
+          try {
+            data = JSON.parse(resText);
+          } catch {
+            const isPayloadTooLarge = res.status === 413 || resText.includes("FUNCTION_PAYLOAD_TOO_LARGE") || resText.includes("Request Entity Too Large");
+            const errorMsg = isPayloadTooLarge
+              ? "Document payload exceeded serverless execution limit (4.5 MB). Please take a photo with your mobile camera or upload an optimized image."
+              : resText && resText.length < 250 ? resText : `Scan failed (${res.status}).`;
+
+            fetch("/api/v1/telemetry/report", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                subsystem: "API_ROUTER",
+                level: "ERROR",
+                action: isPayloadTooLarge ? "INGRESS_413_PAYLOAD_TOO_LARGE" : "INGRESS_SCAN_ERROR",
+                statusCode: res.status,
+                errorCode: isPayloadTooLarge ? "FUNCTION_PAYLOAD_TOO_LARGE" : "SCAN_ERROR",
+                message: `Scan upload rejected at network edge (${res.status}): ${resText.slice(0, 100)}`,
+                metadata: { fileName: file.name, fileSize: file.size, wasCompressed },
+              }),
+            }).catch(() => {});
+
+            throw new Error(errorMsg);
+          }
+
           if (!res.ok) {
+            fetch("/api/v1/telemetry/report", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                subsystem: "AI_AGENTS",
+                level: "ERROR",
+                action: "SCAN_API_ERROR",
+                statusCode: res.status,
+                errorCode: data.code || "SCAN_ERROR",
+                message: data.error || "Failed to analyze document",
+                metadata: { fileName: file.name },
+              }),
+            }).catch(() => {});
+
             throw new Error(data.error || "Failed to analyze document.");
           }
 
@@ -278,7 +324,7 @@ export function CitizenVaultView({ onMintKeyForDemo, viewMode = "all" }: Citizen
         setAddError("Could not read local file buffer.");
         setAddDocStep("source");
       };
-      reader.readAsDataURL(file);
+      reader.readAsDataURL(optimizedFile);
     } catch (err: any) {
       setAddError(err.message || "Document processing failed.");
       setAddDocStep("source");
@@ -1390,12 +1436,29 @@ export function CitizenVaultView({ onMintKeyForDemo, viewMode = "all" }: Citizen
                 </div>
                 <div>
                   <h4 className="font-heading text-sm font-bold text-slate-900">
-                    Analyzing Document with Gemini Vision AI
+                    Secure AI Vision & Ledger Verification Pipeline
                   </h4>
-                  <p className="text-xs text-slate-500 max-w-xs mt-1">
+                  <p className="text-xs text-slate-500 max-w-sm mt-1">
                     Ephemerally extracting verified credentials and generating SHA-256 cryptographic seal. Zero raw files saved to disk.
                   </p>
                 </div>
+
+                {/* Multi-step progress pipeline indicators */}
+                <div className="w-full max-w-sm bg-slate-50 rounded-xl p-3 border border-slate-200/80 text-left space-y-2 mt-2">
+                  <div className="flex items-center gap-2 text-xs text-emerald-700 font-medium">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                    <span>1. Document pre-processed & optimized (&lt;1MB)</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-slate-600">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                    <span>2. AI Vision extraction (Gemini / Groq Failover)</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-slate-400">
+                    <span className="w-2 h-2 rounded-full bg-slate-300" />
+                    <span>3. Ephemeral SHA-256 anchor & Base Sepolia ledger prep</span>
+                  </div>
+                </div>
+
                 <div className="w-48 h-1.5 bg-slate-100 rounded-full overflow-hidden">
                   <div className="h-full bg-emerald-600 rounded-full animate-indeterminate" />
                 </div>

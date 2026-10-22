@@ -12,6 +12,7 @@ import {
 import { GoogleDriveConnector } from "@/core/storage/google_drive";
 import { DropboxConnector } from "@/core/storage/dropbox";
 import { randomUUID } from "crypto";
+import { liveTelemetry } from "@/lib/telemetry/live_logger";
 
 interface CachedScanPreview {
   scanId: string;
@@ -78,6 +79,17 @@ export async function POST(req: NextRequest) {
 
     const targetUserId = auth.user.userId;
 
+    liveTelemetry.record({
+      subsystem: "API_ROUTER",
+      level: "INFO",
+      action: confirmed ? "VAULT_SCAN_CONFIRM_INGRESS" : "VAULT_SCAN_PREVIEW_INGRESS",
+      durationMs: 0,
+      statusCode: 200,
+      message: `Scan endpoint invoked (${confirmed ? "Phase B Commit" : "Phase A Preview"}) for ${fileName || scanId || "document"}`,
+      metadata: { fileName, category, confirmed, mimeType },
+      userId: targetUserId,
+    });
+
     // Strictly allowlist the caller-supplied category against the VaultCategory enum
     if (category !== undefined && category !== "auto_detect" && !VaultCategoryEnum.safeParse(category).success) {
       return NextResponse.json({ error: "Invalid vault category supplied" }, { status: 400 });
@@ -118,6 +130,17 @@ export async function POST(req: NextRequest) {
         // Zero ephemeral buffer before bailing out
         fileBuffer.fill(0);
         if (err instanceof VisionExtractionUnavailableError || err?.code === "VISION_EXTRACTION_UNAVAILABLE") {
+          liveTelemetry.record({
+            subsystem: "AI_AGENTS",
+            level: "ERROR",
+            action: "VAULT_SCAN_AI_FAILED",
+            durationMs: 0,
+            statusCode: 503,
+            errorCode: "VISION_EXTRACTION_UNAVAILABLE",
+            message: `Vision extraction unavailable for ${fileName}: ${err.message}`,
+            metadata: { fileName, category: categoryHint },
+            userId: targetUserId,
+          });
           return NextResponse.json(
             {
               error: "AI extraction service is currently unavailable. No data was extracted, stored, or anchored. Please retry shortly.",
@@ -292,6 +315,17 @@ export async function POST(req: NextRequest) {
     if (scanId) {
       scanPreviewCache.delete(scanId);
     }
+
+    liveTelemetry.record({
+      subsystem: "BLOCKCHAIN_LEDGER",
+      level: "SUCCESS",
+      action: "BASE_SEPOLIA_ANCHOR_SUCCESS",
+      durationMs: 0,
+      statusCode: 200,
+      message: `Scan confirmed & anchored to Base Sepolia L2: ${commitResult.txHash}`,
+      metadata: { txHash: commitResult.txHash, category: effectiveCategory, documentName: effectiveFileName },
+      userId: targetUserId,
+    });
 
     return NextResponse.json({
       status: "SUCCESS_SECURED",

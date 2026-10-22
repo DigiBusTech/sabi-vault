@@ -15,6 +15,8 @@ import {
 import { VaultCategory } from "@/types/vault";
 import { ScanPipeline } from "./ScanPipeline";
 import { CloudConnectModal } from "./CloudConnectModal";
+import { optimizeDocumentForUpload } from "@/lib/utils/image_compressor";
+import { Sparkles, Cpu, CheckCircle } from "lucide-react";
 
 const MAX_FILE_BYTES = 16 * 1024 * 1024; // 16 MB ephemeral processing cap
 
@@ -74,6 +76,7 @@ export function DocumentIntake({ onSynced }: DocumentIntakeProps) {
   const [category, setCategory] = useState<string>("auto_detect");
   const [dragOver, setDragOver] = useState<boolean>(false);
   const [uploading, setUploading] = useState<boolean>(false);
+  const [uploadStage, setUploadStage] = useState<"idle" | "optimizing" | "analyzing" | "anchoring">("idle");
   const [activeFileName, setActiveFileName] = useState<string>("");
   const [result, setResult] = useState<SyncResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -127,18 +130,37 @@ export function DocumentIntake({ onSynced }: DocumentIntakeProps) {
     setError(null);
     setResult(null);
 
-    if (file.size > MAX_FILE_BYTES) {
-      setError(`"${file.name}" is ${(file.size / (1024 * 1024)).toFixed(1)} MB. The ephemeral pipeline accepts files up to 16 MB.`);
+    // If PDF or non-image is over 4.2 MB, warn before sending to prevent Vercel 4.5 MB serverless limit
+    if (!file.type.startsWith("image/") && file.size > 4.2 * 1024 * 1024) {
+      setError(`"${file.name}" is ${(file.size / (1024 * 1024)).toFixed(1)} MB. PDFs must be under 4.2 MB to comply with serverless execution limits. Please optimize or scan document pages individually.`);
+      fetch("/api/v1/telemetry/report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          subsystem: "API_ROUTER",
+          level: "WARN",
+          action: "FILE_EXCEEDS_SERVERLESS_CAP",
+          statusCode: 413,
+          errorCode: "PAYLOAD_TOO_LARGE",
+          message: `User attempted to upload ${(file.size / (1024 * 1024)).toFixed(1)} MB PDF exceeding 4.2 MB serverless ceiling.`,
+          metadata: { fileName: file.name, fileSize: file.size },
+        }),
+      }).catch(() => {});
       return;
     }
 
     setUploading(true);
     setActiveFileName(file.name);
+    setUploadStage("optimizing");
 
     try {
-      // Use native multipart FormData to stream full-fidelity uncompressed binary
+      // 1. Client-side smart pre-compression for photos/images (reduces 10MB down to ~500KB)
+      const { file: optimizedFile, wasCompressed } = await optimizeDocumentForUpload(file);
+
+      // 2. Send optimized file
+      setUploadStage("analyzing");
       const formData = new FormData();
-      formData.append("file", file);
+      formData.append("file", optimizedFile);
       formData.append("category", category);
 
       const res = await fetch("/api/v1/vault/sync", {
@@ -151,15 +173,49 @@ export function DocumentIntake({ onSynced }: DocumentIntakeProps) {
       try {
         data = JSON.parse(resText);
       } catch {
-        setError(resText && resText.length < 250 ? resText : `Sync failed with server status ${res.status}.`);
+        const isPayloadTooLarge = res.status === 413 || resText.includes("FUNCTION_PAYLOAD_TOO_LARGE") || resText.includes("Request Entity Too Large");
+        const errMsg = isPayloadTooLarge
+          ? "File payload exceeded Vercel serverless limit (4.5 MB). We recommend taking a photo via camera or reducing PDF file size."
+          : resText && resText.length < 250 ? resText : `Sync failed with server status ${res.status}.`;
+
+        fetch("/api/v1/telemetry/report", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            subsystem: "API_ROUTER",
+            level: "ERROR",
+            action: isPayloadTooLarge ? "INGRESS_413_PAYLOAD_TOO_LARGE" : "INGRESS_SYNC_ERROR",
+            statusCode: res.status,
+            errorCode: isPayloadTooLarge ? "FUNCTION_PAYLOAD_TOO_LARGE" : "HTTP_" + res.status,
+            message: `Document upload rejected at network edge (${res.status}): ${resText.slice(0, 100)}`,
+            metadata: { fileName: file.name, fileSize: file.size, wasCompressed },
+          }),
+        }).catch(() => {});
+
+        setError(errMsg);
         return;
       }
 
       if (!res.ok) {
+        fetch("/api/v1/telemetry/report", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            subsystem: "API_ROUTER",
+            level: "ERROR",
+            action: "VAULT_SYNC_ERROR",
+            statusCode: res.status,
+            errorCode: data.code || "SYNC_ERROR",
+            message: data.details || data.error || `Sync error ${res.status}`,
+            metadata: { fileName: file.name },
+          }),
+        }).catch(() => {});
+
         setError(data.details || data.error || `Document sync failed (${res.status}). Please try again.`);
         return;
       }
 
+      setUploadStage("anchoring");
       setResult({
         documentName: data.documentName,
         category: data.category,
@@ -172,10 +228,11 @@ export function DocumentIntake({ onSynced }: DocumentIntakeProps) {
       setError(err?.message ? `Upload failed: ${err.message}` : "Network error while syncing the document.");
     } finally {
       setUploading(false);
+      setUploadStage("idle");
     }
   };
 
-  const copyHash = () => {
+    const copyHash = () => {
     if (!result) return;
     navigator.clipboard.writeText(result.sha256Hash);
     setCopied(true);
@@ -245,19 +302,42 @@ export function DocumentIntake({ onSynced }: DocumentIntakeProps) {
             }`}
             style={dragOver ? { animation: "scanDropPulse 0.9s ease-in-out infinite" } : undefined}
           >
-            <span
-              className={`flex h-12 w-12 items-center justify-center rounded-xl transition-colors duration-200 ${
-                dragOver ? "bg-emerald-600 text-white" : "bg-white text-emerald-600 ring-1 ring-slate-200"
-              }`}
-            >
-              <UploadCloud className="h-6 w-6" />
-            </span>
-            <span className="mt-3 text-sm font-bold text-slate-900">
-              {dragOver ? "Drop to scan and anchor" : "Drag a document here, or browse"}
-            </span>
-            <span className="mt-1 text-[11px] text-slate-500">
-              PDF, image, or text up to 8 MB. Scanned, hashed, anchored. Never stored.
-            </span>
+            {uploading ? (
+              <div className="flex flex-col items-center justify-center space-y-3 py-1">
+                <div className="relative">
+                  <div className="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center">
+                    <Loader2 className="w-6 h-6 animate-spin text-emerald-600" />
+                  </div>
+                </div>
+                <div className="text-center">
+                  <p className="text-xs font-bold text-slate-900 font-heading">
+                    {uploadStage === "optimizing" && "📄 Reading & Optimizing Document..."}
+                    {uploadStage === "analyzing" && "🤖 Multi-Agent AI Extraction (Gemini / Groq)..."}
+                    {uploadStage === "anchoring" && "⛓️ Anchoring Cryptographic SHA-256 Seal..."}
+                    {uploadStage === "idle" && "Processing Document..."}
+                  </p>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    Active file: <span className="font-semibold text-slate-700">{activeFileName}</span> · Ephemeral in-memory pipeline
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <>
+                <span
+                  className={`flex h-12 w-12 items-center justify-center rounded-xl transition-colors duration-200 ${
+                    dragOver ? "bg-emerald-600 text-white" : "bg-white text-emerald-600 ring-1 ring-slate-200"
+                  }`}
+                >
+                  <UploadCloud className="h-6 w-6" />
+                </span>
+                <span className="mt-3 text-sm font-bold text-slate-900">
+                  {dragOver ? "Drop to scan and anchor" : "Drag a document here, or browse"}
+                </span>
+                <span className="mt-1 text-[11px] text-slate-500">
+                  PDF, image, or text up to 8 MB. Scanned, hashed, anchored. Never stored.
+                </span>
+              </>
+            )}
           </button>
           <input
             ref={inputRef}
