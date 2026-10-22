@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useState } from "react";
+import { LiveTelemetryMonitor } from "@/components/admin/LiveTelemetryMonitor";
 import {
   Activity,
   AlertTriangle,
@@ -106,7 +107,13 @@ function sourceLabel(source: ConfigEntry["source"]) {
   }
 }
 
-export function SuperAdminView() {
+export type AdminViewMode = "all" | "overview" | "users" | "organizations" | "config" | "telemetry";
+
+interface SuperAdminViewProps {
+  viewMode?: AdminViewMode;
+}
+
+export function SuperAdminView({ viewMode = "all" }: SuperAdminViewProps = {}) {
   // Data state
   const [telemetry, setTelemetry] = useState<any | null>(null);
   const [users, setUsers] = useState<AdminUser[]>([]);
@@ -400,6 +407,7 @@ export function SuperAdminView() {
       )}
 
       {/* ---- Overview ---- */}
+      {(viewMode === "all" || viewMode === "overview") && (
       <section id="overview" className={sectionAnchor}>
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           {[
@@ -448,8 +456,10 @@ export function SuperAdminView() {
           </a>
         </div>
       </section>
+    )}
 
       {/* ---- Users ---- */}
+      {(viewMode === "all" || viewMode === "users") && (
       <section id="users" className={sectionAnchor}>
         <div className="clean-card dash-card-in rounded-2xl p-6" style={{ animationDelay: "80ms" }}>
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -565,8 +575,10 @@ export function SuperAdminView() {
           </div>
         </div>
       </section>
+    )}
 
       {/* ---- Organizations ---- */}
+      {(viewMode === "all" || viewMode === "organizations") && (
       <section id="organizations" className={sectionAnchor}>
         <div className="clean-card dash-card-in rounded-2xl p-6" style={{ animationDelay: "120ms" }}>
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
@@ -687,8 +699,10 @@ export function SuperAdminView() {
           </div>
         </div>
       </section>
+    )}
 
       {/* ---- Config keys ---- */}
+      {(viewMode === "all" || viewMode === "config") && (
       <section id="config" className={sectionAnchor}>
         <div className="mb-4 flex items-start justify-between gap-3">
           <div>
@@ -776,6 +790,14 @@ export function SuperAdminView() {
           })}
         </div>
       </section>
+    )}
+
+      {/* ---- Live Telemetry Mission Control ---- */}
+      {(viewMode === "all" || viewMode === "telemetry") && (
+        <section id="telemetry" className={sectionAnchor}>
+          <LiveTelemetryMonitor />
+        </section>
+      )}
 
       {/* ---- Register org modal ---- */}
       {showOrgModal && (

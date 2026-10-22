@@ -1,4 +1,4 @@
-﻿/**
+/**
  * SabiProfile Multi-LLM Failover Gateway Router
  *
  * Provides enterprise high availability across multiple LLM backends:
@@ -9,6 +9,7 @@
  */
 
 import { getConfigValueSync } from "@/core/config/platform_config";
+import { liveTelemetry } from "@/lib/telemetry/live_logger";
 
 export interface LLMMessage {
   role: "system" | "user" | "assistant";
@@ -48,16 +49,35 @@ export class MultiLLMGateway {
   async complete(options: LLMRequestOptions): Promise<LLMResponse> {
     const startTime = Date.now();
 
-    // 1. Primary: Google Gemini 1.5 Flash
+    // 1. Primary: Google Gemini 1.5/2.0/2.5 Flash
     if (this.geminiApiKey) {
       try {
         const response = await this.callGemini(options);
+        const duration = Date.now() - startTime;
+        liveTelemetry.record({
+          subsystem: "AI_AGENTS",
+          level: "SUCCESS",
+          action: "GEMINI_INFERENCE",
+          durationMs: duration,
+          statusCode: 200,
+          message: `Inference completed via Google Gemini (${this.geminiModel}) in ${duration}ms.`,
+          metadata: { model: this.geminiModel, provider: "gemini" },
+        });
         return {
           content: response,
           providerUsed: "gemini",
-          latencyMs: Date.now() - startTime,
+          latencyMs: duration,
         };
       } catch (err: any) {
+        liveTelemetry.record({
+          subsystem: "AI_AGENTS",
+          level: "WARN",
+          action: "GEMINI_INFERENCE_FAILOVER",
+          durationMs: Date.now() - startTime,
+          statusCode: 502,
+          errorCode: "GEMINI_ERROR",
+          message: `Gemini inference failed (${err.message}). Failing over to Groq...`,
+        });
         console.warn(`[MultiLLM Gateway] Gemini Primary failed: ${err.message}. Failing over to Groq...`);
       }
     }
@@ -66,12 +86,31 @@ export class MultiLLMGateway {
     if (this.groqApiKey) {
       try {
         const response = await this.callGroq(options);
+        const duration = Date.now() - startTime;
+        liveTelemetry.record({
+          subsystem: "AI_AGENTS",
+          level: "SUCCESS",
+          action: "GROQ_INFERENCE",
+          durationMs: duration,
+          statusCode: 200,
+          message: `Inference completed via Groq LLaMA in ${duration}ms.`,
+          metadata: { provider: "groq" },
+        });
         return {
           content: response,
           providerUsed: "groq",
-          latencyMs: Date.now() - startTime,
+          latencyMs: duration,
         };
       } catch (err: any) {
+        liveTelemetry.record({
+          subsystem: "AI_AGENTS",
+          level: "WARN",
+          action: "GROQ_INFERENCE_FAILOVER",
+          durationMs: Date.now() - startTime,
+          statusCode: 502,
+          errorCode: "GROQ_ERROR",
+          message: `Groq inference failed (${err.message}). Failing over to OpenAI...`,
+        });
         console.warn(`[MultiLLM Gateway] Groq Secondary failed: ${err.message}. Failing over to OpenAI...`);
       }
     }
@@ -80,22 +119,51 @@ export class MultiLLMGateway {
     if (this.openAiApiKey) {
       try {
         const response = await this.callOpenAI(options);
+        const duration = Date.now() - startTime;
+        liveTelemetry.record({
+          subsystem: "AI_AGENTS",
+          level: "SUCCESS",
+          action: "OPENAI_INFERENCE",
+          durationMs: duration,
+          statusCode: 200,
+          message: `Inference completed via OpenAI in ${duration}ms.`,
+          metadata: { provider: "openai" },
+        });
         return {
           content: response,
           providerUsed: "openai",
-          latencyMs: Date.now() - startTime,
+          latencyMs: duration,
         };
       } catch (err: any) {
+        liveTelemetry.record({
+          subsystem: "AI_AGENTS",
+          level: "WARN",
+          action: "OPENAI_INFERENCE_FAILOVER",
+          durationMs: Date.now() - startTime,
+          statusCode: 502,
+          errorCode: "OPENAI_ERROR",
+          message: `OpenAI inference failed (${err.message}). Falling back to deterministic engine...`,
+        });
         console.warn(`[MultiLLM Gateway] OpenAI Tertiary failed: ${err.message}. Falling back to deterministic engine...`);
       }
     }
 
     // 4. Deterministic Mock Fallback for local testing and zero-downtime resilience
     const mockResponse = this.deterministicFallback(options);
+    const duration = Date.now() - startTime;
+    liveTelemetry.record({
+      subsystem: "AI_AGENTS",
+      level: "INFO",
+      action: "DETERMINISTIC_FALLBACK",
+      durationMs: duration,
+      statusCode: 200,
+      message: "Generated deterministic schema-compliant credential structure (offline fallback).",
+      metadata: { provider: "deterministic_fallback" },
+    });
     return {
       content: mockResponse,
       providerUsed: "deterministic_fallback",
-      latencyMs: Date.now() - startTime,
+      latencyMs: duration,
     };
   }
 

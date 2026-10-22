@@ -42,7 +42,13 @@ const AGENT_STAGES = [
   { name: "Fraud and Anomaly Radar", desc: "Pattern and tenure analysis" },
 ] as const;
 
-export function EnterpriseScreeningView() {
+export type EnterpriseViewMode = "all" | "overview" | "rubrics" | "screening";
+
+interface EnterpriseScreeningViewProps {
+  viewMode?: EnterpriseViewMode;
+}
+
+export function EnterpriseScreeningView({ viewMode = "all" }: EnterpriseScreeningViewProps = {}) {
   const [rubrics, setRubrics] = useState<CriteriaProfile[]>([]);
   const [selectedRubricId, setSelectedRubricId] = useState<string>("");
   const [activeMode, setActiveMode] = useState<"single" | "bulk">("single");
@@ -221,6 +227,7 @@ export function EnterpriseScreeningView() {
   return (
     <div className="space-y-10">
       {/* ---- Overview ---- */}
+      {(viewMode === "all" || viewMode === "overview") && (
       <section id="overview" className={sectionAnchor}>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           {[
@@ -262,8 +269,10 @@ export function EnterpriseScreeningView() {
           ))}
         </div>
       </section>
+    )}
 
       {/* ---- Criteria studio ---- */}
+      {(viewMode === "all" || viewMode === "rubrics") && (
       <section id="rubrics" className={`${sectionAnchor} dash-card-in`} style={{ animationDelay: "120ms" }}>
         <div className="clean-card rounded-2xl p-6">
           <div className="flex flex-col justify-between gap-4 border-b border-slate-100 pb-5 md:flex-row md:items-center">
@@ -354,8 +363,10 @@ export function EnterpriseScreeningView() {
           </div>
         </div>
       </section>
+    )}
 
       {/* ---- Screening ---- */}
+      {(viewMode === "all" || viewMode === "screening") && (
       <section id="screening" className={sectionAnchor}>
         {/* Mode tabs */}
         <div className="mb-5 inline-flex rounded-xl border border-slate-200 bg-white p-1" role="tablist" aria-label="Screening mode">
@@ -710,6 +721,7 @@ export function EnterpriseScreeningView() {
           </div>
         )}
       </section>
+    )}
 
       {/* ---- New rubric modal ---- */}
       {showCustomModal && (

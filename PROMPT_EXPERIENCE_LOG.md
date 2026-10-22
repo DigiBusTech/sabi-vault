@@ -1979,3 +1979,43 @@
   - `node tests/test_full_suite.mjs`: 100% Passed (8/8 master integration suites).
   - `npx tsc --noEmit`: 100% Passed (0 errors).
   - `npx next build`: 100% Passed (all 54 static and dynamic routes compiled cleanly).
+
+
+---
+
+### Entry #056 - Zero-Downscale Full-Fidelity Ingestion, Google Drive Disconnect Overhaul, Base Sepolia Private Key Validation, Live Telemetry Mission Control & Multi-Page Modular Dashboards
+- **Date & Time:** 2026-10-22 13:10:00 (Local)
+- **Author:** SabiProfile Core Architecture AI
+- **User Prompt / Intent:**
+  > "i do not think downscalling the image is the solution we should find another solution, also we should fix the private key to know the root cause of the network error, also Fixing the Google Drive Connected UI badge with remove account feature, or disconnect, then add part 5. to the plan which is the dashboards user,org,gov and super admin, let all features have their own page, not one long scroll page with static side bar nav. let each features and section have their own page or screen. without joining everything together. expand on these to make it better with all the frontend and UI/UX skills installed in this project."
+- **Architectural Solutions & Changes:**
+  1. **Full-Fidelity File Ingestion (Zero Downscaling):**
+     - Rather than compressing or scaling down camera captures or document images, preserved 100% of original raw resolution to guarantee maximum OCR fidelity.
+     - Updated `src/app/api/v1/vault/sync/route.ts` to support native `multipart/form-data` uploads via `req.formData()`. Multipart binary streaming eliminates the 33% Base64 string memory expansion.
+     - Added `export const maxDuration = 60` and `export const dynamic = "force-dynamic"` to give serverless execution a full 60-second execution budget so Base Sepolia on-chain mining or OCR extraction never hits a premature 10s timeout.
+     - Rewrote error parsing in `src/components/dashboard/DocumentIntake.tsx` to display exact server details instead of collapsing into a generic "Network error".
+  2. **Google Drive / Dropbox Connected State & Disconnect UI:**
+     - In `DocumentIntake.tsx`, implemented live query to `GET /api/v1/user/cloud-settings` on mount and after OAuth redirect callback (`?cloudConnected=`).
+     - Replaced hardcoded "Connect" buttons with dynamic state: renders a green pulse indicator with "Connected & Vault Synced" status when linked.
+     - Added an instant "Disconnect / Remove Account" button invoking `DELETE /api/v1/user/cloud-settings?provider=google_drive|dropbox`, updating UI state immediately without page reload.
+  3. **Base Sepolia Ledger Client Private Key Hardening:**
+     - In `src/core/blockchain/ledger_client.ts`, implemented automatic private key sanitization (trimming, 0x normalization).
+     - Added strict guard checking if a 42-character public wallet address (e.g. `0xE25CD...`) was supplied instead of a 66-character private key, raising an explicit, actionable error explaining how to export the private key from MetaMask.
+  4. **Super Admin Live Telemetry Mission Control (Parts 2, 3 & 4):**
+     - Built `src/lib/telemetry/live_logger.ts`: high-performance in-memory circular ring buffer (capacity: 500 events) persisted on `globalThis`.
+     - Instrumented `API_ROUTER`, `AI_AGENTS` (Gemini 2.5/2.0/1.5 & Groq), `BLOCKCHAIN_LEDGER` (Base Sepolia L2), `CRYPTO_HASH`, and `SECURITY_AUTH`.
+     - Built API route `src/app/api/v1/admin/telemetry/events/route.ts` supporting filtering by subsystem, level, latency threshold, keyword search, buffer clearing, and JSON export.
+     - Built `src/components/admin/LiveTelemetryMonitor.tsx`: comprehensive Mission Control console with live 3s polling, pause/resume controls, latency metrics, error rate radar, and interactive JSON payload inspector.
+  5. **Complete Multi-Page Modular Dashboard Architecture (Part 5):**
+     - Completely abolished monolithic single-scroll pages and anchor links (`href="#..."`).
+     - Upgraded `DashboardShell.tsx` to use Next.js `<Link>` navigation with active route detection (`usePathname()`).
+     - Built modular sub-routes across all 4 system roles:
+       - **Citizen:** `/dashboard` (Overview), `/dashboard/documents` (Intake), `/dashboard/vault` (Vault), `/dashboard/keys` (Scoped Keys), `/dashboard/devices` (Security), `/dashboard/audit` (Audit Log).
+       - **Enterprise:** `/dashboard/enterprise` (Overview), `/dashboard/enterprise/organization` (Org Profile), `/dashboard/enterprise/rubrics` (Criteria Studio), `/dashboard/enterprise/screening` (Screening Console).
+       - **Government:** `/dashboard/government` (Overview), `/dashboard/government/nodes` (Regional Nodes), `/dashboard/government/ledger` (Settlement Ledger), `/dashboard/government/fraud` (Fraud Radar).
+       - **Super Admin:** `/dashboard/admin` (Overview), `/dashboard/admin/users` (Users), `/dashboard/admin/organizations` (KYC Orgs), `/dashboard/admin/config` (Platform Config), `/dashboard/admin/telemetry` (Mission Control).
+- **Validation:**
+  - `node tests/test_document_scan_and_cloud.mjs`: 26/26 tests PASSED.
+  - `node tests/test_device_management.mjs`: 5/5 suites PASSED.
+  - `node tests/test_full_suite.mjs`: 8/8 master integration suites PASSED.
+  - `npx tsc --noEmit`: 100% PASSED (0 errors).

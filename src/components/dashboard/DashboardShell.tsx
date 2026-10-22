@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   Vault,
@@ -22,6 +22,7 @@ import {
   AlertTriangle,
   Laptop,
   Lock,
+  Activity,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { logoutAndResetSession, getStoredAccessToken } from "@/lib/security/silent_refresh.client";
@@ -30,6 +31,7 @@ import { getDeviceFingerprint } from "@/lib/security/fingerprint.client";
 export interface ShellNavItem {
   id: string;
   label: string;
+  href?: string;
 }
 
 interface DashboardShellProps {
@@ -56,6 +58,7 @@ const NAV_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   ledger: Landmark,
   fraud: ShieldCheck,
   devices: Laptop,
+  telemetry: Activity,
 };
 
 function roleLabel(role: string): string {
@@ -73,6 +76,7 @@ function roleLabel(role: string): string {
  */
 export function DashboardShell({ role, email, orgName, navItems, children }: DashboardShellProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const [activeId, setActiveId] = useState<string>(navItems[0]?.id ?? "overview");
   const [mobileOpen, setMobileOpen] = useState<boolean>(false);
   const [sessionTerminated, setSessionTerminated] = useState<boolean>(false);
@@ -255,21 +259,30 @@ export function DashboardShell({ role, email, orgName, navItems, children }: Das
       <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4" aria-label="Workspace sections">
         {navItems.map((item) => {
           const Icon = NAV_ICONS[item.id] ?? LayoutDashboard;
-          const isActive = activeId === item.id;
+          const targetHref = item.href || (item.id === "overview" ? "/dashboard" : `/dashboard/${item.id}`);
+          const isCurrent = item.href
+            ? item.href === "/dashboard"
+              ? pathname === "/dashboard"
+              : pathname === item.href || pathname.startsWith(`${item.href}/`)
+            : activeId === item.id;
+
           return (
-            <a
+            <Link
               key={item.id}
-              href={`#${item.id}`}
-              onClick={() => setMobileOpen(false)}
+              href={targetHref}
+              onClick={() => {
+                setActiveId(item.id);
+                setMobileOpen(false);
+              }}
               className={`group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition-all duration-200 ${
-                isActive
+                isCurrent
                   ? "bg-emerald-50 text-emerald-700"
                   : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
               }`}
             >
               <span
                 className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors duration-200 ${
-                  isActive
+                  isCurrent
                     ? "bg-emerald-600 text-white"
                     : "bg-slate-100 text-slate-400 group-hover:bg-slate-200 group-hover:text-slate-600"
                 }`}
@@ -277,10 +290,10 @@ export function DashboardShell({ role, email, orgName, navItems, children }: Das
                 <Icon className="h-4 w-4" />
               </span>
               {item.label}
-              {isActive && (
+              {isCurrent && (
                 <span className="ml-auto h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden="true" />
               )}
-            </a>
+            </Link>
           );
         })}
       </nav>

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   AlertTriangle,
   Check,
@@ -9,12 +9,21 @@ import {
   FileText,
   ShieldCheck,
   UploadCloud,
+  Unlink,
+  Loader2,
 } from "lucide-react";
 import { VaultCategory } from "@/types/vault";
 import { ScanPipeline } from "./ScanPipeline";
 import { CloudConnectModal } from "./CloudConnectModal";
 
-const MAX_FILE_BYTES = 8 * 1024 * 1024; // 8 MB ephemeral processing cap
+const MAX_FILE_BYTES = 16 * 1024 * 1024; // 16 MB ephemeral processing cap
+
+interface CloudIntegrationInfo {
+  provider: "google_drive" | "dropbox";
+  is_active: boolean;
+  connected_at: string;
+  drive_folder_id?: string | null;
+}
 
 const CATEGORY_OPTIONS: { value: VaultCategory; label: string }[] = [
   { value: "academics", label: "Academics" },
@@ -66,6 +75,48 @@ export function DocumentIntake({ onSynced }: DocumentIntakeProps) {
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState<boolean>(false);
   const [cloudModal, setCloudModal] = useState<"google_drive" | "dropbox" | null>(null);
+  const [integrations, setIntegrations] = useState<CloudIntegrationInfo[]>([]);
+  const [disconnecting, setDisconnecting] = useState<string | null>(null);
+
+  const refreshIntegrations = async () => {
+    try {
+      const res = await fetch("/api/v1/user/cloud-settings");
+      if (res.ok) {
+        const data = await res.json();
+        setIntegrations(data.integrations || []);
+      }
+    } catch {
+      // Non-fatal
+    }
+  };
+
+  useEffect(() => {
+    refreshIntegrations();
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("cloudConnected")) {
+        refreshIntegrations();
+      }
+    }
+  }, []);
+
+  const handleDisconnectCloud = async (provider: "google_drive" | "dropbox") => {
+    if (disconnecting) return;
+    setDisconnecting(provider);
+    try {
+      const res = await fetch(`/api/v1/user/cloud-settings?provider=${provider}`, { method: "DELETE" });
+      if (res.ok) {
+        setIntegrations((prev) => prev.filter((i) => i.provider !== provider));
+      } else {
+        const d = await res.json().catch(() => ({}));
+        setError(d.error || `Failed to disconnect ${provider}`);
+      }
+    } catch {
+      setError(`Network error disconnecting ${provider}`);
+    } finally {
+      setDisconnecting(null);
+    }
+  };
 
   const handleFile = async (file: File | undefined) => {
     if (!file || uploading) return;
@@ -73,7 +124,7 @@ export function DocumentIntake({ onSynced }: DocumentIntakeProps) {
     setResult(null);
 
     if (file.size > MAX_FILE_BYTES) {
-      setError(`"${file.name}" is ${(file.size / (1024 * 1024)).toFixed(1)} MB. The ephemeral pipeline accepts files up to 8 MB.`);
+      setError(`"${file.name}" is ${(file.size / (1024 * 1024)).toFixed(1)} MB. The ephemeral pipeline accepts files up to 16 MB.`);
       return;
     }
 
@@ -81,17 +132,30 @@ export function DocumentIntake({ onSynced }: DocumentIntakeProps) {
     setActiveFileName(file.name);
 
     try {
-      const fileBase64 = await readFileAsBase64(file);
+      // Use native multipart FormData to stream full-fidelity uncompressed binary
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("category", category);
+
       const res = await fetch("/api/v1/vault/sync", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fileName: file.name, fileBase64, category }),
+        body: formData,
       });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error || "Document sync failed. Please try again.");
+
+      const resText = await res.text();
+      let data: any = null;
+      try {
+        data = JSON.parse(resText);
+      } catch {
+        setError(resText && resText.length < 250 ? resText : `Sync failed with server status ${res.status}.`);
         return;
       }
+
+      if (!res.ok) {
+        setError(data.details || data.error || `Document sync failed (${res.status}). Please try again.`);
+        return;
+      }
+
       setResult({
         documentName: data.documentName,
         category: data.category,
@@ -100,8 +164,8 @@ export function DocumentIntake({ onSynced }: DocumentIntakeProps) {
         onChainCommit: data.onChainCommit,
       });
       onSynced(data.category);
-    } catch {
-      setError("Network error while syncing the document.");
+    } catch (err: any) {
+      setError(err?.message ? `Upload failed: ${err.message}` : "Network error while syncing the document.");
     } finally {
       setUploading(false);
     }
@@ -217,29 +281,74 @@ export function DocumentIntake({ onSynced }: DocumentIntakeProps) {
             </span>
             <span className="h-px flex-1 bg-slate-200" />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {(
               [
                 { id: "google_drive" as const, name: "Google Drive", logo: "https://cdn.simpleicons.org/googledrive" },
                 { id: "dropbox" as const, name: "Dropbox", logo: "https://cdn.simpleicons.org/dropbox" },
               ]
-            ).map((p) => (
-              <button
-                key={p.id}
-                type="button"
-                onClick={() => setCloudModal(p.id)}
-                className="group flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-left transition-all duration-200 hover:border-emerald-300 hover:shadow-sm active:scale-[0.98]"
-              >
-                <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-50 ring-1 ring-slate-200 transition-colors group-hover:bg-emerald-50 group-hover:ring-emerald-200">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={p.logo} alt="" className="h-4 w-4" />
-                </span>
-                <span>
-                  <span className="block text-xs font-bold text-slate-900">{p.name}</span>
-                  <span className="block text-[10px] font-medium text-emerald-700">Connect</span>
-                </span>
-              </button>
-            ))}
+            ).map((p) => {
+              const isConnected = integrations.some((i) => i.provider === p.id && i.is_active);
+              const isBusy = disconnecting === p.id;
+
+              return (
+                <div
+                  key={p.id}
+                  className={`group relative flex items-center justify-between rounded-xl border p-3.5 transition-all duration-200 ${
+                    isConnected
+                      ? "border-emerald-200 bg-emerald-50/40 shadow-sm"
+                      : "border-slate-200 bg-white hover:border-emerald-300 hover:shadow-sm"
+                  }`}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span
+                      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ring-1 transition-colors ${
+                        isConnected
+                          ? "bg-white ring-emerald-200 text-emerald-600 shadow-xs"
+                          : "bg-slate-50 ring-slate-200 group-hover:bg-emerald-50 group-hover:ring-emerald-200"
+                      }`}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={p.logo} alt="" className="h-4 w-4" />
+                    </span>
+                    <div className="min-w-0">
+                      <span className="block truncate text-xs font-bold text-slate-900">{p.name}</span>
+                      {isConnected ? (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700">
+                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                          Connected & Vault Synced
+                        </span>
+                      ) : (
+                        <span className="block text-[10px] font-medium text-slate-500">Not connected</span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    {isConnected ? (
+                      <button
+                        type="button"
+                        onClick={() => handleDisconnectCloud(p.id)}
+                        disabled={isBusy}
+                        className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-white px-2.5 py-1.5 text-[10px] font-bold text-red-600 transition-colors hover:bg-red-50 hover:border-red-300 disabled:opacity-50"
+                        title={`Disconnect ${p.name}`}
+                      >
+                        {isBusy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Unlink className="h-3 w-3" />}
+                        Disconnect
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setCloudModal(p.id)}
+                        className="rounded-lg bg-emerald-50 px-3 py-1.5 text-[11px] font-bold text-emerald-700 transition-colors hover:bg-emerald-100 active:scale-95"
+                      >
+                        Connect
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
 
@@ -321,7 +430,10 @@ export function DocumentIntake({ onSynced }: DocumentIntakeProps) {
         <CloudConnectModal
           provider={cloudModal}
           open={cloudModal !== null}
-          onClose={() => setCloudModal(null)}
+          onClose={() => {
+            setCloudModal(null);
+            refreshIntegrations();
+          }}
         />
       )}
     </div>

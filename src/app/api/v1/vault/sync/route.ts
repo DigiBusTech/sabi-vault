@@ -5,47 +5,95 @@ import { BlockchainLedgerClient } from "@/core/blockchain/ledger_client";
 import { VaultCategory, CloudFileRef } from "@/types/vault";
 import { authenticateUser } from "@/lib/auth/auth_guard";
 import { globalUserStore } from "@/core/vault/user_store";
+import { liveTelemetry } from "@/lib/telemetry/live_logger";
+
+export const maxDuration = 60;
+export const dynamic = "force-dynamic";
 
 /**
  * POST /api/v1/vault/sync
  *
  * Ephemeral Document Synchronization Endpoint
- * Receives file content ephemerally, parses into standardized category JSON,
- * sanitizes the in-memory buffer, and commits the hash on-chain.
+ * Receives file content ephemerally (via multipart/form-data or JSON base64),
+ * parses into standardized category JSON, sanitizes in-memory buffer,
+ * and commits the hash on-chain.
  * ZERO raw physical files are saved on disk or server.
  */
 export async function POST(req: NextRequest) {
+  const startTime = Date.now();
   try {
     const auth = await authenticateUser(req);
     if (!auth.isAuthenticated || !auth.user) {
+      liveTelemetry.record({
+        subsystem: "SECURITY_AUTH",
+        level: "WARN",
+        action: "POST /api/v1/vault/sync",
+        durationMs: Date.now() - startTime,
+        statusCode: auth.status,
+        errorCode: "AUTH_REQUIRED",
+        message: auth.error || "Authentication required for document sync.",
+      });
       return NextResponse.json({ error: auth.error || "Authentication required" }, { status: auth.status });
     }
 
-    const body = await req.json();
-    const { vaultId, fileName, fileBase64, category, cloudProvider, cloudFileId, cloudWebViewLink } = body;
-
-    if (vaultId && vaultId !== auth.user.userId) {
-      return NextResponse.json({ error: "You may only sync documents to your own vault." }, { status: 403 });
-    }
-
     const targetVaultId = auth.user.userId;
-    if (!fileName || !fileBase64) {
-      return NextResponse.json(
-        { error: "Missing required fields: fileName or fileBase64" },
-        { status: 400 }
-      );
+    let fileName = "";
+    let category: string | undefined = undefined;
+    let fileBuffer: Buffer | null = null;
+    let cloudProvider: any = undefined;
+    let cloudFileId: string | undefined = undefined;
+    let cloudWebViewLink: string | undefined = undefined;
+
+    const contentType = req.headers.get("content-type") || "";
+
+    if (contentType.includes("multipart/form-data")) {
+      const formData = await req.formData();
+      const file = formData.get("file") as File | null;
+      if (!file) {
+        return NextResponse.json({ error: "Missing required file in multipart form data." }, { status: 400 });
+      }
+      fileName = file.name || "uploaded_document";
+      category = (formData.get("category") as string) || undefined;
+      cloudProvider = formData.get("cloudProvider") || undefined;
+      cloudFileId = (formData.get("cloudFileId") as string) || undefined;
+      cloudWebViewLink = (formData.get("cloudWebViewLink") as string) || undefined;
+
+      const arrayBuffer = await file.arrayBuffer();
+      fileBuffer = Buffer.from(arrayBuffer);
+    } else {
+      const body = await req.json();
+      const { vaultId, fileName: jsonFileName, fileBase64, category: jsonCat, cloudProvider: cp, cloudFileId: cfId, cloudWebViewLink: cLink } = body;
+
+      if (vaultId && vaultId !== targetVaultId) {
+        return NextResponse.json({ error: "You may only sync documents to your own vault." }, { status: 403 });
+      }
+
+      if (!jsonFileName || !fileBase64) {
+        return NextResponse.json(
+          { error: "Missing required fields: fileName or fileBase64" },
+          { status: 400 }
+        );
+      }
+
+      fileName = jsonFileName;
+      category = jsonCat;
+      cloudProvider = cp;
+      cloudFileId = cfId;
+      cloudWebViewLink = cLink;
+      fileBuffer = Buffer.from(fileBase64, "base64");
     }
 
-    // Guard: base64 inflates size ~4/3; cap raw file at 8 MB
-    if (typeof fileBase64 === "string" && fileBase64.length > 12 * 1024 * 1024) {
+    if (!fileBuffer || fileBuffer.length === 0) {
+      return NextResponse.json({ error: "Empty file payload provided." }, { status: 400 });
+    }
+
+    // Cap raw file at 16 MB ephemeral processing limit
+    if (fileBuffer.length > 16 * 1024 * 1024) {
       return NextResponse.json(
-        { error: "File exceeds the 8 MB ephemeral processing limit." },
+        { error: "File exceeds the 16 MB ephemeral processing limit." },
         { status: 413 }
       );
     }
-
-    // 1. Create ephemeral Buffer in memory
-    const fileBuffer = Buffer.from(fileBase64, "base64");
 
     // 2. Process via Ephemeral Parser (memory zeroed in finally block)
     const gateway = new MultiLLMGateway();
@@ -88,6 +136,23 @@ export async function POST(req: NextRequest) {
       targetVaultId
     );
 
+    const durationMs = Date.now() - startTime;
+    liveTelemetry.record({
+      subsystem: "API_ROUTER",
+      level: "SUCCESS",
+      action: "POST /api/v1/vault/sync",
+      durationMs,
+      statusCode: 200,
+      message: `Document "${parsedResult.documentName}" successfully parsed, hashed, and anchored to ${commitResult.isSimulated ? "Simulation" : "Base Sepolia"}.`,
+      metadata: {
+        category: parsedResult.category,
+        sha256: parsedResult.sha256Hash,
+        txHash: commitResult.txHash,
+        isSimulated: commitResult.isSimulated === true,
+      },
+      userId: targetVaultId,
+    });
+
     return NextResponse.json({
       status: "SUCCESS_SYNCED",
       vaultId: targetVaultId,
@@ -111,8 +176,19 @@ export async function POST(req: NextRequest) {
       syncedAt: parsedResult.processedAt,
     });
   } catch (err: any) {
+    liveTelemetry.record({
+      subsystem: "API_ROUTER",
+      level: "ERROR",
+      action: "POST /api/v1/vault/sync",
+      durationMs: Date.now() - startTime,
+      statusCode: 500,
+      errorCode: "SYNC_PIPELINE_ERROR",
+      message: `Sync pipeline failure: ${err?.message || String(err)}`,
+      metadata: { stack: err?.stack?.substring(0, 300) },
+    });
+
     return NextResponse.json(
-      { error: "Failed to ephemerally sync document", details: err.message },
+      { error: "Failed to ephemerally sync document", details: err?.message || String(err) },
       { status: 500 }
     );
   }

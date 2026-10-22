@@ -11,7 +11,13 @@ import {
   Landmark,
 } from "lucide-react";
 
-export function SovereignGovtView() {
+export type GovtViewMode = "all" | "overview" | "nodes" | "ledger" | "fraud";
+
+interface SovereignGovtViewProps {
+  viewMode?: GovtViewMode;
+}
+
+export function SovereignGovtView({ viewMode = "all" }: SovereignGovtViewProps = {}) {
   const [analytics, setAnalytics] = useState<any | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -77,6 +83,7 @@ export function SovereignGovtView() {
   return (
     <div className="space-y-10">
       {/* ---- Overview metrics ---- */}
+      {(viewMode === "all" || viewMode === "overview") && (
       <section id="overview" className={sectionAnchor}>
         <div className="mb-4 flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
           <div>
@@ -160,6 +167,7 @@ export function SovereignGovtView() {
           </div>
         )}
       </section>
+    )}
 
       {disburseSuccessMsg && (
         <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-xs font-medium text-emerald-800">
@@ -175,6 +183,7 @@ export function SovereignGovtView() {
       )}
 
       {/* ---- Regional nodes ---- */}
+      {(viewMode === "all" || viewMode === "nodes") && (
       <section id="nodes" className={sectionAnchor}>
         <div className="clean-card dash-card-in rounded-2xl p-6" style={{ animationDelay: "100ms" }}>
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -247,8 +256,10 @@ export function SovereignGovtView() {
           </div>
         </div>
       </section>
+    )}
 
       {/* ---- Settlement ledger ---- */}
+      {(viewMode === "all" || viewMode === "ledger") && (
       <section id="ledger" className={sectionAnchor}>
         <div className="clean-card dash-card-in rounded-2xl p-6" style={{ animationDelay: "120ms" }}>
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -304,8 +315,10 @@ export function SovereignGovtView() {
           </div>
         </div>
       </section>
+    )}
 
       {/* ---- Fraud radar ---- */}
+      {(viewMode === "all" || viewMode === "fraud") && (
       <section id="fraud" className={sectionAnchor}>
         <div className="clean-card dash-card-in rounded-2xl p-6" style={{ animationDelay: "140ms" }}>
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -371,6 +384,7 @@ export function SovereignGovtView() {
           </div>
         </div>
       </section>
+    )}
     </div>
   );
 }

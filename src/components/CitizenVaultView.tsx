@@ -36,8 +36,11 @@ import { VaultCategory, FullUserVault } from "@/types/vault";
 import { DocumentIntake } from "@/components/dashboard/DocumentIntake";
 import { DeviceManager } from "@/components/dashboard/DeviceManager";
 
+export type CitizenViewMode = "all" | "overview" | "documents" | "vault" | "keys" | "devices" | "audit";
+
 interface CitizenVaultViewProps {
   onMintKeyForDemo?: (key: string) => void;
+  viewMode?: CitizenViewMode;
 }
 
 const CATEGORIES: {
@@ -53,7 +56,7 @@ const CATEGORIES: {
   { id: "portfolio", label: "Portfolio", icon: Globe2 },
 ];
 
-export function CitizenVaultView({ onMintKeyForDemo }: CitizenVaultViewProps) {
+export function CitizenVaultView({ onMintKeyForDemo, viewMode = "all" }: CitizenVaultViewProps) {
   const [vault, setVault] = useState<FullUserVault | null>(null);
   const [activeCategory, setActiveCategory] = useState<VaultCategory>("academics");
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -525,60 +528,65 @@ export function CitizenVaultView({ onMintKeyForDemo }: CitizenVaultViewProps) {
   return (
     <div className="space-y-10">
       {/* ---- Overview ---- */}
-      <section id="overview" className={sectionAnchor}>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          {[
-            {
-              icon: Shield,
-              label: "Sovereign node",
-              value: vault?.sovereignNode || "ng-west-africa",
-              sub: "NDPC compliant · zero server PDFs",
-            },
-            {
-              icon: Lock,
-              label: "Immutability layer",
-              value: "Base Sepolia L2",
-              sub: "SHA-256 hash verification",
-            },
-            {
-              icon: Key,
-              label: "Active scoped keys",
-              value: `${activeKeys} key${activeKeys === 1 ? "" : "s"}`,
-              sub: `${totalRecords} records in vault`,
-            },
-          ].map((stat, i) => (
-            <div
-              key={stat.label}
-              className="clean-card dash-card-in flex items-center gap-3.5 rounded-2xl p-4"
-              style={{ animationDelay: `${i * 70}ms` }}
-            >
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
-                <stat.icon className="h-5 w-5" />
-              </span>
-              <div className="min-w-0">
-                <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">
-                  {stat.label}
-                </p>
-                <p className="truncate text-sm font-extrabold text-slate-900">{stat.value}</p>
-                <p className="text-[11px] text-slate-500">{stat.sub}</p>
+      {(viewMode === "all" || viewMode === "overview") && (
+        <section id="overview" className={sectionAnchor}>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            {[
+              {
+                icon: Shield,
+                label: "Sovereign node",
+                value: vault?.sovereignNode || "ng-west-africa",
+                sub: "NDPC compliant · zero server PDFs",
+              },
+              {
+                icon: Lock,
+                label: "Immutability layer",
+                value: "Base Sepolia L2",
+                sub: "SHA-256 hash verification",
+              },
+              {
+                icon: Key,
+                label: "Active scoped keys",
+                value: `${activeKeys} key${activeKeys === 1 ? "" : "s"}`,
+                sub: `${totalRecords} records in vault`,
+              },
+            ].map((stat, i) => (
+              <div
+                key={stat.label}
+                className="clean-card dash-card-in flex items-center gap-3.5 rounded-2xl p-4"
+                style={{ animationDelay: `${i * 70}ms` }}
+              >
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+                  <stat.icon className="h-5 w-5" />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">
+                    {stat.label}
+                  </p>
+                  <p className="truncate text-sm font-extrabold text-slate-900">{stat.value}</p>
+                  <p className="text-[11px] text-slate-500">{stat.sub}</p>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
-      </section>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* ---- Document intake ---- */}
-      <section id="documents" className={`${sectionAnchor} dash-card-in`} style={{ animationDelay: "140ms" }}>
-        <DocumentIntake
-          onSynced={(cat) => {
-            setActiveCategory(cat);
-            loadVaultData();
-          }}
-        />
-      </section>
+      {(viewMode === "all" || viewMode === "documents") && (
+        <section id="documents" className={`${sectionAnchor} dash-card-in`} style={{ animationDelay: "140ms" }}>
+          <DocumentIntake
+            onSynced={(cat) => {
+              setActiveCategory(cat);
+              loadVaultData();
+            }}
+          />
+        </section>
+      )}
 
       {/* ---- Vault ---- */}
-      <section id="vault" className={`${sectionAnchor} dash-card-in`} style={{ animationDelay: "200ms" }}>
+      {(viewMode === "all" || viewMode === "vault") && (
+        <section id="vault" className={`${sectionAnchor} dash-card-in`} style={{ animationDelay: "200ms" }}>
         <div className="clean-card rounded-2xl p-6">
           <div className="flex flex-col justify-between gap-3 border-b border-slate-100 pb-4 sm:flex-row sm:items-center">
             <div>
@@ -676,8 +684,10 @@ export function CitizenVaultView({ onMintKeyForDemo }: CitizenVaultViewProps) {
           </div>
         </div>
       </section>
+    )}
 
       {/* ---- Scoped keys ---- */}
+      {(viewMode === "all" || viewMode === "keys") && (
       <section id="keys" className={sectionAnchor}>
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
           {/* Mint panel */}
@@ -897,15 +907,19 @@ export function CitizenVaultView({ onMintKeyForDemo }: CitizenVaultViewProps) {
           </div>
         </div>
       </section>
+    )}
 
       {/* ---- Connected Devices & Session Management ---- */}
+      {(viewMode === "all" || viewMode === "devices") && (
       <section id="devices" className={sectionAnchor}>
         <div className="clean-card dash-card-in rounded-2xl p-6" style={{ animationDelay: "100ms" }}>
           <DeviceManager />
         </div>
       </section>
+    )}
 
       {/* ---- Audit trail ---- */}
+      {(viewMode === "all" || viewMode === "audit") && (
       <section id="audit" className={sectionAnchor}>
         <div className="clean-card dash-card-in rounded-2xl p-6" style={{ animationDelay: "80ms" }}>
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -968,6 +982,7 @@ export function CitizenVaultView({ onMintKeyForDemo }: CitizenVaultViewProps) {
           </div>
         </div>
       </section>
+    )}
 
       {/* ---- Document Intake & Auto-Scan Modal (Zero Manual Text Invariant) ---- */}
       <CameraScannerModal

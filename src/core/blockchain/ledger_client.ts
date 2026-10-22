@@ -1,6 +1,7 @@
-﻿import { ethers } from "ethers";
+import { ethers } from "ethers";
 import { VerificationTier } from "@/types/vault";
 import { getConfigValueSync } from "@/core/config/platform_config";
+import { liveTelemetry } from "@/lib/telemetry/live_logger";
 
 export interface OnChainVerificationResponse {
   isMatch: boolean;
@@ -80,13 +81,33 @@ export class BlockchainLedgerClient {
 
     const key = `${vaultId}:${category}`;
     const timestamp = Math.floor(Date.now() / 1000);
-    const privateKey = signerPrivateKey || getConfigValueSync("blockchain.signer_private_key") || undefined;
+    const rawKey = (signerPrivateKey || getConfigValueSync("blockchain.signer_private_key") || "").trim();
+    let normalizedPrivateKey: string | undefined = undefined;
+
+    if (rawKey) {
+      if (rawKey.startsWith("0x") && rawKey.length === 42) {
+        throw new Error(
+          "Invalid private key configuration: A 42-character public wallet address (" +
+          rawKey.substring(0, 10) +
+          "...) was supplied instead of the private key. In MetaMask, tap Account Details -> Show Private Key to export your 64/66-character private key."
+        );
+      }
+      normalizedPrivateKey = rawKey.startsWith("0x") ? rawKey : `0x${rawKey}`;
+      if (normalizedPrivateKey.length !== 66) {
+        throw new Error(
+          `Invalid private key length (${rawKey.length} chars). A standard EVM private key must be 64 hex characters (or 66 with 0x prefix).`
+        );
+      }
+    }
+
     const registryConfigured =
       this.registryAddress !== "0x1234567890123456789012345678901234567890";
 
-    if (privateKey && this.provider && registryConfigured) {
+    const commitStart = Date.now();
+
+    if (normalizedPrivateKey && this.provider && registryConfigured) {
       try {
-        const wallet = new ethers.Wallet(privateKey, this.provider);
+        const wallet = new ethers.Wallet(normalizedPrivateKey, this.provider);
         const contract = new ethers.Contract(this.registryAddress, REGISTRY_ABI, wallet);
         const bytes32Hash = "0x" + sha256Hex;
         const tx = await contract.commitTier1Hash(vaultId, category, bytes32Hash);
@@ -94,16 +115,56 @@ export class BlockchainLedgerClient {
         if (!receipt || receipt.status !== 1) {
           throw new Error("Blockchain transaction was not confirmed successfully.");
         }
+        liveTelemetry.record({
+          subsystem: "BLOCKCHAIN_LEDGER",
+          level: "SUCCESS",
+          action: "COMMIT_HASH_BASE_SEPOLIA",
+          durationMs: Date.now() - commitStart,
+          statusCode: 200,
+          message: `On-chain anchor mined successfully on Base Sepolia. Block: ${receipt.blockNumber}`,
+          metadata: {
+            contract: this.registryAddress,
+            txHash: receipt.hash,
+            blockNumber: receipt.blockNumber,
+            gasUsed: receipt.gasUsed?.toString(),
+            category,
+            vaultId,
+          },
+          userId: vaultId,
+        });
         return { txHash: receipt.hash, timestamp, isSimulated: false };
-      } catch (err) {
+      } catch (err: any) {
+        liveTelemetry.record({
+          subsystem: "BLOCKCHAIN_LEDGER",
+          level: "ERROR",
+          action: "COMMIT_HASH_BASE_SEPOLIA",
+          durationMs: Date.now() - commitStart,
+          statusCode: 500,
+          errorCode: "LEDGER_TX_FAILED",
+          message: `Base Sepolia on-chain commit reverted or rejected: ${err?.message || String(err)}`,
+          metadata: { contract: this.registryAddress, category, vaultId },
+          userId: vaultId,
+        });
         if (!this.simulationEnabled) {
-          throw new Error("Blockchain commit failed; refusing to return a simulated receipt.", { cause: err });
+          const errMsg = err?.message || String(err);
+          throw new Error(`Blockchain commit failed on Base Sepolia: ${errMsg}`, { cause: err });
         }
       }
     }
 
     if (!this.simulationEnabled) {
-      throw new Error("Blockchain signing is not configured; refusing to simulate a production commit.");
+      liveTelemetry.record({
+        subsystem: "BLOCKCHAIN_LEDGER",
+        level: "ERROR",
+        action: "COMMIT_HASH_VALIDATION",
+        durationMs: Date.now() - commitStart,
+        statusCode: 400,
+        errorCode: "SIGNER_CONFIG_MISSING",
+        message: "Signing private key is missing while simulation_mode is disabled.",
+      });
+      throw new Error(
+        "Blockchain signing is not configured or private key is missing; refusing to simulate a production commit when simulation_mode is false."
+      );
     }
 
     BlockchainLedgerClient.localSimulationLedger.set(key, {
@@ -112,6 +173,17 @@ export class BlockchainLedgerClient {
       timestamp,
     });
     const simTxHash = ethers.keccak256(ethers.toUtf8Bytes(`${key}:${sha256Hex}:${timestamp}`));
+
+    liveTelemetry.record({
+      subsystem: "BLOCKCHAIN_LEDGER",
+      level: "INFO",
+      action: "COMMIT_HASH_SIMULATED",
+      durationMs: Date.now() - commitStart,
+      statusCode: 200,
+      message: `Simulated ledger commit generated for vault "${vaultId}" [${category}].`,
+      metadata: { txHash: simTxHash, category, vaultId, tier },
+      userId: vaultId,
+    });
     return {
       txHash: simTxHash,
       timestamp,
