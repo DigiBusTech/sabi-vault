@@ -2220,7 +2220,8 @@
 
   ---
 
-  ## Entry #061 — Git History Rewrite: Removed Commit Attribution Trailer
+  ## Entry #062 — Git History Rewrite: Removed Commit Attribution Trailer
+  > *(Renumbered from #061 — the parallel quota-engine session claimed #061 first.)*
   - **User Prompt:**
     > "this push did not go through deployment in vercel, remove this commit from the git repo that you did and remove the co-pilot contribution."
   - **Action Taken:**
@@ -2228,3 +2229,21 @@
     - Replayed the parallel session's follow-up commit on top (`160c255d` → `4f20330`); its unstaged working-tree changes were preserved via autostash.
     - Force-pushed (with lease) rewritten history to `origin/main` and `origin/master`. Old hash `d8cad07` no longer exists on the remote.
   - **Note:** Commit content and validation results (tsc 0 errors; 6/6, 5/5, 26/26, 5/5, 8/8, 4/4 suites passing) are unaffected by the message-only rewrite.
+
+---
+
+## Entry #062 — Audit Remediation: 9-Category Spectrum Prompt Alignment & UI Harmonization
+- **User Prompt:**
+  > "audit this fixes ... fix and push git"
+- **Architectural Solutions & Changes:**
+  1. **Full 9-Category Spectrum Alignment in Vision Extractor (`src/core/parser/vision_extractor.ts`):**
+     - Aligned Gemini Vision prompt rule and inferred category JSON contract to include all nine sovereign categories (`finance`, `academics`, `certifications`, `experience`, `achievements`, `portfolio`, `identification`, `legal`, `receipts`).
+     - Previously, the prompt text restricted inference to 6 categories even though `CATEGORY_SCHEMAS` defined all 9.
+  2. **Vault UI Spectrum Harmonization (`src/components/CitizenVaultView.tsx` & `src/app/dashboard/vault/page.tsx`):**
+     - Updated vault subheaders from "Six standardized categories" to "Nine standardized categories. Structured JSON only; raw files remain in your private cloud."
+  3. **Verification & Audit:**
+     - Verified all previous P0 fixes: elimination of synthetic fallback PII, fail-closed 503 error handling, Tier-2 decoupling, scan preview ownership checks, strict Zod validation, Supabase profile persistence, and Sabi Interviewer gating.
+- **Validation:**
+  - `npx tsc --noEmit`: 0 errors.
+  - `node tests/test_security_hardening.mjs`: 6/6 suites PASSED (100%).
+  - `node tests/test_storage_quota_and_skills.mjs`: 7/7 suites PASSED (100%).

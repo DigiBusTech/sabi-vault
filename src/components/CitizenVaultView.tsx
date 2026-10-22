@@ -865,7 +865,7 @@ export function CitizenVaultView({ onMintKeyForDemo, viewMode = "all" }: Citizen
                 Sovereign credential vault
               </h2>
               <p className="mt-1 text-xs text-slate-500">
-                Six standardized categories. Structured JSON only; raw files never leave your device cloud.
+                Nine standardized categories. Structured JSON only; raw files never leave your device cloud.
               </p>
             </div>
             <button

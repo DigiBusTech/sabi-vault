@@ -186,7 +186,7 @@ export class VisionExtractor {
 
     const categoryRule = categoryHint
       ? `The document belongs to category '${categoryHint}'. Follow this schema:\n${CATEGORY_SCHEMAS[categoryHint]}`
-      : `Classify the document into one of these 6 categories: finance, academics, certifications, experience, achievements, portfolio.\nSchemas:\n${Object.entries(
+      : `Classify the document into one of these 9 categories: finance, academics, certifications, experience, achievements, portfolio, identification, legal, receipts.\nSchemas:\n${Object.entries(
           CATEGORY_SCHEMAS
         )
           .map(([k, v]) => `[${k}]:\n${v}`)
@@ -202,7 +202,7 @@ ${categoryRule}
 
 Return a single JSON object with the exact keys:
 {
-  "inferredCategory": "finance" | "academics" | "certifications" | "experience" | "achievements" | "portfolio",
+  "inferredCategory": "finance" | "academics" | "certifications" | "experience" | "achievements" | "portfolio" | "identification" | "legal" | "receipts",
   "confidence": number between 0.85 and 0.99,
   "extractedFields": { ... extracted fields matching the category schema ... },
   "rawTextSnippet": "First 150-200 characters of key text found on document"

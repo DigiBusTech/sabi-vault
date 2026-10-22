@@ -21,7 +21,7 @@ export default async function VaultPage() {
           Sovereign Credential Vault
         </h1>
         <p className="mt-1 text-sm text-slate-500">
-          Six standardized categories. Structured JSON only; raw files remain in your private cloud.
+          Nine standardized categories. Structured JSON only; raw files remain in your private cloud.
         </p>
       </div>
 
