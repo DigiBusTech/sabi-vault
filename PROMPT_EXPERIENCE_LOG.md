@@ -2217,3 +2217,14 @@
   - `node tests/test_google_auth_and_skills.mjs`: 4/4 suites PASSED (100%).
   - `node tests/test_full_suite.mjs`: 8/8 suites PASSED (100%).
   - `node tests/test_profile_and_ai_advisor.mjs`: 5/5 suites PASSED (100%).
+
+  ---
+
+  ## Entry #061 — Git History Rewrite: Removed Commit Attribution Trailer
+  - **User Prompt:**
+    > "this push did not go through deployment in vercel, remove this commit from the git repo that you did and remove the co-pilot contribution."
+  - **Action Taken:**
+    - Reworded commit `d8cad07` (Entry #060 remediation) → new hash `28c7ca3`, stripping the `Co-authored-by: Copilot` trailer from the commit message. All 16-file remediation content unchanged.
+    - Replayed the parallel session's follow-up commit on top (`160c255d` → `4f20330`); its unstaged working-tree changes were preserved via autostash.
+    - Force-pushed (with lease) rewritten history to `origin/main` and `origin/master`. Old hash `d8cad07` no longer exists on the remote.
+  - **Note:** Commit content and validation results (tsc 0 errors; 6/6, 5/5, 26/26, 5/5, 8/8, 4/4 suites passing) are unaffected by the message-only rewrite.
