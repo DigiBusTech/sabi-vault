@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authenticateUser } from "@/lib/auth/auth_guard";
 import { profileAndAdvisorStore } from "@/core/vault/profile_store";
+import { UserProfileNicheInputSchema } from "@/types/profile";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +19,7 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const niches = profileAndAdvisorStore.listNiches(auth.user.userId);
+    const niches = await profileAndAdvisorStore.listNiches(auth.user.userId);
     return NextResponse.json({ niches });
   } catch (err: any) {
     return NextResponse.json(
@@ -43,7 +44,15 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const niche = profileAndAdvisorStore.createOrUpdateNiche(auth.user.userId, body);
+    const parsed = UserProfileNicheInputSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Invalid niche payload", issues: parsed.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+
+    const niche = await profileAndAdvisorStore.createOrUpdateNiche(auth.user.userId, parsed.data);
 
     return NextResponse.json({
       success: true,
@@ -78,7 +87,7 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: "Missing niche ID" }, { status: 400 });
     }
 
-    const success = profileAndAdvisorStore.deleteNiche(auth.user.userId, nicheId);
+    const success = await profileAndAdvisorStore.deleteNiche(auth.user.userId, nicheId);
     return NextResponse.json({ success });
   } catch (err: any) {
     return NextResponse.json(

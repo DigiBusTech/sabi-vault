@@ -106,7 +106,7 @@ export async function GET(request: NextRequest) {
 
             // Seed user profile
             const userId = `usr_${googleUser.sub?.substring(0, 8) || "google"}`;
-            profileAndAdvisorStore.updateProfile(userId, {
+            await profileAndAdvisorStore.updateProfile(userId, {
               fullName: name,
               avatarUrl: picture,
             });

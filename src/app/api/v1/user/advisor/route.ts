@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authenticateUser } from "@/lib/auth/auth_guard";
 import { profileAndAdvisorStore } from "@/core/vault/profile_store";
+import { TargetGoalInputSchema } from "@/types/profile";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +19,7 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const audit = profileAndAdvisorStore.runAdvisorAudit(auth.user.userId);
+    const audit = await profileAndAdvisorStore.runAdvisorAudit(auth.user.userId);
     return NextResponse.json({ audit });
   } catch (err: any) {
     return NextResponse.json(
@@ -43,8 +44,16 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const updatedGoal = profileAndAdvisorStore.addOrUpdateGoal(auth.user.userId, body);
-    const refreshedAudit = profileAndAdvisorStore.runAdvisorAudit(auth.user.userId);
+    const parsed = TargetGoalInputSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Invalid target goal payload", issues: parsed.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+
+    const updatedGoal = await profileAndAdvisorStore.addOrUpdateGoal(auth.user.userId, parsed.data);
+    const refreshedAudit = await profileAndAdvisorStore.runAdvisorAudit(auth.user.userId);
 
     return NextResponse.json({
       success: true,

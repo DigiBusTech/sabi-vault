@@ -145,13 +145,15 @@ assert(!("encryptedAccessToken" in list[0]), "Raw/encrypted tokens are NOT expos
 // --- Suite 3: Gemini Vision AI Extraction & Category Classification ---
 console.log("\n--- Suite 3: Gemini Vision AI Extraction & Category Classification ---");
 
+// SECURITY INVARIANT (Entry #059): keyword/AI classification NEVER grants Tier-2.
+// All classifications emit Tier 1; Tier-2 requires the notary attestation flow.
 function classifyDocument(fileName, textSnippet = "") {
   const lower = (fileName + " " + textSnippet).toLowerCase();
   if (lower.includes("statement") || lower.includes("bank") || lower.includes("tax") || lower.includes("balance")) {
     return { category: "finance", tier: 1 };
   }
   if (lower.includes("degree") || lower.includes("university") || lower.includes("transcript") || lower.includes("gpa")) {
-    return { category: "academics", tier: 2 };
+    return { category: "academics", tier: 1 };
   }
   if (lower.includes("resume") || lower.includes("engineer") || lower.includes("employment") || lower.includes("work")) {
     return { category: "experience", tier: 1 };
@@ -171,7 +173,7 @@ assert(testBank.tier === 1, "Finance category assigned Tier 1 Standard Hashed");
 
 const testDegree = classifyDocument("University_Degree_Computer_Science.jpg", "Bachelor of Science First Class Honours");
 assert(testDegree.category === "academics", "Classified university degree as academics");
-assert(testDegree.tier === 2, "Academics category assigned Tier 2 Legalized/Authenticated");
+assert(testDegree.tier === 1, "Academics classification stays Tier 1 (Tier-2 requires notary attestation)");
 
 const testCert = classifyDocument("AWS_Solutions_Architect_Badge.png", "Amazon Web Services Certified");
 assert(testCert.category === "certifications", "Classified certificate as certifications");

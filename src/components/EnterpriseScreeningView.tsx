@@ -95,8 +95,8 @@ export function EnterpriseScreeningView({ viewMode = "all" }: EnterpriseScreenin
   const [selectedTrack, setSelectedTrack] = useState<QueryTrackId>("LABOUR");
   const [isLoadingRubrics, setIsLoadingRubrics] = useState<boolean>(true);
 
-  // AI Smart Interviewer & Interview Scheduling Modals
-  const [showAiInterviewerModal, setShowAiInterviewerModal] = useState<boolean>(false);
+  // Sabi Interviewer & Interview Scheduling Modals
+  const [showSabiInterviewerModal, setShowSabiInterviewerModal] = useState<boolean>(false);
   const [showDirectInterviewModal, setShowDirectInterviewModal] = useState<boolean>(false);
   const [interviewLink, setInterviewLink] = useState<string>("");
   const [notified, setNotified] = useState<boolean>(false);
@@ -769,11 +769,11 @@ export function EnterpriseScreeningView({ viewMode = "all" }: EnterpriseScreenin
 
                       <button
                         type="button"
-                        onClick={() => setShowAiInterviewerModal(true)}
+                        onClick={() => setShowSabiInterviewerModal(true)}
                         className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-emerald-300 bg-emerald-50 py-2.5 px-4 text-xs font-bold text-emerald-800 hover:bg-emerald-100 transition-all active:scale-95"
                       >
                         <Bot className="h-4 w-4 text-emerald-600" />
-                        <span>🤖 AI Smart Interviewer</span>
+                        <span>🤖 Sabi Interviewer</span>
                         <span className="rounded bg-emerald-200/70 px-1.5 py-0.5 text-[9px] font-extrabold text-emerald-900">
                           Coming Soon
                         </span>
@@ -1120,8 +1120,8 @@ export function EnterpriseScreeningView({ viewMode = "all" }: EnterpriseScreenin
         </div>
       )}
 
-      {/* AI Smart Interviewer Coming Soon Modal */}
-      {showAiInterviewerModal && (
+      {/* Sabi Interviewer Coming Soon Modal */}
+      {showSabiInterviewerModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs">
           <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl border border-slate-100 space-y-5 animate-scale-in">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -1130,7 +1130,7 @@ export function EnterpriseScreeningView({ viewMode = "all" }: EnterpriseScreenin
                   <Bot className="h-5 w-5" />
                 </span>
                 <div>
-                  <h3 className="text-sm font-bold text-slate-900">🤖 AI Smart Interviewer</h3>
+                  <h3 className="text-sm font-bold text-slate-900">🤖 Sabi Interviewer</h3>
                   <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[9px] font-extrabold text-emerald-800 ring-1 ring-emerald-200">
                     Future Upgrade · Enterprise Roadmap
                   </span>
@@ -1138,7 +1138,7 @@ export function EnterpriseScreeningView({ viewMode = "all" }: EnterpriseScreenin
               </div>
               <button
                 type="button"
-                onClick={() => setShowAiInterviewerModal(false)}
+                onClick={() => setShowSabiInterviewerModal(false)}
                 className="text-slate-400 hover:text-slate-600"
               >
                 <X className="h-5 w-5" />
@@ -1147,7 +1147,7 @@ export function EnterpriseScreeningView({ viewMode = "all" }: EnterpriseScreenin
 
             <div className="space-y-4 text-xs text-slate-600">
               <p className="leading-relaxed">
-                The <strong>AI Smart Interviewer</strong> is an autonomous, multi-modal screening agent designed to conduct live technical, behavioral, and visa eligibility interviews without requiring human panel hours.
+                The <strong>Sabi Interviewer</strong> is an autonomous, multi-modal screening agent designed to conduct live technical, behavioral, and visa eligibility interviews without requiring human panel hours.
               </p>
 
               <div className="rounded-xl bg-slate-50 p-4 border border-slate-100 space-y-2">
@@ -1188,7 +1188,7 @@ export function EnterpriseScreeningView({ viewMode = "all" }: EnterpriseScreenin
             <div className="flex justify-end pt-1">
               <button
                 type="button"
-                onClick={() => setShowAiInterviewerModal(false)}
+                onClick={() => setShowSabiInterviewerModal(false)}
                 className="rounded-xl bg-slate-900 px-4 py-2 text-xs font-bold text-white hover:bg-slate-800"
               >
                 Close Preview

@@ -123,3 +123,24 @@ export const SovereignAdvisorAuditSchema = z.object({
 });
 export type SovereignAdvisorAudit = z.infer<typeof SovereignAdvisorAuditSchema>;
 
+// --- API Input Schemas (strict validation for mutating endpoints) ---
+
+/** POST /api/v1/user/profile — profile updates never accept userId/updatedAt from the client. */
+export const UserHumanProfileUpdateSchema = UserHumanProfileSchema.omit({
+  userId: true,
+  updatedAt: true,
+}).partial();
+export type UserHumanProfileUpdate = z.infer<typeof UserHumanProfileUpdateSchema>;
+
+/** POST /api/v1/user/niches — create/update payload; server owns userId and timestamps. */
+export const UserProfileNicheInputSchema = UserProfileNicheSchema.omit({
+  userId: true,
+  createdAt: true,
+  updatedAt: true,
+}).partial();
+export type UserProfileNicheInput = z.infer<typeof UserProfileNicheInputSchema>;
+
+/** POST /api/v1/user/advisor — goal create/update payload; server owns userId. */
+export const TargetGoalInputSchema = TargetGoalSchema.omit({ userId: true }).partial();
+export type TargetGoalInput = z.infer<typeof TargetGoalInputSchema>;
+

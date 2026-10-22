@@ -2118,7 +2118,8 @@
 
 ---
 
-## Entry #058 — Independent Security & Completeness Audit of Entry #057 Implementation
+## Entry #059 — Independent Security & Completeness Audit of Entry #057 Implementation
+> *(Renumbered from #058 to resolve a collision with the parallel Google Auth entry above.)*
 - **User Prompt:**
   > "audit this if it is fully implemented as said and no lapses with no security vulnerabilities, if any lapses and gaps report and give fixes plan if any" (auditing the Entry #057 delivery summary for the 9-category vault, Human Profile Suite, Persona Niche Studio, and AI Sovereign Target Advisor).
 - **Audit Method:** Dedicated security-review subagent over all 20+ touched files + independent verification (file existence, commit `70132fd`, `tsc --noEmit`, all 4 test suites re-run).
@@ -2132,3 +2133,39 @@
   4. 🟡 **MEDIUM:** `UserHumanProfileSchema` (zod) imported but never used — POST `/api/v1/user/profile` accepts unvalidated arbitrary JSON (also niches/advisor).
   5. ⚪ **LOW:** Scan preview cache not ownership-bound (122-bit UUID makes it impractical; defense-in-depth only). Claim inflation: "AI Smart Interviewer" is a modal mockup; "encrypted video meeting link" not implemented; advisor is rule-based, not LLM.
 - **Fix Plan Status:** Reported to user with prioritized P0/P1/P2 remediation plan; awaiting user decision on scope of fixes.
+
+---
+
+## Entry #060 — Security Hardening Remediation: Fail-Closed Extraction, Tier Decoupling, Supabase Persistence & Sabi Interviewer
+- **User Prompt:**
+  > "nice fix the gaps and lapses, also the AI Smart Interviewer rename it to 'Sabi Interviewer' and leave it at coming soon on trigger. use all the backed skills in this project to fix these gaps."
+- **Architectural Solutions & Changes (remediating all Entry #059 findings):**
+  1. **CRITICAL — Fail-Closed Vision Extraction (`src/core/parser/vision_extractor.ts`):**
+     - Deleted `generateDeterministicFallback()` entirely — the fabrication factory that invented passport numbers, MRZ codes, notary seals, and bank balances on any Gemini failure.
+     - All failure paths (missing API key, model 404s, API errors, empty payload, parse failure) now throw `VisionExtractionUnavailableError` (code `VISION_EXTRACTION_UNAVAILABLE`).
+     - LLM `inferredCategory` is allowlist-validated via `VaultCategoryEnum.safeParse` before use (falls back to hint/`portfolio`).
+  2. **Tier-2 Trust Decoupling (`vision_extractor.ts`, `ephemeral_parser.ts`):**
+     - AI/keyword classification can NEVER grant `TIER_2_AUTHENTICATED_LEGALIZED`; all extractions land at `TIER_1_STANDARD_HASHED`. Tier-2 is exclusively grantable by the notary/institutional attestation flow.
+     - Caller-supplied categories are enum-validated in both `scan` and `sync` ingestion routes (400 on invalid).
+  3. **Scan Route Hardening (`src/app/api/v1/vault/scan/route.ts`):**
+     - Extraction outage → HTTP 503 with explicit "nothing extracted, stored, or anchored" contract; ephemeral buffer zeroed before bail-out; no preview cache write, no on-chain commit.
+     - Phase B confirmation now enforces preview ownership (`cachedPreview.userId !== targetUserId` → 403).
+  4. **Zod Payload Enforcement (`src/types/profile.ts` + 3 routes):**
+     - Added `UserHumanProfileUpdateSchema`, `UserProfileNicheInputSchema`, `TargetGoalInputSchema` (server-owned `userId`/timestamps omitted from client payloads).
+     - POST `/api/v1/user/profile|niches|advisor` now `safeParse` bodies and return 400 with flattened field errors on invalid input.
+  5. **Sovereign Node Persistence (`src/core/vault/profile_store.ts`):**
+     - Rewrote the store: profiles/niches/goals persist to Supabase tables (`user_human_profiles`, `user_profile_niches`, `user_target_goals`) via the service-role client whenever configured; RLS migration is now genuinely effective.
+     - In-memory Maps remain strictly a development fallback; demo Chinwe seed data loads only in that fallback mode via `seedDemoData()`.
+     - Removed dangerous default `userId = "usr_chinwe_okafor_7721"` parameters (default-identity IDOR risk); all methods are async and require explicit userId; deletes enforce ownership in the query predicate.
+     - Updated callers: 3 user API routes + `src/app/auth/callback/route.ts` (await).
+  6. **Sabi Interviewer Rename (`src/components/EnterpriseScreeningView.tsx`):**
+     - "AI Smart Interviewer" fully renamed to **Sabi Interviewer** (labels, state variables, modal); trigger retains the "Coming Soon" badge and opens only the preview modal.
+  7. **Display-Side Fail-Closed Tiers (`src/components/CitizenVaultView.tsx`):**
+     - Identification/legal records with missing tier now render "Tier 1 Hashed" instead of defaulting up to "Tier 2 Notarized".
+- **Validation:**
+  - `npx tsc --noEmit`: 0 errors.
+  - `node tests/test_security_hardening.mjs` (NEW): 6/6 suites PASSED (fail-closed extraction, tier decoupling, ownership/503, zod enforcement, Supabase persistence, Sabi Interviewer rename).
+  - `node tests/test_profile_and_ai_advisor.mjs`: 5/5 PASSED (updated to Sabi Interviewer naming).
+  - `node tests/test_document_scan_and_cloud.mjs`: 26/26 PASSED (Suite 3 simulation aligned to Tier-1-only classification policy).
+  - `node tests/test_device_management.mjs`: 5/5 PASSED. `node tests/test_full_suite.mjs`: 8/8 PASSED.
+- **Remaining Known Item (deferred):** "Org Direct Interview" meeting link is generated client-side as a placeholder (real Google Meet/Zoom scheduling requires Calendar API integration); advisor engine remains deterministic rule-based pending LLM-gateway wiring.

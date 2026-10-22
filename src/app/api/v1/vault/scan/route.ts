@@ -4,7 +4,7 @@ import { VisionExtractor, VisionExtractionUnavailableError } from "@/core/parser
 import { computeSha256 } from "@/core/crypto/hasher";
 import { BlockchainLedgerClient } from "@/core/blockchain/ledger_client";
 import { globalUserStore } from "@/core/vault/user_store";
-import { VaultCategory, CloudFileRef } from "@/types/vault";
+import { VaultCategory, VaultCategoryEnum, CloudFileRef } from "@/types/vault";
 import {
   getUserCloudIntegration,
   CloudProvider,
@@ -77,6 +77,11 @@ export async function POST(req: NextRequest) {
     } = body;
 
     const targetUserId = auth.user.userId;
+
+    // Strictly allowlist the caller-supplied category against the VaultCategory enum
+    if (category !== undefined && category !== "auto_detect" && !VaultCategoryEnum.safeParse(category).success) {
+      return NextResponse.json({ error: "Invalid vault category supplied" }, { status: 400 });
+    }
 
     // --- PHASE A: PREVIEW & AI VISION EXTRACTION ---
     if (!confirmed) {

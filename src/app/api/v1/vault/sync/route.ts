@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { EphemeralDocumentParser } from "@/core/parser/ephemeral_parser";
 import { MultiLLMGateway } from "@/agents/gateway/llm_gateway";
 import { BlockchainLedgerClient } from "@/core/blockchain/ledger_client";
-import { VaultCategory, CloudFileRef } from "@/types/vault";
+import { VaultCategory, VaultCategoryEnum, CloudFileRef } from "@/types/vault";
 import { authenticateUser } from "@/lib/auth/auth_guard";
 import { globalUserStore } from "@/core/vault/user_store";
 import { liveTelemetry } from "@/lib/telemetry/live_logger";
@@ -86,6 +86,11 @@ export async function POST(req: NextRequest) {
 
     if (!fileBuffer || fileBuffer.length === 0) {
       return NextResponse.json({ error: "Empty file payload provided." }, { status: 400 });
+    }
+
+    // Strictly allowlist the caller-supplied category against the VaultCategory enum
+    if (category !== undefined && !VaultCategoryEnum.safeParse(category).success) {
+      return NextResponse.json({ error: "Invalid vault category supplied" }, { status: 400 });
     }
 
     // Cap raw file at 16 MB ephemeral processing limit

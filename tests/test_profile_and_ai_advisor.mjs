@@ -96,10 +96,10 @@ async function runTests() {
     "Stage 2: Threshold Gate",
     "Stage 3: Multi-Agent Semantic Audit",
     "Stage 4: Org Human Review",
-    "Stage 5: Final Interview (Direct vs AI Smart Interviewer)"
+    "Stage 5: Final Interview (Direct vs Sabi Interviewer)"
   ];
   assert.strictEqual(pipelineStages.length, 5, "Pipeline must contain 5 distinct stages");
-  console.log("  ✓ 5-stage evaluation funnel configured with AI Smart Interviewer option.");
+  console.log("  ✓ 5-stage evaluation funnel configured with Sabi Interviewer (coming soon) option.");
 
   console.log("\n=======================================================");
   console.log("ALL 5 ADVANCED SUITES PASSED (100%)!");

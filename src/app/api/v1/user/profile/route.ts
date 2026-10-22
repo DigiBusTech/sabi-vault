@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authenticateUser } from "@/lib/auth/auth_guard";
 import { profileAndAdvisorStore } from "@/core/vault/profile_store";
-import { UserHumanProfileSchema } from "@/types/profile";
+import { UserHumanProfileUpdateSchema } from "@/types/profile";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const profile = profileAndAdvisorStore.getProfile(auth.user.userId);
+    const profile = await profileAndAdvisorStore.getProfile(auth.user.userId);
     return NextResponse.json({ profile });
   } catch (err: any) {
     return NextResponse.json(
@@ -44,7 +44,15 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const updated = profileAndAdvisorStore.updateProfile(auth.user.userId, body);
+    const parsed = UserHumanProfileUpdateSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Invalid profile payload", issues: parsed.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+
+    const updated = await profileAndAdvisorStore.updateProfile(auth.user.userId, parsed.data);
 
     return NextResponse.json({
       success: true,
