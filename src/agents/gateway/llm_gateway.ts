@@ -29,13 +29,15 @@ export interface LLMResponse {
 
 export class MultiLLMGateway {
   private geminiApiKey: string | undefined;
+  private geminiModel: string;
   private groqApiKey: string | undefined;
   private openAiApiKey: string | undefined;
 
   constructor() {
     // Resolved per instantiation from the dynamic platform config
     // (dashboard-managed, legacy env fallback handled inside the service).
-    this.geminiApiKey = getConfigValueSync("ai.gemini_api_key") || undefined;
+    this.geminiApiKey = getConfigValueSync("ai.gemini_api_key") || process.env.GEMINI_API_KEY || undefined;
+    this.geminiModel = getConfigValueSync("ai.gemini_model") || process.env.GEMINI_MODEL || "gemini-2.5-flash";
     this.groqApiKey = getConfigValueSync("ai.groq_api_key") || undefined;
     this.openAiApiKey = getConfigValueSync("ai.openai_api_key") || undefined;
   }
@@ -99,27 +101,44 @@ export class MultiLLMGateway {
 
   private async callGemini(options: LLMRequestOptions): Promise<string> {
     const prompt = options.messages.map((m) => `${m.role.toUpperCase()}: ${m.content}`).join("\n\n");
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${this.geminiApiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: {
-            temperature: options.temperature ?? 0.1,
-            responseMimeType: options.jsonSchema ? "application/json" : "text/plain",
-          },
-        }),
-      }
-    );
+    const modelsToTry = [this.geminiModel, "gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"];
+    const uniqueModels = Array.from(new Set(modelsToTry));
 
-    if (!response.ok) {
-      throw new Error(`Gemini API HTTP ${response.status}: ${await response.text()}`);
+    let lastError: Error | null = null;
+    for (const model of uniqueModels) {
+      try {
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${this.geminiApiKey}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: prompt }] }],
+              generationConfig: {
+                temperature: options.temperature ?? 0.1,
+                responseMimeType: options.jsonSchema ? "application/json" : "text/plain",
+              },
+            }),
+          }
+        );
+
+        if (response.status === 404) {
+          // Model string not recognized, try next model in fallback list
+          continue;
+        }
+
+        if (!response.ok) {
+          throw new Error(`Gemini API HTTP ${response.status}: ${await response.text()}`);
+        }
+
+        const json = await response.json();
+        return json.candidates[0].content.parts[0].text;
+      } catch (err: any) {
+        lastError = err;
+      }
     }
 
-    const json = await response.json();
-    return json.candidates[0].content.parts[0].text;
+    throw lastError || new Error("All Gemini model backends failed");
   }
 
   private async callGroq(options: LLMRequestOptions): Promise<string> {

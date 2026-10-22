@@ -109,10 +109,19 @@ export const CONFIG_REGISTRY: ConfigKeyMeta[] = [
   {
     key: "ai.gemini_api_key",
     label: "Gemini API Key",
-    description: "Primary LLM gateway (Gemini 1.5 Flash) for document structuring and RAG evaluation.",
+    description: "Primary LLM gateway for document structuring, Vision AI, and RAG evaluation.",
     category: "ai",
     sensitive: true,
     envVar: "GEMINI_API_KEY",
+  },
+  {
+    key: "ai.gemini_model",
+    label: "Gemini Model Identifier",
+    description: "Gemini model version (e.g. gemini-2.5-flash, gemini-2.5-pro, or gemini-2.0-flash). Defaults to gemini-2.5-flash.",
+    category: "ai",
+    sensitive: false,
+    envVar: "GEMINI_MODEL",
+    defaultValue: "gemini-2.5-flash",
   },
   {
     key: "ai.groq_api_key",
