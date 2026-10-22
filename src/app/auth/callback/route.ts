@@ -4,6 +4,9 @@ import { getConfigValueSync, getConfigValue, primeConfigCache } from "@/core/con
 import { globalUserStore } from "@/core/vault/user_store";
 import { profileAndAdvisorStore } from "@/core/vault/profile_store";
 import { registerUserSession, REFRESH_COOKIE_NAME } from "@/lib/security/session";
+import { resolveGoogleRedirectUri } from "@/lib/auth/google_oauth";
+
+export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
@@ -31,6 +34,7 @@ export async function GET(request: NextRequest) {
 
     const devEmail = "google.citizen@sabiprofile.com";
     const devUserId = "usr_chinwe_okafor_7721";
+    globalUserStore.getVault(devUserId);
 
     const response = NextResponse.redirect(new URL(safePath, requestUrl.origin));
     response.cookies.set("sb_auth_token", "mock_google_session_token", {
@@ -59,7 +63,7 @@ export async function GET(request: NextRequest) {
     console.warn("[Auth Callback] Supabase code exchange skipped or failed:", supabaseErr);
   }
 
-  // 3. Fallback: Direct Google OAuth token exchange if Google credentials are configured
+  // 3. Direct Google OAuth token exchange
   try {
     await primeConfigCache();
 
@@ -88,8 +92,16 @@ export async function GET(request: NextRequest) {
       (await getConfigValue("integrations.google_drive_client_secret")) ||
       process.env.GOOGLE_DRIVE_CLIENT_SECRET;
 
-    // Use current request origin callback (whitelisted in Google Cloud Console for all environments)
-    const redirectUri = `${requestUrl.origin}/auth/callback`;
+    const configuredRedirectUri =
+      (await getConfigValue("auth.google_redirect_uri")) ||
+      getConfigValueSync("auth.google_redirect_uri") ||
+      process.env.NEXT_PUBLIC_GOOGLE_REDIRECT_URI ||
+      "";
+
+    // Canonical redirect URI matching signin flow exactly across apex, www, Vercel, & localhost
+    const redirectUri = resolveGoogleRedirectUri(request, {
+      configuredUri: configuredRedirectUri,
+    });
 
     if (clientId && clientSecret) {
       const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
@@ -118,8 +130,9 @@ export async function GET(request: NextRequest) {
             const name = googleUser.name || "Google Citizen";
             const picture = googleUser.picture;
 
-            // Seed user profile
+            // Seed user vault & profile
             const userId = `usr_${googleUser.sub?.substring(0, 8) || "google"}`;
+            globalUserStore.getVault(userId);
             await profileAndAdvisorStore.updateProfile(userId, {
               fullName: name,
               avatarUrl: picture,
@@ -171,6 +184,9 @@ export async function GET(request: NextRequest) {
             return response;
           }
         }
+      } else {
+        const errorText = await tokenRes.text();
+        console.error("[Auth Callback] Google token exchange rejected:", tokenRes.status, errorText);
       }
     }
   } catch (directOAuthErr) {

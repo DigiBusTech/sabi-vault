@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getConfigValueSync, getConfigValue, primeConfigCache } from "@/core/config/platform_config";
 import { randomBytes } from "crypto";
+import { resolveGoogleRedirectUri } from "@/lib/auth/google_oauth";
 
 export const dynamic = "force-dynamic";
 
@@ -42,9 +43,17 @@ export async function GET(req: NextRequest) {
       process.env.GOOGLE_DRIVE_CLIENT_ID ||
       "";
 
+    const configuredRedirectUri =
+      (await getConfigValue("auth.google_redirect_uri")) ||
+      getConfigValueSync("auth.google_redirect_uri") ||
+      process.env.NEXT_PUBLIC_GOOGLE_REDIRECT_URI ||
+      "";
+
+    // Canonical redirect URI strictly matching Google Cloud Console credentials across apex, www, Vercel, & localhost
+    const redirectUri = resolveGoogleRedirectUri(req, {
+      configuredUri: configuredRedirectUri,
+    });
     const origin = req.nextUrl.origin;
-    // Dynamic redirect URI matches whichever whitelisted domain the user is browsing on (sabiprofile.com or vercel.app or localhost)
-    const redirectUri = `${origin}/auth/callback`;
 
     // State payload encodes target path, role, and anti-CSRF token
     const statePayload = {
@@ -86,6 +95,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       url: googleAuthUrl,
+      redirectUri,
       isDevSimulation: false,
     });
   } catch (err: any) {
@@ -95,4 +105,3 @@ export async function GET(req: NextRequest) {
     );
   }
 }
-

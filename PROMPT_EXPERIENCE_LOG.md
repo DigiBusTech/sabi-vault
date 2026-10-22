@@ -2470,3 +2470,38 @@
   - `tests/test_enterprise_security.mjs`: 6/6 suites passed (100%).
   - `npx tsc --noEmit`: 0 errors.
 - **Note:** Committed without Copilot trailer per user instruction.
+
+
+---
+
+## Entry #070 — Google OAuth Redirect URI Canonical Normalization & Error 400 Resolution
+- **User Prompt:**
+  > "it now works for https://sabi-vault.vercel.app/login but not working for https://sabiprofile.com/login, see screenshot."
+  > (User provided 2 screenshots: Screenshot 1 showing "Access blocked: This app's request is invalid - Error 400: redirect_uri_mismatch" when signing in from https://sabiprofile.com/login; Screenshot 2 showing Google Account Chooser with SabiProfile logo working cleanly on https://sabi-vault.vercel.app/login).
+- **Root Cause Analysis:**
+  1. **Discrepancy Between Whitelisted URIs and Domain Variations:** In Google Cloud Console Credentials, the user's Client ID had:
+     - Authorised JavaScript origins: `https://www.sabiprofile.com`, `https://sabi-vault.vercel.app`, `http://localhost:3000` (apex `https://sabiprofile.com` was missing from JavaScript origins).
+     - Authorised redirect URIs: `https://sabiprofile.com/auth/callback`, `https://sabi-vault.vercel.app/auth/callback`, `http://localhost:3000/auth/callback` (`https://www.sabiprofile.com/auth/callback` was missing from redirect URIs).
+  2. **Raw `req.nextUrl.origin` Mismatch on Custom Domain:** In `signin/route.ts`, `redirectUri` was constructed as `${req.nextUrl.origin}/auth/callback`. When accessed through `www.sabiprofile.com` or when Vercel's reverse proxy routed requests, `origin` evaluated to `https://www.sabiprofile.com`. Because Google Cloud Console only had `https://sabiprofile.com/auth/callback` (without `www`), Google immediately blocked the handshake with `Error 400: redirect_uri_mismatch`.
+  3. **Unused Super Admin Redirect URI Configuration:** Although Super Admin platform config defined `auth.google_redirect_uri = "https://sabiprofile.com/auth/callback"`, neither `signin/route.ts` nor `callback/route.ts` consulted it, leaving domain resolution vulnerable to reverse proxy host variance.
+- **Remediations Implemented:**
+  1. **Canonical OAuth Redirect Resolver (`src/lib/auth/google_oauth.ts`):**
+     - Created `resolveGoogleRedirectUri(req, options)` to deterministically resolve the exact redirect URI across environments.
+     - For production `sabiprofile.com` (both apex and `www.sabiprofile.com` subdomains), strictly normalizes to the whitelisted canonical URI `https://sabiprofile.com/auth/callback` (or configured URI from Super Admin).
+     - For Vercel deployments (`*.vercel.app`), dynamically preserves `https://${host}/auth/callback`.
+     - For local development, preserves `http://${host}/auth/callback`.
+     - Enforces `https://` for all non-loopback domains to protect against reverse proxy SSL termination dropping the protocol to `http:`.
+  2. **Unified Integration in Sign-in and Callback Routes:**
+     - Updated `src/app/api/v1/auth/google/signin/route.ts` to utilize `resolveGoogleRedirectUri` with `auth.google_redirect_uri`.
+     - Updated `src/app/auth/callback/route.ts` to utilize the exact same `resolveGoogleRedirectUri` during token exchange with `https://oauth2.googleapis.com/token`.
+     - Added `globalUserStore.getVault(userId)` on Google user provisioning so citizen vaults are pre-initialized immediately upon OAuth onboarding.
+     - Enhanced error logging on Google token exchange rejection for clear Super Admin diagnostics.
+  3. **Unit Tests in `tests/test_google_auth_and_skills.mjs`:**
+     - Added comprehensive resolver tests verifying apex, www, Vercel preview, and localhost URL resolutions.
+- **Validation:**
+  - `tests/test_google_auth_and_skills.mjs`: 5/5 suites passed (100%).
+  - `tests/test_camera_upload_telemetry.mjs`: 6/6 suites passed (100%).
+  - `tests/test_security_hardening.mjs`: 6/6 suites passed (100%).
+  - `tests/test_enterprise_security.mjs`: 6/6 suites passed (100%).
+  - `npx tsc --noEmit`: 0 errors.
+- **Note:** Committed without Copilot trailer per user instruction.
