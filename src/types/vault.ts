@@ -31,6 +31,14 @@ export const DocumentMetadataSchema = z.object({
       attestedAt: z.string().datetime(),
     })
     .optional(),
+  cloudFileRef: z
+    .object({
+      provider: z.enum(["google_drive", "dropbox", "onedrive", "local_ephemeral"]),
+      fileId: z.string(),
+      webViewLink: z.string().optional(),
+      uploadedAt: z.string(),
+    })
+    .optional(),
   sourceCloudStorage: z.object({
     provider: z.enum(["google_drive", "dropbox", "onedrive", "local_ephemeral"]),
     remoteFileId: z.string(),
@@ -39,6 +47,13 @@ export const DocumentMetadataSchema = z.object({
 });
 
 export type DocumentMetadata = z.infer<typeof DocumentMetadataSchema>;
+export interface CloudFileRef {
+  provider: "google_drive" | "dropbox" | "onedrive" | "local_ephemeral";
+  fileId: string;
+  webViewLink?: string;
+  uploadedAt: string;
+}
+
 
 // --- 1. FINANCE CATEGORY SCHEMA ---
 export const FinanceSchema = z.object({

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { EphemeralDocumentParser } from "@/core/parser/ephemeral_parser";
 import { MultiLLMGateway } from "@/agents/gateway/llm_gateway";
 import { BlockchainLedgerClient } from "@/core/blockchain/ledger_client";
-import { VaultCategory, VerificationTier } from "@/types/vault";
+import { VaultCategory, CloudFileRef } from "@/types/vault";
 import { authenticateUser } from "@/lib/auth/auth_guard";
 import { globalUserStore } from "@/core/vault/user_store";
 
@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { vaultId, fileName, fileBase64, category } = body;
+    const { vaultId, fileName, fileBase64, category, cloudProvider, cloudFileId, cloudWebViewLink } = body;
 
     if (vaultId && vaultId !== auth.user.userId) {
       return NextResponse.json({ error: "You may only sync documents to your own vault." }, { status: 403 });
@@ -65,7 +65,17 @@ export async function POST(req: NextRequest) {
       parsedResult.tier
     );
 
-    // 4. Update structured vault state in sovereign store
+    // 4. Build cloud file reference if saved to citizen's private storage
+    const cloudFileRef: CloudFileRef | undefined = cloudFileId
+      ? {
+          provider: cloudProvider || "google_drive",
+          fileId: cloudFileId,
+          webViewLink: cloudWebViewLink,
+          uploadedAt: new Date().toISOString(),
+        }
+      : undefined;
+
+    // 5. Update structured vault state in sovereign store
     globalUserStore.addCredential(
       parsedResult.category,
       {
@@ -73,10 +83,10 @@ export async function POST(req: NextRequest) {
         documentName: parsedResult.documentName,
         hashRef: parsedResult.sha256Hash,
         tier: parsedResult.tier,
+        cloudFileRef,
       },
       targetVaultId
     );
-
 
     return NextResponse.json({
       status: "SUCCESS_SYNCED",
@@ -92,6 +102,7 @@ export async function POST(req: NextRequest) {
         isSimulated: commitResult.isSimulated === true,
       },
       structuredData: parsedResult.structuredData,
+      cloudFileRef,
       zeroRawFileGuarantee: {
         bufferOverwrittenInMemory: true,
         savedToDisk: false,
@@ -106,4 +117,3 @@ export async function POST(req: NextRequest) {
     );
   }
 }
-

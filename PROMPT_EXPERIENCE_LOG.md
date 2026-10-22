@@ -1939,3 +1939,43 @@
   - `npx tsc --noEmit`: 100% Passed (0 errors).
   - `npm run build`: 100% Passed (all 52 static and dynamic routes compiled cleanly).
 
+
+---
+
+### Entry #055 - Sovereign Mobile Document Scanning, Zero-Manual-Entry Trust Model, Gemini Vision AI Extraction, Private Cloud Storage Dispatch & On-Chain Anchoring
+- **Date & Time:** 2026-10-22
+- **Author:** SabiProfile Core Architecture AI
+- **User Prompt / Intent:**
+  > "I want to implement scanning to use mobile phone camera to scan documents and upload directly to user vault but it stores at drive or dropbox and the records are stored with us... Adding manually should have upload file and the system scan and store file in dropbox or drive depending on user settings, and save the details and hashed, also retrieving for queries etc. ... continue with implementation but something will change in phase 3. Enhanced Manual Record Addition: Dual-Mode with Auto-Scan, the 'Manual Direct Entry' will change from text to upload file and the system auto extract details while saving the file in user configured space drive or dropbox, no place to enter text manually, but only file upload so it automatically extracts to avoid user falsly inputing wrong data. the main aim of this project is to organizations and institution trust this CV profile or data that can not be tampared with after saved and hashed with cryptographic architecture."
+- **Root Cause & Architectural Shift:**
+  - **Zero Manual Data Entry Invariant:** SabiProfile's cryptographic trust model requires that every candidate qualification presented to organizations and institutions is provably derived from an authentic physical or digital document. Allowing manual text input for credentials (e.g. typing arbitrary GPA, balances, or employers) creates vulnerability to false claims. By eliminating all free-text input and mandating document upload or real-time camera scanning, Gemini Vision AI performs factual schema extraction while SHA-256 cryptographic hashing anchors the document's existence at that instant onto the Base Sepolia blockchain ledger.
+  - **Zero Raw Document Centralization:** SabiProfile's core invariant requires that no raw PDFs or document images are stored on SabiProfile servers. Raw documents are dispatched directly to the citizen's linked private Google Drive or Dropbox vault via OAuth 2.0, while only normalized JSON records and cryptographic hashes reside on sovereign nodes.
+- **Actions Taken:**
+  1. **Phase 1: Private Cloud Storage Connectors & Token Cryptography:**
+     - Created Supabase migration `supabase/migrations/20261022000000_user_cloud_integrations.sql` creating `user_cloud_integrations` table with RLS policies, tracking encrypted OAuth tokens, token expiration, and folder IDs.
+     - Built `src/core/storage/cloud_integrations.ts` providing AES-256-GCM token encryption and decryption, in-memory caching for local development, and CRUD helpers (`saveUserCloudIntegration`, `getUserCloudIntegration`, `listUserCloudIntegrations`, `disconnectUserCloudIntegration`).
+     - Upgraded `src/core/storage/google_drive.ts` with multipart write support (`uploadFile`), folder resolution and creation (`createVaultFolder`, `getFolderIdByName`), returning `DriveUploadResult`.
+     - Built `src/core/storage/dropbox.ts` providing full Dropbox API v2 connector with `uploadFile` (`POST /2/files/upload`), `downloadFile`, `createFolder`, and `listFolder`.
+     - Built OAuth code exchange callback route `src/app/api/v1/integrations/[provider]/callback/route.ts` exchanging authorization codes for Google Drive & Dropbox tokens, encrypting tokens via AES-256-GCM, auto-initializing `/SabiProfile Vault` root folders, and redirecting to the dashboard.
+     - Updated `src/app/api/v1/integrations/[provider]/connect/route.ts` to request `drive.file drive.readonly` scope for file upload capability.
+     - Built `src/app/api/v1/user/cloud-settings/route.ts` with `GET` (list active providers) and `DELETE` (disconnect provider).
+  2. **Phase 2 & 3: Gemini Vision AI Extraction & Two-Phase Scan Pipeline:**
+     - Created `src/core/parser/vision_extractor.ts` using Gemini 1.5 Flash Vision AI to extract structured, schema-compliant JSON fields across all 6 vault categories (`finance`, `academics`, `certifications`, `experience`, `achievements`, `portfolio`) with deterministic fallback.
+     - Created Two-Phase Commit API route `src/app/api/v1/vault/scan/route.ts`:
+       - **Phase A (confirmed: false):** Ingests document buffer, computes SHA-256 hash, runs Gemini Vision AI, and returns a preview with confidence score and extracted fields without persisting.
+       - **Phase B (confirmed: true):** Dispatches original file to user's private Google Drive or Dropbox, commits SHA-256 hash to Base Sepolia ledger, persists structured record in sovereign store with `CloudFileRef`, and wipes memory buffer with zeroes.
+     - Updated `src/types/vault.ts` to export `CloudFileRef` and extend `DocumentMetadataSchema`.
+     - Updated `src/app/api/v1/vault/sync/route.ts` to accept and persist `cloudFileRef` metadata.
+  3. **Phase 4: Mobile Camera Scanner Modal & CitizenVaultView Upgrade:**
+     - Built `src/components/dashboard/CameraScannerModal.tsx` featuring rear camera WebRTC stream (`facingMode: "environment"`), A4 document framing guides, live video capture to canvas, 88% JPEG compression, retake controls, and native file upload fallback.
+     - Completely replaced the old manual text entry modal in `src/components/CitizenVaultView.tsx` with a 4-step auto-scan & secure workflow:
+       - **Step 1 (Source Selection):** Choose Camera Scan or File Upload with private cloud storage indicator.
+       - **Step 2 (AI Vision Extraction):** Animated document scanner visual while Gemini extracts verified data.
+       - **Step 3 (Review Extracted Fields):** Read-only factual readout of extracted attributes, SHA-256 hash, and verification tier.
+       - **Step 4 (Securing & On-Chain Commit):** Progress animation showing schema validation, cloud storage dispatch, and Base Sepolia transaction hash.
+- **Validation:**
+  - `node tests/test_document_scan_and_cloud.mjs`: 100% Passed (26/26 tests verifying AES-256-GCM encryption/decryption, tamper detection, cloud store CRUD, category classification, buffer sanitization, blockchain anchoring, and CloudFileRef structure).
+  - `node tests/test_device_management.mjs`: 100% Passed (5/5 suites).
+  - `node tests/test_full_suite.mjs`: 100% Passed (8/8 master integration suites).
+  - `npx tsc --noEmit`: 100% Passed (0 errors).
+  - `npx next build`: 100% Passed (all 54 static and dynamic routes compiled cleanly).
