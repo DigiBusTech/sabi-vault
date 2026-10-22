@@ -2321,6 +2321,36 @@
 
 ---
 
+## Entry #068 — Dynamic Serverless AI Key Hydration, PDF Failover Structuring & Self-Diagnosing Errors
+- **User Prompt:**
+  > "i tried uploading documents and encountered this error again,
+  > and see the log i exported from the super admin. attached in json file. 
+  > app is verified and now works well and display logo on google auth drive. 
+  > also testing from camera scan and capture."
+- **Root Cause Analysis from Exported Telemetry:**
+  1. **Key Hydration Failure in Serverless Functions:** The exported telemetry log revealed: `{"errorCode": "VISION_AI_DOWN", "message": "No Vision AI keys configured (both Gemini and Groq keys are unset).", "metadata": {"hasGeminiKey": false, "hasGroqKey": false}}`. Both `VisionExtractor` and `MultiLLMGateway` were synchronously reading keys using `getConfigValueSync()` in their constructors. In Vercel serverless cold starts, the in-memory cache is empty; synchronous reads cannot query the Supabase `platform_config` table where Super Admin saved the API keys. Thus, `this.geminiApiKey` and `this.groqApiKey` remained `undefined` at runtime.
+  2. **PDF Binaries Sent to Groq Vision:** Groq Vision (`llama-3.2-11b-vision-preview`) requires image data URIs (JPEG/PNG/WEBP). When a user uploaded a PDF statement (`Moniepoint-Document-2024-09-16T06-30.pdf`), Groq Vision rejected the raw PDF payload as an invalid image format.
+  3. **Non-Public Gemini Model:** `gemini-2.5-flash` in the models-to-try array caused an unnecessary 404 roundtrip before falling back to `gemini-2.0-flash`.
+- **Remediations Implemented:**
+  1. **Dynamic Asynchronous Key Hydration (`vision_extractor.ts` & `llm_gateway.ts`):**
+     - Updated `VisionExtractor.extractDocumentFields()` and `MultiLLMGateway.complete()` to call `await primeConfigCache()` and `await getConfigValue(...)` if keys are missing from process memory, guaranteeing that keys stored in Supabase `platform_config` are fetched immediately on serverless cold starts.
+     - Added fallbacks for `process.env.GOOGLE_API_KEY`, `process.env.GOOGLE_GEMINI_API_KEY`, and `process.env.GROQ_VISION_API_KEY`.
+     - Called `await primeConfigCache()` in `/api/v1/vault/scan/route.ts` prior to extractor initialization.
+  2. **PDF Fallback Text Structuring via Groq LLaMA 3.3 70B (`vision_extractor.ts`):**
+     - When a PDF document is uploaded and Gemini is unavailable or unfunded, `extractWithGroq()` extracts textual content from the PDF binary streams and dispatches it to Groq's `llama-3.3-70b-versatile` text completions model with structured JSON response mode.
+     - Image files (camera scans, PNG, JPG) continue to use Groq Vision (`llama-3.2-11b-vision-preview`).
+  3. **Actionable Self-Diagnosing Error Display (`CitizenVaultView.tsx`, `DocumentIntake.tsx`):**
+     - Exposed `detail: err.message` in 503 scan responses. The UI now displays the exact diagnostic reason (e.g. prompt to configure keys in Super Admin) rather than a generic opaque message.
+  4. **Optimized Gemini Model List (`vision_extractor.ts`):**
+     - Updated Gemini model fallback roster to `["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-flash-8b"]`.
+- **Validation:**
+  - `tests/test_camera_upload_telemetry.mjs`: 6/6 suites passed (100%).
+  - `tests/test_bot_autofill_and_google_verification.mjs`: 5/5 suites passed (100%).
+  - `npx tsc --noEmit`: 0 errors.
+- **Note:** Committed without Copilot trailer per user instruction.
+
+---
+
 ## Entry #067 — Honeypot Autofill Immunity, Google Search Console Verification & Drive Scopes Hardening
 - **User Prompt:**
   > "this only link works for auth 'https://sabi-vault.vercel.app/dashboard/admin' this one shows bot 'https://sabiprofile.com/dashboard/admin' bot triggered,
@@ -2377,5 +2407,66 @@
 - **Validation:**
   - `tests/test_camera_upload_telemetry.mjs`: 6/6 suites passed (100%).
   - `tests/test_bot_autofill_and_google_verification.mjs`: 5/5 suites passed (100%).
+  - `npx tsc --noEmit`: 0 errors.
+- **Note:** Committed without Copilot trailer per user instruction.
+
+---
+
+## Entry #068 — Dynamic Serverless AI Key Hydration, PDF Failover Structuring & Self-Diagnosing Errors
+- **User Prompt:**
+  > "i tried uploading documents and encountered this error again,
+  > and see the log i exported from the super admin. attached in json file. 
+  > app is verified and now works well and display logo on google auth drive. 
+  > also testing from camera scan and capture."
+- **Root Cause Analysis from Exported Telemetry:**
+  1. **Key Hydration Failure in Serverless Functions:** The exported telemetry log revealed: `{"errorCode": "VISION_AI_DOWN", "message": "No Vision AI keys configured (both Gemini and Groq keys are unset).", "metadata": {"hasGeminiKey": false, "hasGroqKey": false}}`. Both `VisionExtractor` and `MultiLLMGateway` were synchronously reading keys using `getConfigValueSync()` in their constructors. In Vercel serverless cold starts, the in-memory cache is empty; synchronous reads cannot query the Supabase `platform_config` table where Super Admin saved the API keys. Thus, `this.geminiApiKey` and `this.groqApiKey` remained `undefined` at runtime.
+  2. **PDF Binaries Sent to Groq Vision:** Groq Vision (`llama-3.2-11b-vision-preview`) requires image data URIs (JPEG/PNG/WEBP). When a user uploaded a PDF statement (`Moniepoint-Document-2024-09-16T06-30.pdf`), Groq Vision rejected the raw PDF payload as an invalid image format.
+  3. **Non-Public Gemini Model:** `gemini-2.5-flash` in the models-to-try array caused an unnecessary 404 roundtrip before falling back to `gemini-2.0-flash`.
+- **Remediations Implemented:**
+  1. **Dynamic Asynchronous Key Hydration (`vision_extractor.ts` & `llm_gateway.ts`):**
+     - Updated `VisionExtractor.extractDocumentFields()` and `MultiLLMGateway.complete()` to call `await primeConfigCache()` and `await getConfigValue(...)` if keys are missing from process memory, guaranteeing that keys stored in Supabase `platform_config` are fetched immediately on serverless cold starts.
+     - Added fallbacks for `process.env.GOOGLE_API_KEY`, `process.env.GOOGLE_GEMINI_API_KEY`, and `process.env.GROQ_VISION_API_KEY`.
+     - Called `await primeConfigCache()` in `/api/v1/vault/scan/route.ts` prior to extractor initialization.
+  2. **PDF Fallback Text Structuring via Groq LLaMA 3.3 70B (`vision_extractor.ts`):**
+     - When a PDF document is uploaded and Gemini is unavailable or unfunded, `extractWithGroq()` extracts textual content from the PDF binary streams and dispatches it to Groq's `llama-3.3-70b-versatile` text completions model with structured JSON response mode.
+     - Image files (camera scans, PNG, JPG) continue to use Groq Vision (`llama-3.2-11b-vision-preview`).
+  3. **Actionable Self-Diagnosing Error Display (`CitizenVaultView.tsx`, `DocumentIntake.tsx`):**
+     - Exposed `detail: err.message` in 503 scan responses. The UI now displays the exact diagnostic reason (e.g. prompt to configure keys in Super Admin) rather than a generic opaque message.
+  4. **Optimized Gemini Model List (`vision_extractor.ts`):**
+     - Updated Gemini model fallback roster to `["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-flash-8b"]`.
+- **Validation:**
+  - `tests/test_camera_upload_telemetry.mjs`: 6/6 suites passed (100%).
+  - `tests/test_bot_autofill_and_google_verification.mjs`: 5/5 suites passed (100%).
+  - `npx tsc --noEmit`: 0 errors.
+- **Note:** Committed without Copilot trailer per user instruction.
+
+
+---
+
+## Entry #069 — Google Fast Auth Direct OAuth Routing & Supabase Provider Bypass
+- **User Prompt:**
+  > "google auth for signin and up is not working after the config"
+  > (User provided 3 screenshots showing Supabase error: {"code":400,"error_code":"validation_failed","msg":"Unsupported provider: provider is not enabled"} at https://fhbhelvrqqaqurjcxkcd.supabase.co/auth/v1/authorize?provider=google&redirect_to=..., and showing Google Auth keys configured in SabiProfile Super Admin and Google Cloud Console).
+- **Root Cause Analysis:**
+  1. **Supabase GoTrue Provider Conflict:** `GoogleAuthButton.tsx` was attempting `supabase.auth.signInWithOAuth({ provider: "google" })` before falling back to SabiProfile's direct Google OAuth route. The Supabase browser SDK immediately redirected the browser to `https://fhbhelvrqqaqurjcxkcd.supabase.co/auth/v1/authorize?provider=google`. Because Google authentication was configured directly in SabiProfile's Super Admin and Google Cloud Console (and not enabled in the external Supabase Cloud console), Supabase rejected the request with: `Unsupported provider: provider is not enabled`.
+  2. **Synchronous Key Reads in Sign-In Route:** `/api/v1/auth/google/signin/route.ts` called `getConfigValueSync()` without awaiting `primeConfigCache()`, which caused cold serverless instances to miss the keys configured in the Super Admin dashboard.
+  3. **Static Redirect URI Mismatch:** `/auth/callback` redirect URI previously depended on `getConfigValueSync("auth.google_redirect_uri")`. If the user was on `sabi-vault.vercel.app` but the config held `https://sabiprofile.com/auth/callback`, Google rejected the redirect URI or redirected to the wrong host.
+- **Remediations Implemented:**
+  1. **Direct Google OAuth Dispatch in `GoogleAuthButton.tsx`:**
+     - Removed the brittle `supabase.auth.signInWithOAuth` attempt. The button now immediately queries `/api/v1/auth/google/signin?next=...&role=...&mode=json` and navigates directly to Google's official OAuth consent screen (`https://accounts.google.com/o/oauth2/v2/auth?client_id=...`).
+     - Supabase's disabled provider error is completely eliminated.
+  2. **Dynamic Asynchronous Key Hydration in Sign-In Route (`src/app/api/v1/auth/google/signin/route.ts`):**
+     - Added `await primeConfigCache()` and `await getConfigValue("auth.google_client_id")` so keys saved in Super Admin are immediately loaded on serverless workers.
+     - Set dynamic redirect URI to `${origin}/auth/callback`, guaranteeing exact alignment with the 3 URIs whitelisted in Google Cloud Console (`https://sabiprofile.com/auth/callback`, `https://sabi-vault.vercel.app/auth/callback`, `http://localhost:3000/auth/callback`).
+  3. **Cryptographic SabiProfile Session Minting in Callback (`src/app/auth/callback/route.ts`):**
+     - Hydrated `clientId` and `clientSecret` via `await primeConfigCache()` and `await getConfigValue(...)`.
+     - Exchanged authorization code directly with Google (`https://oauth2.googleapis.com/token`) using current request origin.
+     - Fetched Google user profile, registered the session via `registerUserSession()`, and set `sb_auth_token`, `sabi_refresh_token`, `sabi_user_email`, and `sabi_user_role` cookies.
+- **Validation:**
+  - `tests/test_google_auth_and_skills.mjs`: 4/4 suites passed (100%).
+  - `tests/test_camera_upload_telemetry.mjs`: 6/6 suites passed (100%).
+  - `tests/test_security_hardening.mjs`: 6/6 suites passed (100%).
+  - `tests/test_storage_quota_and_skills.mjs`: 8/8 suites passed (100%).
+  - `tests/test_enterprise_security.mjs`: 6/6 suites passed (100%).
   - `npx tsc --noEmit`: 0 errors.
 - **Note:** Committed without Copilot trailer per user instruction.

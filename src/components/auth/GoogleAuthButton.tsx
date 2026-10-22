@@ -25,32 +25,8 @@ export function GoogleAuthButton({
     setErrorMessage(null);
 
     try {
-      // 1. First attempt: If Supabase browser client is configured with Google provider
-      try {
-        const supabase = createClient();
-        if (supabase) {
-          const redirectUrl = `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
-          const { error } = await supabase.auth.signInWithOAuth({
-            provider: "google",
-            options: {
-              redirectTo: redirectUrl,
-              queryParams: {
-                access_type: "offline",
-                prompt: "select_account",
-              },
-            },
-          });
-
-          if (!error) {
-            // Handled by browser redirect
-            return;
-          }
-        }
-      } catch (sbErr) {
-        // Supabase browser client not active or unconfigured, fallback to platform Google OAuth endpoint
-      }
-
-      // 2. Fallback: SabiProfile Managed Google OAuth endpoint
+      // Directly dispatch to SabiProfile Managed Google OAuth endpoint
+      // (Uses Google Client ID & Secret configured in Super Admin dashboard and whitelisted in Google Cloud Console)
       const res = await fetch(
         `/api/v1/auth/google/signin?next=${encodeURIComponent(next)}&role=${role}&mode=json`
       );

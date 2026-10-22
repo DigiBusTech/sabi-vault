@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getConfigValueSync } from "@/core/config/platform_config";
+import { getConfigValueSync, getConfigValue, primeConfigCache } from "@/core/config/platform_config";
 import { randomBytes } from "crypto";
 
 export const dynamic = "force-dynamic";
@@ -15,7 +15,12 @@ export const dynamic = "force-dynamic";
  */
 export async function GET(req: NextRequest) {
   try {
-    const isEnabled = getConfigValueSync("auth.google_oauth_enabled") !== "false";
+    await primeConfigCache();
+
+    const isEnabled =
+      (await getConfigValue("auth.google_oauth_enabled")) !== "false" &&
+      getConfigValueSync("auth.google_oauth_enabled") !== "false";
+
     if (!isEnabled) {
       return NextResponse.json(
         { error: "Google Authentication is disabled in platform configuration." },
@@ -29,18 +34,17 @@ export async function GET(req: NextRequest) {
     const mode = searchParams.get("mode") || "json";
 
     const clientId =
+      (await getConfigValue("auth.google_client_id")) ||
       getConfigValueSync("auth.google_client_id") ||
       process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ||
-      getConfigValueSync("integrations.google_drive_client_id") ||
+      process.env.GOOGLE_CLIENT_ID ||
+      (await getConfigValue("integrations.google_drive_client_id")) ||
       process.env.GOOGLE_DRIVE_CLIENT_ID ||
       "";
 
     const origin = req.nextUrl.origin;
-    const configuredRedirect = getConfigValueSync("auth.google_redirect_uri");
-    const redirectUri =
-      configuredRedirect && configuredRedirect.startsWith("http")
-        ? configuredRedirect
-        : `${origin}/auth/callback`;
+    // Dynamic redirect URI matches whichever whitelisted domain the user is browsing on (sabiprofile.com or vercel.app or localhost)
+    const redirectUri = `${origin}/auth/callback`;
 
     // State payload encodes target path, role, and anti-CSRF token
     const statePayload = {
