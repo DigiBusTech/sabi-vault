@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authenticateUser } from "@/lib/auth/auth_guard";
 import { VisionExtractor, VisionExtractionUnavailableError } from "@/core/parser/vision_extractor";
+import { primeConfigCache } from "@/core/config/platform_config";
 import { computeSha256 } from "@/core/crypto/hasher";
 import { BlockchainLedgerClient } from "@/core/blockchain/ledger_client";
 import { globalUserStore } from "@/core/vault/user_store";
@@ -116,6 +117,7 @@ export async function POST(req: NextRequest) {
       const sha256Hash = computeSha256(fileBuffer);
 
       // Run Gemini Vision Extractor (FAIL CLOSED: no extraction, no preview, no commit)
+      await primeConfigCache();
       const extractor = new VisionExtractor();
       const categoryHint = category === "auto_detect" ? undefined : (category as VaultCategory | undefined);
       let result;
@@ -145,6 +147,7 @@ export async function POST(req: NextRequest) {
             {
               error: "AI extraction service is currently unavailable. No data was extracted, stored, or anchored. Please retry shortly.",
               code: "VISION_EXTRACTION_UNAVAILABLE",
+              detail: err.message,
             },
             { status: 503 }
           );

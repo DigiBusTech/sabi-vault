@@ -8,7 +8,7 @@
  * 4. Deterministic Mock Fallback (Testing / Offline fail-safe)
  */
 
-import { getConfigValueSync } from "@/core/config/platform_config";
+import { getConfigValueSync, getConfigValue, primeConfigCache } from "@/core/config/platform_config";
 import { liveTelemetry } from "@/lib/telemetry/live_logger";
 
 export interface LLMMessage {
@@ -37,10 +37,16 @@ export class MultiLLMGateway {
   constructor() {
     // Resolved per instantiation from the dynamic platform config
     // (dashboard-managed, legacy env fallback handled inside the service).
-    this.geminiApiKey = getConfigValueSync("ai.gemini_api_key") || process.env.GEMINI_API_KEY || undefined;
-    this.geminiModel = getConfigValueSync("ai.gemini_model") || process.env.GEMINI_MODEL || "gemini-2.5-flash";
-    this.groqApiKey = getConfigValueSync("ai.groq_api_key") || undefined;
-    this.openAiApiKey = getConfigValueSync("ai.openai_api_key") || undefined;
+    this.geminiApiKey =
+      getConfigValueSync("ai.gemini_api_key") ||
+      process.env.GEMINI_API_KEY ||
+      process.env.GOOGLE_GEMINI_API_KEY ||
+      process.env.GOOGLE_API_KEY ||
+      process.env.NEXT_PUBLIC_GEMINI_API_KEY ||
+      undefined;
+    this.geminiModel = getConfigValueSync("ai.gemini_model") || process.env.GEMINI_MODEL || "gemini-2.0-flash";
+    this.groqApiKey = getConfigValueSync("ai.groq_api_key") || process.env.GROQ_API_KEY || process.env.GROQ_VISION_API_KEY || undefined;
+    this.openAiApiKey = getConfigValueSync("ai.openai_api_key") || process.env.OPENAI_API_KEY || undefined;
   }
 
   /**
@@ -48,6 +54,28 @@ export class MultiLLMGateway {
    */
   async complete(options: LLMRequestOptions): Promise<LLMResponse> {
     const startTime = Date.now();
+
+    // Dynamically hydrate keys from database platform_config if unpopulated in serverless worker
+    if (!this.geminiApiKey && !this.groqApiKey && !this.openAiApiKey) {
+      await primeConfigCache();
+      this.geminiApiKey =
+        this.geminiApiKey ||
+        (await getConfigValue("ai.gemini_api_key")) ||
+        process.env.GEMINI_API_KEY ||
+        process.env.GOOGLE_GEMINI_API_KEY ||
+        process.env.GOOGLE_API_KEY ||
+        undefined;
+      this.groqApiKey =
+        this.groqApiKey ||
+        (await getConfigValue("ai.groq_api_key")) ||
+        process.env.GROQ_API_KEY ||
+        undefined;
+      this.openAiApiKey =
+        this.openAiApiKey ||
+        (await getConfigValue("ai.openai_api_key")) ||
+        process.env.OPENAI_API_KEY ||
+        undefined;
+    }
 
     // 1. Primary: Google Gemini 1.5/2.0/2.5 Flash
     if (this.geminiApiKey) {

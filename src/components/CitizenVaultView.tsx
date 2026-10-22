@@ -310,7 +310,8 @@ export function CitizenVaultView({ onMintKeyForDemo, viewMode = "all" }: Citizen
               }),
             }).catch(() => {});
 
-            throw new Error(data.error || "Failed to analyze document.");
+            const errorDisplay = data.detail ? `${data.error} (${data.detail})` : (data.error || "Failed to analyze document.");
+            throw new Error(errorDisplay);
           }
 
           setScanPreviewData(data);

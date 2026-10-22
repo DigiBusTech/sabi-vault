@@ -10,7 +10,7 @@
  * - Raw image/PDF buffers are ephemeral and never written to centralized storage.
  */
 
-import { getConfigValueSync } from "@/core/config/platform_config";
+import { getConfigValueSync, getConfigValue, primeConfigCache } from "@/core/config/platform_config";
 import { VaultCategory, VaultCategoryEnum, VerificationTier } from "@/types/vault";
 import { liveTelemetry } from "@/lib/telemetry/live_logger";
 
@@ -175,7 +175,7 @@ export class VisionExtractor {
     base64Data: string
   ): Promise<{ parsed: any; durationMs: number }> {
     const startTime = Date.now();
-    const modelsToTry = [this.geminiModel, "gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"];
+    const modelsToTry = [this.geminiModel, "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-flash-8b"];
     const uniqueModels = Array.from(new Set(modelsToTry));
 
     let lastError: Error | null = null;
@@ -239,11 +239,52 @@ export class VisionExtractor {
     base64Data: string
   ): Promise<{ parsed: any; durationMs: number }> {
     const startTime = Date.now();
-    const modelsToTry = ["llama-3.2-11b-vision-preview", "llama-3.2-90b-vision-preview"];
 
-    // Groq OpenAI-compatible vision expects images as data URLs
-    const dataUriMime = effectiveMime === "application/pdf" ? "image/jpeg" : effectiveMime;
-    const imageUrl = `data:${dataUriMime};base64,${base64Data}`;
+    // If PDF, extract textual content and utilize Groq LLaMA 3.3 70B text reasoning
+    if (effectiveMime === "application/pdf") {
+      const pdfBuffer = Buffer.from(base64Data, "base64");
+      const rawStr = pdfBuffer.toString("utf8");
+      const textMatches = rawStr.match(/[\w@.,:/ \-'\n]{4,}/g);
+      const extractedText = textMatches ? textMatches.join(" ").substring(0, 5000) : rawStr.substring(0, 3000);
+
+      const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${this.groqApiKey}`,
+        },
+        body: JSON.stringify({
+          model: "llama-3.3-70b-versatile",
+          messages: [
+            {
+              role: "system",
+              content: "You are the SabiProfile Sovereign Document Structuring Engine. Extract strictly factual credentials into clean JSON according to the requested schema. Return valid JSON only.",
+            },
+            {
+              role: "user",
+              content: `${prompt}\n\nExtracted Document Text:\n"""\n${extractedText}\n"""`,
+            },
+          ],
+          temperature: 0.05,
+          response_format: { type: "json_object" },
+        }),
+      });
+
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`Groq PDF Structuring HTTP ${res.status}: ${errText}`);
+      }
+
+      const json = await res.json();
+      const contentText = json.choices?.[0]?.message?.content;
+      if (!contentText) throw new Error("Groq returned empty content for PDF.");
+      const parsed = JSON.parse(contentText);
+      return { parsed, durationMs: Date.now() - startTime };
+    }
+
+    // For image captures (JPEG, PNG, camera viewfinder photos):
+    const modelsToTry = ["llama-3.2-11b-vision-preview", "llama-3.2-90b-vision-preview"];
+    const imageUrl = `data:${effectiveMime};base64,${base64Data}`;
 
     let lastError: Error | null = null;
     for (const model of modelsToTry) {
@@ -300,6 +341,29 @@ export class VisionExtractor {
     categoryHint?: VaultCategory,
     fileName?: string
   ): Promise<VisionExtractionResult> {
+    // Dynamically resolve keys from database platform_config and env in serverless context
+    if (!this.geminiApiKey || !this.groqApiKey) {
+      await primeConfigCache();
+      this.geminiApiKey =
+        this.geminiApiKey ||
+        (await getConfigValue("ai.gemini_api_key")) ||
+        process.env.GEMINI_API_KEY ||
+        process.env.GOOGLE_GEMINI_API_KEY ||
+        process.env.GOOGLE_API_KEY ||
+        process.env.NEXT_PUBLIC_GEMINI_API_KEY ||
+        undefined;
+
+      this.groqApiKey =
+        this.groqApiKey ||
+        (await getConfigValue("ai.groq_api_key")) ||
+        process.env.GROQ_API_KEY ||
+        process.env.GROQ_VISION_API_KEY ||
+        undefined;
+
+      const model = await getConfigValue("ai.gemini_model");
+      if (model) this.geminiModel = model;
+    }
+
     const effectiveMime = mimeType?.toLowerCase().includes("pdf")
       ? "application/pdf"
       : mimeType || "image/jpeg";

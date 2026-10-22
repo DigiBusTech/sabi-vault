@@ -2348,3 +2348,34 @@
   - `tests/test_camera_upload_telemetry.mjs`: 6/6 passed (100%).
   - `npx tsc --noEmit`: 0 errors.
 - **Note:** Committed without Copilot trailer per user instruction.
+
+
+---
+
+## Entry #068 — Dynamic Serverless AI Key Hydration, PDF Failover Structuring & Self-Diagnosing Errors
+- **User Prompt:**
+  > "i tried uploading documents and encountered this error again,
+  > and see the log i exported from the super admin. attached in json file. 
+  > app is verified and now works well and display logo on google auth drive. 
+  > also testing from camera scan and capture."
+- **Root Cause Analysis from Exported Telemetry:**
+  1. **Key Hydration Failure in Serverless Functions:** The exported telemetry log revealed: `{"errorCode": "VISION_AI_DOWN", "message": "No Vision AI keys configured (both Gemini and Groq keys are unset).", "metadata": {"hasGeminiKey": false, "hasGroqKey": false}}`. Both `VisionExtractor` and `MultiLLMGateway` were synchronously reading keys using `getConfigValueSync()` in their constructors. In Vercel serverless cold starts, the in-memory cache is empty; synchronous reads cannot query the Supabase `platform_config` table where Super Admin saved the API keys. Thus, `this.geminiApiKey` and `this.groqApiKey` remained `undefined` at runtime.
+  2. **PDF Binaries Sent to Groq Vision:** Groq Vision (`llama-3.2-11b-vision-preview`) requires image data URIs (JPEG/PNG/WEBP). When a user uploaded a PDF statement (`Moniepoint-Document-2024-09-16T06-30.pdf`), Groq Vision rejected the raw PDF payload as an invalid image format.
+  3. **Non-Public Gemini Model:** `gemini-2.5-flash` in the models-to-try array caused an unnecessary 404 roundtrip before falling back to `gemini-2.0-flash`.
+- **Remediations Implemented:**
+  1. **Dynamic Asynchronous Key Hydration (`vision_extractor.ts` & `llm_gateway.ts`):**
+     - Updated `VisionExtractor.extractDocumentFields()` and `MultiLLMGateway.complete()` to call `await primeConfigCache()` and `await getConfigValue(...)` if keys are missing from process memory, guaranteeing that keys stored in Supabase `platform_config` are fetched immediately on serverless cold starts.
+     - Added fallbacks for `process.env.GOOGLE_API_KEY`, `process.env.GOOGLE_GEMINI_API_KEY`, and `process.env.GROQ_VISION_API_KEY`.
+     - Called `await primeConfigCache()` in `/api/v1/vault/scan/route.ts` prior to extractor initialization.
+  2. **PDF Fallback Text Structuring via Groq LLaMA 3.3 70B (`vision_extractor.ts`):**
+     - When a PDF document is uploaded and Gemini is unavailable or unfunded, `extractWithGroq()` extracts textual content from the PDF binary streams and dispatches it to Groq's `llama-3.3-70b-versatile` text completions model with structured JSON response mode.
+     - Image files (camera scans, PNG, JPG) continue to use Groq Vision (`llama-3.2-11b-vision-preview`).
+  3. **Actionable Self-Diagnosing Error Display (`CitizenVaultView.tsx`, `DocumentIntake.tsx`):**
+     - Exposed `detail: err.message` in 503 scan responses. The UI now displays the exact diagnostic reason (e.g. prompt to configure keys in Super Admin) rather than a generic opaque message.
+  4. **Optimized Gemini Model List (`vision_extractor.ts`):**
+     - Updated Gemini model fallback roster to `["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-flash-8b"]`.
+- **Validation:**
+  - `tests/test_camera_upload_telemetry.mjs`: 6/6 suites passed (100%).
+  - `tests/test_bot_autofill_and_google_verification.mjs`: 5/5 suites passed (100%).
+  - `npx tsc --noEmit`: 0 errors.
+- **Note:** Committed without Copilot trailer per user instruction.

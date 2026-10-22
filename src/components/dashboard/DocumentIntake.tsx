@@ -211,7 +211,7 @@ export function DocumentIntake({ onSynced }: DocumentIntakeProps) {
           }),
         }).catch(() => {});
 
-        setError(data.details || data.error || `Document sync failed (${res.status}). Please try again.`);
+        setError(data.detail ? `${data.error} (${data.detail})` : (data.details || data.error || `Document sync failed (${res.status}). Please try again.`));
         return;
       }
 
