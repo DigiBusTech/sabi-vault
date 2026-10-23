@@ -188,4 +188,5 @@ if (!globalObj[globalKey]) {
 }
 
 export const liveTelemetry = globalObj[globalKey];
+export const telemetryLogger = liveTelemetry;
 

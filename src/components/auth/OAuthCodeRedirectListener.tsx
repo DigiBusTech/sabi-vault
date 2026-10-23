@@ -22,6 +22,9 @@ export function OAuthCodeRedirectListener() {
       // Only intervene if we are on root or login page and have OAuth payload
       if (pathname === "/" || pathname === "/login") {
         const urlParams = new URLSearchParams(search);
+        // Do not redirect if there's already an error parameter on the login page
+        if (urlParams.has("error")) return;
+
         const hasCode = urlParams.has("code");
         const hasHashToken = hash && (hash.includes("access_token=") || hash.includes("code="));
 

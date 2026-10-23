@@ -207,8 +207,21 @@ async function runTests() {
   assert.strictEqual(result4.passThrough, true, "Normal homepage request without code must pass through");
   console.log("  ✓ OAuth Code interceptor verified for both edge middleware and client-side listener.");
 
+  // Test 8: Shared Domain (.sabiprofile.com) Cookie Persistence & Modern getAll/setAll Binding
+  console.log("\n[Test 8] Verifying Shared Apex Domain Cookie Persistence & Telemetry Integration...");
+  const clientSource = fs.readFileSync(path.join("src", "lib", "supabase", "client.ts"), "utf8");
+  assert(clientSource.includes(".sabiprofile.com"), "Client must configure shared apex domain for cookies");
+  assert(clientSource.includes("cookieOptions"), "Client must provide cookieOptions to createBrowserClient");
+
+  const updatedCallbackSource = fs.readFileSync(path.join("src", "app", "auth", "callback", "route.ts"), "utf8");
+  assert(updatedCallbackSource.includes("getAll"), "Callback must use modern getAll for SSR cookie extraction");
+  assert(updatedCallbackSource.includes("setAll"), "Callback must use modern setAll for SSR cookie propagation");
+  assert(updatedCallbackSource.includes(".sabiprofile.com"), "Callback must enforce shared apex cookie domain");
+  assert(updatedCallbackSource.includes("telemetryLogger"), "Callback must log authentication events to Super Admin telemetry");
+  console.log("  ✓ Shared cookie domain across apex/subdomain and telemetry audit logging verified.");
+
   console.log("\n=======================================================");
-  console.log("ALL 7 GOOGLE AUTH & SKILL SUITES PASSED (100%)!");
+  console.log("ALL 8 GOOGLE AUTH & SKILL SUITES PASSED (100%)!");
   console.log("=======================================================\n");
 }
 

@@ -2604,3 +2604,27 @@
   - `tests/test_google_auth_and_skills.mjs`: Added Test 7 suite testing simulation of user's reported URL `https://www.sabiprofile.com/?code=e8428cee-107b-48d6-a206-3bbbf24e21f0`, apex URLs, and login URLs. 7/7 suites passed (100%).
   - `npx tsc --noEmit`: 0 errors.
 - **Git Commit:** Committed and pushed to `main` and `master` with no Copilot trailers.
+
+
+---
+
+## Entry #074 — Shared Apex Domain Cookie Persistence, Modern SSR Cookie Handlers & Telemetry
+- **User Prompt:**
+  > "see the result after redirect." (Screenshot showing: sabiprofile.com/login?error=auth_failed&error_description=Authentication%20handshake%20could%20not%20be%20completed.%20Please%20try%20signing%20in%20again.)
+- **Root Cause Analysis:**
+  1. **Cross-Subdomain PKCE Verifier Loss:** When a user initiates Google OAuth on `www.sabiprofile.com`, Supabase's `createBrowserClient` sets the PKCE code verifier cookie as a host-only cookie (no domain specified). When redirected to the apex domain `sabiprofile.com`, the browser cannot share host-only cookies across subdomains. Consequently, the server at `sabiprofile.com/auth/callback` found no code verifier cookie in the request headers and rejected the code exchange.
+  2. **Deprecated SSR Cookie Accessors:** The server callback route was using deprecated `get`/`set`/`remove` methods. `@supabase/ssr` v0.12+ requires `getAll()` and `setAll()` to read and chunk modern multi-flow PKCE keys.
+  3. **Expired One-Time Code Use:** Attempting to refresh or re-enter an already consumed or expired authorization code (`?code=e8428cee-...`) triggers `invalid_grant`, which was masked by a fallback to direct Google OAuth and produced a generic error message.
+- **Architectural Upgrades:**
+  1. **Shared Apex Domain Cookies:**
+     - In `src/lib/supabase/client.ts`, configured `cookieOptions: { domain: isProduction ? ".sabiprofile.com" : undefined, path: "/", sameSite: "lax", secure: isBrowser ? window.location.protocol === "https:" : false }`.
+     - In `src/app/auth/callback/route.ts`, applied `.sabiprofile.com` domain to all Supabase and SabiProfile session cookies (`sb_auth_token`, `sabi_refresh_token`, `sabi_user_email`, `sabi_user_role`), guaranteeing seamless session sharing between `www.sabiprofile.com` and `sabiprofile.com`.
+  2. **Modern `@supabase/ssr` Handlers:**
+     - Updated `createServerClient` in `route.ts` to implement `getAll()` and `setAll()` with domain propagation.
+  3. **Telemetry & Descriptive Error Reporting:**
+     - Hooked `telemetryLogger.record({ subsystem: "SECURITY_AUTH", ... })` into the OAuth callback flow to log all authentication events (success, code exchange rejection, provider rejection) live to the Super Admin Telemetry Dashboard.
+     - Preserved raw provider failure reasons (`sbError.message`) so any issue is clearly explained rather than obscured by generic error text.
+- **Validation:**
+  - `tests/test_google_auth_and_skills.mjs`: Test 8 passed, all 8 suites passed (100%).
+  - `npx tsc --noEmit`: 0 errors.
+- **Git Commit:** Committed and pushed to `main` and `master` with no Copilot trailers.

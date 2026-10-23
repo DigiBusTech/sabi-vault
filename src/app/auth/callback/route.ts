@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { createServerClient } from "@supabase/ssr";
 import { getConfigValueSync, getConfigValue, primeConfigCache } from "@/core/config/platform_config";
 import { globalUserStore } from "@/core/vault/user_store";
 import { profileAndAdvisorStore } from "@/core/vault/profile_store";
 import { registerUserSession, REFRESH_COOKIE_NAME } from "@/lib/security/session";
 import { resolveGoogleRedirectUri } from "@/lib/auth/google_oauth";
+import { telemetryLogger } from "@/lib/telemetry/live_logger";
 
 export const dynamic = "force-dynamic";
 
@@ -14,10 +15,19 @@ export async function GET(request: NextRequest) {
   const state = requestUrl.searchParams.get("state");
   const errorParam = requestUrl.searchParams.get("error");
   const errorDesc = requestUrl.searchParams.get("error_description");
+
+  // Determine canonical host and origin across proxies and subdomains
+  const requestHost = (request.headers.get("x-forwarded-host") || requestUrl.host).toLowerCase();
+  const proto = request.headers.get("x-forwarded-proto") || requestUrl.protocol.replace(":", "");
+  const canonicalOrigin = `${proto}://${requestHost}`;
+
+  const isProduction = requestHost.includes("sabiprofile.com");
+  const cookieDomain = isProduction ? ".sabiprofile.com" : undefined;
+
   const requestedPath = requestUrl.searchParams.get("next") || "/dashboard";
-  const requestedUrl = new URL(requestedPath, requestUrl.origin);
+  const requestedUrl = new URL(requestedPath, canonicalOrigin);
   const safePath =
-    requestedUrl.origin === requestUrl.origin
+    requestedUrl.origin === canonicalOrigin
       ? `${requestedUrl.pathname}${requestedUrl.search}${requestedUrl.hash}`
       : "/dashboard";
 
@@ -25,8 +35,17 @@ export async function GET(request: NextRequest) {
   if (errorParam) {
     const message = errorDesc || errorParam || "Authentication was denied or encountered an error.";
     console.error("[Auth Callback] OAuth provider error:", errorParam, errorDesc);
+    telemetryLogger.record({
+      subsystem: "SECURITY_AUTH",
+      level: "WARN",
+      action: "OAUTH_PROVIDER_REJECTED",
+      durationMs: 0,
+      message,
+      errorCode: errorParam,
+      metadata: { errorParam, errorDesc, host: requestHost },
+    });
     return NextResponse.redirect(
-      new URL(`/login?error=auth_failed&error_description=${encodeURIComponent(message)}`, requestUrl.origin)
+      new URL(`/login?error=auth_failed&error_description=${encodeURIComponent(message)}`, canonicalOrigin)
     );
   }
 
@@ -72,19 +91,20 @@ export async function GET(request: NextRequest) {
       } catch {}
     }
 
-    const devEmail = "google.citizen@sabiprofile.com";
     const devUserId = "usr_chinwe_okafor_7721";
     globalUserStore.getVault(devUserId);
 
-    const response = NextResponse.redirect(new URL(safePath, requestUrl.origin));
+    const response = NextResponse.redirect(new URL(safePath, canonicalOrigin));
     response.cookies.set("sb_auth_token", "mock_google_session_token", {
       path: "/",
+      domain: cookieDomain,
       httpOnly: false,
       secure: process.env.NODE_ENV === "production",
       maxAge: 7 * 86400,
     });
     response.cookies.set("sabi_user_role", targetRole, {
       path: "/",
+      domain: cookieDomain,
       httpOnly: false,
       secure: process.env.NODE_ENV === "production",
       maxAge: 7 * 86400,
@@ -103,25 +123,36 @@ export async function GET(request: NextRequest) {
     } catch {}
   }
 
-  // 2. Try Supabase Session Exchange (with direct response cookie binding)
+  let lastExchangeError: string | null = null;
+
+  // 2. Try Supabase Session Exchange (with modern getAll/setAll cookie binding)
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (supabaseUrl && supabaseAnonKey) {
     try {
-      const response = NextResponse.redirect(new URL(safePath, requestUrl.origin));
+      const response = NextResponse.redirect(new URL(safePath, canonicalOrigin));
       const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+        cookieOptions: {
+          domain: cookieDomain,
+          path: "/",
+          sameSite: "lax",
+          secure: proto === "https",
+        },
         cookies: {
-          get(name: string) {
-            return request.cookies.get(name)?.value;
+          getAll() {
+            return request.cookies.getAll();
           },
-          set(name: string, value: string, options: CookieOptions) {
-            request.cookies.set({ name, value, ...options });
-            response.cookies.set({ name, value, ...options });
-          },
-          remove(name: string, options: CookieOptions) {
-            request.cookies.set({ name, value: "", ...options });
-            response.cookies.set({ name, value: "", ...options });
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value, options }) => {
+              request.cookies.set({ name, value, ...options });
+              response.cookies.set({
+                name,
+                value,
+                ...options,
+                domain: cookieDomain || options?.domain,
+              });
+            });
           },
         },
       });
@@ -162,15 +193,17 @@ export async function GET(request: NextRequest) {
           role: targetRole,
         });
 
-        // Set SabiProfile cryptographic tokens
+        // Set SabiProfile cryptographic tokens with shared domain
         response.cookies.set("sb_auth_token", session.accessToken, {
           path: "/",
+          domain: cookieDomain,
           httpOnly: false,
           secure: process.env.NODE_ENV === "production",
           maxAge: 7 * 86400,
         });
         response.cookies.set(REFRESH_COOKIE_NAME, session.refreshToken, {
           path: "/",
+          domain: cookieDomain,
           httpOnly: true,
           secure: process.env.NODE_ENV === "production",
           sameSite: "lax",
@@ -178,22 +211,45 @@ export async function GET(request: NextRequest) {
         });
         response.cookies.set("sabi_user_email", email, {
           path: "/",
+          domain: cookieDomain,
           httpOnly: false,
           secure: process.env.NODE_ENV === "production",
           maxAge: 7 * 86400,
         });
         response.cookies.set("sabi_user_role", targetRole, {
           path: "/",
+          domain: cookieDomain,
           httpOnly: false,
           secure: process.env.NODE_ENV === "production",
           maxAge: 7 * 86400,
         });
 
+        telemetryLogger.record({
+          subsystem: "SECURITY_AUTH",
+          level: "SUCCESS",
+          action: "OAUTH_LOGIN_SUCCESS",
+          durationMs: 0,
+          userId,
+          message: `User ${email} authenticated successfully via Supabase OAuth.`,
+          metadata: { email, role: targetRole, host: requestHost },
+        });
+
         return response;
       } else if (sbError) {
+        lastExchangeError = sbError.message;
         console.warn("[Auth Callback] Supabase code exchange did not match code:", sbError.message);
+        telemetryLogger.record({
+          subsystem: "SECURITY_AUTH",
+          level: "WARN",
+          action: "SUPABASE_CODE_EXCHANGE_FAILED",
+          durationMs: 0,
+          message: `Supabase code exchange rejected: ${sbError.message}`,
+          errorCode: sbError.name || "AUTH_CODE_EXCHANGE_ERROR",
+          metadata: { error: sbError.message, host: requestHost },
+        });
       }
     } catch (supabaseErr: any) {
+      lastExchangeError = supabaseErr?.message;
       console.warn("[Auth Callback] Supabase code exchange exception:", supabaseErr?.message);
     }
   }
@@ -276,15 +332,17 @@ export async function GET(request: NextRequest) {
               role: targetRole,
             });
 
-            const response = NextResponse.redirect(new URL(safePath, requestUrl.origin));
+            const response = NextResponse.redirect(new URL(safePath, canonicalOrigin));
             response.cookies.set("sb_auth_token", session.accessToken, {
               path: "/",
+              domain: cookieDomain,
               httpOnly: false,
               secure: process.env.NODE_ENV === "production",
               maxAge: 7 * 86400,
             });
             response.cookies.set(REFRESH_COOKIE_NAME, session.refreshToken, {
               path: "/",
+              domain: cookieDomain,
               httpOnly: true,
               secure: process.env.NODE_ENV === "production",
               sameSite: "lax",
@@ -292,35 +350,61 @@ export async function GET(request: NextRequest) {
             });
             response.cookies.set("sabi_user_email", email, {
               path: "/",
+              domain: cookieDomain,
               httpOnly: false,
               secure: process.env.NODE_ENV === "production",
               maxAge: 7 * 86400,
             });
             response.cookies.set("sabi_user_role", targetRole, {
               path: "/",
+              domain: cookieDomain,
               httpOnly: false,
               secure: process.env.NODE_ENV === "production",
               maxAge: 7 * 86400,
             });
+
+            telemetryLogger.record({
+              subsystem: "SECURITY_AUTH",
+              level: "SUCCESS",
+              action: "DIRECT_GOOGLE_OAUTH_SUCCESS",
+              durationMs: 0,
+              userId,
+              message: `User ${email} authenticated successfully via Direct Google OAuth.`,
+              metadata: { email, role: targetRole, host: requestHost },
+            });
+
             return response;
           }
         }
       } else {
         const errorText = await tokenRes.text();
-        console.error("[Auth Callback] Direct Google token exchange rejected:", tokenRes.status, errorText);
+        console.warn("[Auth Callback] Direct Google token exchange rejected:", tokenRes.status, errorText);
       }
     }
   } catch (directOAuthErr: any) {
-    console.error("[Auth Callback] Direct Google OAuth fallback failed:", directOAuthErr?.message);
+    console.warn("[Auth Callback] Direct Google OAuth fallback failed:", directOAuthErr?.message);
+    if (!lastExchangeError) lastExchangeError = directOAuthErr?.message;
   }
 
   // If all exchange mechanisms failed, redirect with informative error
+  const descriptiveReason =
+    lastExchangeError && lastExchangeError.length > 5
+      ? lastExchangeError
+      : "Authentication code is expired or invalid. Please click 'Continue with Google' to sign in.";
+
+  telemetryLogger.record({
+    subsystem: "SECURITY_AUTH",
+    level: "ERROR",
+    action: "OAUTH_CALLBACK_FAILED",
+    durationMs: 0,
+    message: descriptiveReason,
+    metadata: { codeReceived: !!code, host: requestHost },
+  });
+
   return NextResponse.redirect(
     new URL(
-      `/login?error=auth_failed&error_description=${encodeURIComponent(
-        "Authentication handshake could not be completed. Please try signing in again."
-      )}`,
-      requestUrl.origin
+      `/login?error=auth_failed&error_description=${encodeURIComponent(descriptiveReason)}`,
+      canonicalOrigin
     )
   );
 }
