@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { getConfigValueSync, getConfigValue, primeConfigCache } from "@/core/config/platform_config";
 import { globalUserStore } from "@/core/vault/user_store";
 import { profileAndAdvisorStore } from "@/core/vault/profile_store";
@@ -12,14 +12,54 @@ export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
   const state = requestUrl.searchParams.get("state");
+  const errorParam = requestUrl.searchParams.get("error");
+  const errorDesc = requestUrl.searchParams.get("error_description");
   const requestedPath = requestUrl.searchParams.get("next") || "/dashboard";
   const requestedUrl = new URL(requestedPath, requestUrl.origin);
-  const safePath = requestedUrl.origin === requestUrl.origin
-    ? `${requestedUrl.pathname}${requestedUrl.search}${requestedUrl.hash}`
-    : "/dashboard";
+  const safePath =
+    requestedUrl.origin === requestUrl.origin
+      ? `${requestedUrl.pathname}${requestedUrl.search}${requestedUrl.hash}`
+      : "/dashboard";
 
+  // Check if provider returned an explicit error parameter
+  if (errorParam) {
+    const message = errorDesc || errorParam || "Authentication was denied or encountered an error.";
+    console.error("[Auth Callback] OAuth provider error:", errorParam, errorDesc);
+    return NextResponse.redirect(
+      new URL(`/login?error=auth_failed&error_description=${encodeURIComponent(message)}`, requestUrl.origin)
+    );
+  }
+
+  // Handle case where no code query parameter is passed (e.g. hash fragment or direct hit)
   if (!code) {
-    return NextResponse.redirect(new URL("/login?error=confirmation_failed", requestUrl.origin));
+    // Return HTML to safely inspect client-side hash fragments (Supabase implicit / popup flow)
+    const fallbackHtml = `<!DOCTYPE html>
+<html>
+<head><title>Authenticating...</title></head>
+<body>
+<div style="font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; flex-direction: column; color: #1e293b;">
+  <p>Finalizing authentication, please wait...</p>
+</div>
+<script>
+  if (window.location.hash && (window.location.hash.includes('access_token') || window.location.hash.includes('error'))) {
+    const hash = window.location.hash.substring(1);
+    const params = new URLSearchParams(hash);
+    const err = params.get('error_description') || params.get('error');
+    if (err) {
+      window.location.href = '/login?error=auth_failed&error_description=' + encodeURIComponent(err);
+    } else {
+      window.location.href = '${safePath}';
+    }
+  } else {
+    window.location.href = '/login?error=auth_failed&error_description=' + encodeURIComponent('Authentication code was missing or has expired. Please try signing in again.');
+  }
+</script>
+</body>
+</html>`;
+    return new NextResponse(fallbackHtml, {
+      status: 200,
+      headers: { "Content-Type": "text/html; charset=utf-8" },
+    });
   }
 
   // 1. Handle mock development Google fast-auth simulation
@@ -52,30 +92,115 @@ export async function GET(request: NextRequest) {
     return response;
   }
 
-  // 2. Try standard Supabase Session Exchange
-  try {
-    const supabase = createServerSupabaseClient();
-    const { data: sessionData, error } = await supabase.auth.exchangeCodeForSession(code);
-    if (!error && sessionData?.session) {
-      return NextResponse.redirect(new URL(safePath, requestUrl.origin));
-    }
-  } catch (supabaseErr) {
-    console.warn("[Auth Callback] Supabase code exchange skipped or failed:", supabaseErr);
+  // Determine target role from state if available
+  let targetRole: "citizen" | "enterprise_admin" = "citizen";
+  if (state) {
+    try {
+      const decoded = JSON.parse(Buffer.from(state, "base64url").toString("utf8"));
+      if (decoded.role === "enterprise_admin" || decoded.role === "citizen") {
+        targetRole = decoded.role;
+      }
+    } catch {}
   }
 
-  // 3. Direct Google OAuth token exchange
+  // 2. Try Supabase Session Exchange (with direct response cookie binding)
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (supabaseUrl && supabaseAnonKey) {
+    try {
+      const response = NextResponse.redirect(new URL(safePath, requestUrl.origin));
+      const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+        cookies: {
+          get(name: string) {
+            return request.cookies.get(name)?.value;
+          },
+          set(name: string, value: string, options: CookieOptions) {
+            request.cookies.set({ name, value, ...options });
+            response.cookies.set({ name, value, ...options });
+          },
+          remove(name: string, options: CookieOptions) {
+            request.cookies.set({ name, value: "", ...options });
+            response.cookies.set({ name, value: "", ...options });
+          },
+        },
+      });
+
+      const { data: sessionData, error: sbError } = await supabase.auth.exchangeCodeForSession(code);
+      if (!sbError && sessionData?.session) {
+        const user = sessionData.session.user;
+        const email = user.email || "user@sabiprofile.com";
+        const fullName =
+          user.user_metadata?.full_name ||
+          user.user_metadata?.name ||
+          user.user_metadata?.display_name ||
+          email.split("@")[0];
+        const avatarUrl = user.user_metadata?.avatar_url || user.user_metadata?.picture;
+        const userId = `usr_${user.id.substring(0, 8)}`;
+
+        // Seed user vault and profile
+        globalUserStore.getVault(userId);
+        await profileAndAdvisorStore.updateProfile(userId, {
+          fullName,
+          avatarUrl,
+        });
+
+        // Register authenticated SabiProfile session
+        const userAgent = request.headers.get("user-agent") || "";
+        const ipAddress =
+          request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+          request.headers.get("x-real-ip") ||
+          "127.0.0.1";
+        const deviceFingerprint = `sb_${user.id.substring(0, 12)}`;
+
+        const session = await registerUserSession({
+          userId,
+          deviceFingerprint,
+          userAgent,
+          ipAddress,
+          email,
+          role: targetRole,
+        });
+
+        // Set SabiProfile cryptographic tokens
+        response.cookies.set("sb_auth_token", session.accessToken, {
+          path: "/",
+          httpOnly: false,
+          secure: process.env.NODE_ENV === "production",
+          maxAge: 7 * 86400,
+        });
+        response.cookies.set(REFRESH_COOKIE_NAME, session.refreshToken, {
+          path: "/",
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: "lax",
+          maxAge: 30 * 86400,
+        });
+        response.cookies.set("sabi_user_email", email, {
+          path: "/",
+          httpOnly: false,
+          secure: process.env.NODE_ENV === "production",
+          maxAge: 7 * 86400,
+        });
+        response.cookies.set("sabi_user_role", targetRole, {
+          path: "/",
+          httpOnly: false,
+          secure: process.env.NODE_ENV === "production",
+          maxAge: 7 * 86400,
+        });
+
+        return response;
+      } else if (sbError) {
+        console.warn("[Auth Callback] Supabase code exchange did not match code:", sbError.message);
+      }
+    } catch (supabaseErr: any) {
+      console.warn("[Auth Callback] Supabase code exchange exception:", supabaseErr?.message);
+    }
+  }
+
+  // 3. Direct Google OAuth Token Exchange Fallback
   try {
     await primeConfigCache();
-
-    let targetRole: "citizen" | "enterprise_admin" = "citizen";
-    if (state) {
-      try {
-        const decoded = JSON.parse(Buffer.from(state, "base64url").toString("utf8"));
-        if (decoded.role === "enterprise_admin" || decoded.role === "citizen") {
-          targetRole = decoded.role;
-        }
-      } catch {}
-    }
 
     const clientId =
       (await getConfigValue("auth.google_client_id")) ||
@@ -98,7 +223,6 @@ export async function GET(request: NextRequest) {
       process.env.NEXT_PUBLIC_GOOGLE_REDIRECT_URI ||
       "";
 
-    // Canonical redirect URI matching signin flow exactly across apex, www, Vercel, & localhost
     const redirectUri = resolveGoogleRedirectUri(request, {
       configuredUri: configuredRedirectUri,
     });
@@ -119,7 +243,6 @@ export async function GET(request: NextRequest) {
       if (tokenRes.ok) {
         const tokenData = await tokenRes.json();
         if (tokenData.access_token) {
-          // Fetch Google User Profile
           const profileRes = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
             headers: { Authorization: `Bearer ${tokenData.access_token}` },
           });
@@ -130,7 +253,6 @@ export async function GET(request: NextRequest) {
             const name = googleUser.name || "Google Citizen";
             const picture = googleUser.picture;
 
-            // Seed user vault & profile
             const userId = `usr_${googleUser.sub?.substring(0, 8) || "google"}`;
             globalUserStore.getVault(userId);
             await profileAndAdvisorStore.updateProfile(userId, {
@@ -145,7 +267,6 @@ export async function GET(request: NextRequest) {
               "127.0.0.1";
             const deviceFingerprint = `google_${googleUser.sub?.substring(0, 12) || "web"}`;
 
-            // Register authenticated session with cryptographic HMAC-SHA256 tokens
             const session = await registerUserSession({
               userId,
               deviceFingerprint,
@@ -186,13 +307,20 @@ export async function GET(request: NextRequest) {
         }
       } else {
         const errorText = await tokenRes.text();
-        console.error("[Auth Callback] Google token exchange rejected:", tokenRes.status, errorText);
+        console.error("[Auth Callback] Direct Google token exchange rejected:", tokenRes.status, errorText);
       }
     }
-  } catch (directOAuthErr) {
-    console.error("[Auth Callback] Direct Google OAuth fallback failed:", directOAuthErr);
+  } catch (directOAuthErr: any) {
+    console.error("[Auth Callback] Direct Google OAuth fallback failed:", directOAuthErr?.message);
   }
 
-  // If both failed, redirect to login with error
-  return NextResponse.redirect(new URL("/login?error=confirmation_failed", requestUrl.origin));
+  // If all exchange mechanisms failed, redirect with informative error
+  return NextResponse.redirect(
+    new URL(
+      `/login?error=auth_failed&error_description=${encodeURIComponent(
+        "Authentication handshake could not be completed. Please try signing in again."
+      )}`,
+      requestUrl.origin
+    )
+  );
 }

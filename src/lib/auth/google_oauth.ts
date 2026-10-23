@@ -78,3 +78,4 @@ export function resolveGoogleRedirectUri(
   const portPart = port && port !== "80" && port !== "443" ? `:${port}` : "";
   return `${finalProto}://${cleanHost}${portPart}/auth/callback`;
 }
+

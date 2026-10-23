@@ -39,11 +39,18 @@ export function LoginForm() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [honeypot, setHoneypot] = useState(""); // Invisible bot trap
 
-  const [error, setError] = useState(
-    searchParams.get("error") === "confirmation_failed"
-      ? "Email confirmation link was invalid or has expired. Please try signing in or requesting a new confirmation link."
-      : ""
-  );
+  const [error, setError] = useState(() => {
+    const desc = searchParams.get("error_description");
+    if (desc) return decodeURIComponent(desc);
+    const err = searchParams.get("error");
+    if (err === "confirmation_failed") {
+      return "Email confirmation link was invalid or has expired. Please try signing in or requesting a new confirmation link.";
+    }
+    if (err === "auth_failed") {
+      return "Authentication failed. Please verify your credentials or try signing in again.";
+    }
+    return "";
+  });
   const [notice, setNotice] = useState(
     searchParams.get("notice") === "password_reset_success"
       ? "Password updated successfully. Please sign in with your new password."

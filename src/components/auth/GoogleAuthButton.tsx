@@ -24,9 +24,41 @@ export function GoogleAuthButton({
     setLoading(true);
     setErrorMessage(null);
 
+    // 1. Primary Strategy: Supabase Managed Google OAuth
+    // (Used when Google provider is enabled in the Supabase Project Console)
     try {
-      // Directly dispatch to SabiProfile Managed Google OAuth endpoint
-      // (Uses Google Client ID & Secret configured in Super Admin dashboard and whitelisted in Google Cloud Console)
+      const supabase = createClient();
+      const callbackOrigin = window.location.origin;
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${callbackOrigin}/auth/callback?next=${encodeURIComponent(next)}&role=${role}`,
+          queryParams: {
+            access_type: "offline",
+            prompt: "select_account",
+          },
+        },
+      });
+
+      if (!error && data?.url) {
+        window.location.href = data.url;
+        return;
+      }
+
+      console.warn(
+        "[GoogleAuth] Supabase provider unavailable or returned error, falling back to direct route:",
+        error?.message
+      );
+    } catch (sbErr: any) {
+      console.warn(
+        "[GoogleAuth] Supabase OAuth client exception, falling back to direct route:",
+        sbErr?.message
+      );
+    }
+
+    // 2. Resilient Fallback Strategy: SabiProfile Managed Direct Google OAuth route
+    // (Uses Google Client ID & Secret configured in Super Admin dashboard and whitelisted in Google Cloud Console)
+    try {
       const res = await fetch(
         `/api/v1/auth/google/signin?next=${encodeURIComponent(next)}&role=${role}&mode=json`
       );
@@ -58,12 +90,12 @@ export function GoogleAuthButton({
         type="button"
         onClick={handleGoogleAuth}
         disabled={loading}
-        className={`flex w-full items-center justify-center gap-3 rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-xs transition-all hover:bg-slate-50 hover:border-slate-400 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer ${className}`}
+        className={`w-full flex items-center justify-center gap-3 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 font-medium text-sm hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-all duration-200 shadow-sm hover:shadow disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
       >
         {loading ? (
-          <Loader2 className="h-4 w-4 animate-spin text-slate-500" />
+          <Loader2 className="w-4 h-4 animate-spin text-slate-500" />
         ) : (
-          <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24" aria-hidden="true">
+          <svg className="w-4 h-4" viewBox="0 0 24 24">
             <path
               fill="#4285F4"
               d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -86,11 +118,10 @@ export function GoogleAuthButton({
       </button>
 
       {errorMessage && (
-        <p className="text-center text-xs font-medium text-rose-600 animate-fadeIn">
+        <p className="text-xs text-rose-600 text-center font-medium animate-in fade-in duration-200">
           {errorMessage}
         </p>
       )}
     </div>
   );
 }
-

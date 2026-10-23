@@ -133,8 +133,22 @@ async function runTests() {
   );
   console.log("  ✓ Redirect URI canonicalization verified across apex, www, Vercel, and localhost.");
 
+  // Test 6: Dual-Mode Supabase + Direct Google OAuth & Descriptive Error Propagation
+  console.log("\n[Test 6] Verifying Dual-Mode Supabase + Direct Google OAuth & Descriptive Error Reporting...");
+  const googleBtnSource = fs.readFileSync(path.join("src", "components", "auth", "GoogleAuthButton.tsx"), "utf8");
+  assert(googleBtnSource.includes("supabase.auth.signInWithOAuth"), "GoogleAuthButton must attempt Supabase OAuth first");
+  assert(googleBtnSource.includes("/api/v1/auth/google/signin"), "GoogleAuthButton must fallback to direct route");
+
+  assert(callbackSource.includes("createServerClient"), "Callback must use createServerClient with cookie binding");
+  assert(callbackSource.includes("response.cookies.set"), "Callback must write session cookies directly to redirect response");
+  assert(callbackSource.includes("error_description"), "Callback must propagate error_description to avoid misleading confirmation_failed errors");
+
+  const loginFormSource = fs.readFileSync(path.join("src", "components", "auth", "LoginForm.tsx"), "utf8");
+  assert(loginFormSource.includes("error_description"), "LoginForm must extract error_description from searchParams");
+  console.log("  ✓ Dual-mode Supabase/Direct OAuth, response cookie binding, and error reporting verified.");
+
   console.log("\n=======================================================");
-  console.log("ALL 5 GOOGLE AUTH & SKILL SUITES PASSED (100%)!");
+  console.log("ALL 6 GOOGLE AUTH & SKILL SUITES PASSED (100%)!");
   console.log("=======================================================\n");
 }
 

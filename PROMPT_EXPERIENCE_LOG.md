@@ -2505,3 +2505,35 @@
   - `tests/test_enterprise_security.mjs`: 6/6 suites passed (100%).
   - `npx tsc --noEmit`: 0 errors.
 - **Note:** Committed without Copilot trailer per user instruction.
+
+
+---
+
+## Entry #071 — Dual-Mode Supabase Google OAuth Integration, Response Cookie Binding & Auth Error Propagation
+- **User Prompt:**
+  > "see new issue i have configured it in supabase and add redirect url in google console"
+  > (User provided 1 screenshot showing: URL `sabiprofile.com/login?error=confirmation_failed` with banner: "Email confirmation link was invalid or has expired. Please try signing in or requesting a new confirmation link.").
+- **Root Cause Analysis:**
+  1. **Supabase Provider Configured but Button Bypassed Supabase:** The user configured Google OAuth directly in their Supabase project console (`fhbhelvrqqaqurjcxkcd.supabase.co`) and whitelisted Supabase's callback URL in Google Console. However, `GoogleAuthButton.tsx` was dispatching exclusively to SabiProfile's direct OAuth endpoint `/api/v1/auth/google/signin` rather than utilizing Supabase's native `signInWithOAuth` flow.
+  2. **Supabase Code Exchange Cookie Dropping in Next.js App Router:** In `src/app/auth/callback/route.ts`, when `supabase.auth.exchangeCodeForSession(code)` ran, `@supabase/ssr` wrote session cookies into `cookieStore`, but `NextResponse.redirect()` returned a fresh redirect response that did not bind the mutated cookies. As a result, subsequent visits to protected dashboard routes were rejected by `middleware.ts` because session cookies were absent.
+  3. **Misleading `?error=confirmation_failed` Catch-All:** Any unhandled rejection in `/auth/callback` fell through to `redirect(new URL("/login?error=confirmation_failed"))`. In `LoginForm.tsx`, `confirmation_failed` statically displayed: *"Email confirmation link was invalid or has expired"*, misrepresenting OAuth failures as email link expirations and concealing the true underlying error.
+  4. **Uncaptured OAuth Error Parameters:** If Google or Supabase returned `?error=...` or `?error_description=...`, the callback route checked only `if (!code)` and discarded the descriptive error details.
+- **Remediations Implemented:**
+  1. **Dual-Mode Google Authentication (`GoogleAuthButton.tsx`):**
+     - Updated button to first attempt `supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: ... } })`, taking advantage of the user's Supabase Console setup.
+     - Automatically falls back to `/api/v1/auth/google/signin` if the Supabase provider returns an error, guaranteeing resilience.
+  2. **Direct Response Cookie Binding (`src/app/auth/callback/route.ts`):**
+     - Constructed `NextResponse.redirect()` upfront and wired a custom `@supabase/ssr` cookie handler directly to `response.cookies.set(...)` and `response.cookies.delete(...)`.
+     - When `exchangeCodeForSession(code)` succeeds, Supabase session cookies AND SabiProfile cryptographic tokens (`sb_auth_token`, `sabi_refresh_token`) are attached to the redirect response.
+     - Seeded user vault (`globalUserStore.getVault(userId)`) and user profile (`profileAndAdvisorStore.updateProfile(...)`).
+  3. **Descriptive Error Propagation & Client-Side Hash Fallback:**
+     - Extracted `error` and `error_description` from query parameters and redirected to `/login?error=auth_failed&error_description=...`.
+     - If no `code` is received, returned an HTML response to inspect client-side hash fragments (`#access_token=...`) before falling back.
+     - Updated `LoginForm.tsx` to read `error_description` dynamically, displaying the exact reason for any authentication failure.
+- **Validation:**
+  - `tests/test_google_auth_and_skills.mjs`: 6/6 suites passed (100%).
+  - `tests/test_camera_upload_telemetry.mjs`: 6/6 suites passed (100%).
+  - `tests/test_security_hardening.mjs`: 6/6 suites passed (100%).
+  - `tests/test_enterprise_security.mjs`: 6/6 suites passed (100%).
+  - `npx tsc --noEmit`: 0 errors.
+- **Note:** Committed without Copilot trailer per user instruction.
