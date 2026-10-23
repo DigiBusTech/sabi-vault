@@ -2645,3 +2645,17 @@
   - `node tests/test_security_hardening.mjs`: 7/7 suites PASSED (new Test 7 covers the migration + non-fatal seeding guard).
   - `test_google_auth_and_skills` 8/8, `test_storage_quota_and_skills` 8/8, `test_full_suite` 8/8 — all PASSED.
 - **Action Required (Ops):** Apply migration `20261023120000` to the production Supabase node before/alongside this deploy.
+
+---
+
+## Entry #076 — Node.js v26.12.1 Security Upgrade
+- **User Prompt:**
+  > "update the node.js latest version v26.12.1 (https://nodejs.org/blog/release/v26.12.1)"
+- **Why:** v26.12.1 (2026-10-21) is a **security release** patching High-severity CVEs (TLS non-canonical IP rejection, DNS null-byte validation, brotli, http agent guard, crypto snapshot caches) — directly relevant to our TLS-heavy OAuth/cloud/blockchain traffic.
+- **Changes:**
+  1. **Runtime:** Installed Node.js v26.12.1 (bundled npm 11.20.0) — user-level zip at `%LOCALAPPDATA%\Programs\nodejs` on User PATH, plus official MSI launched for the system-wide upgrade of `C:\Program Files\nodejs` (requires UAC acceptance).
+  2. **Repo pins:** Created `.nvmrc` (`26.12.1`); added `engines` (`node >=26.12.1`, `npm >=11.20.0`) to `package.json`; upgraded `@types/node` `^20` → `^26` (lockfile refreshed with npm 11.20.0 under Node 26).
+- **Validation (all under Node v26.12.1):**
+  - `npx tsc --noEmit`: 0 errors.
+  - All 7 suites PASS: hardening 7/7, full 8/8, quota 8/8, profile/advisor 5/5, scan/cloud 26/26, devices 5/5, google auth 8/8.
+- **Ops Note:** Vercel project Node version is configured in dashboard settings (no vercel.json); set it to 26.x when available in the project's Node version selector.
