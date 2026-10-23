@@ -144,6 +144,7 @@ sabiprofile/
 │   │   ├── blockchain/                # EVM interaction, hash anchors, contract clients
 │   │   ├── crypto/                    # SHA-256 hashing, scoped API key generators
 │   │   ├── sovereign/                 # Sovereign node routing & residency compliance
+│   │   ├── notifications/             # Multi-tenant live broadcast store & alert engine
 │   │   ├── storage/                   # OAuth cloud connectors (Google Drive, Dropbox)
 │   │   └── parser/                    # OCR & structured JSON extraction pipelines
 │   ├── agents/                        # Multi-Agent Screening & Gateway

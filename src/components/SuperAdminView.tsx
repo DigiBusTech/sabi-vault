@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 import { LiveTelemetryMonitor } from "@/components/admin/LiveTelemetryMonitor";
+import { BroadcastManager } from "@/components/admin/BroadcastManager";
 import {
   Activity,
   AlertTriangle,
@@ -119,7 +120,7 @@ function sourceLabel(source: ConfigEntry["source"]) {
   }
 }
 
-export type AdminViewMode = "all" | "overview" | "users" | "organizations" | "config" | "telemetry";
+export type AdminViewMode = "all" | "overview" | "users" | "organizations" | "config" | "telemetry" | "broadcasts";
 
 interface SuperAdminViewProps {
   viewMode?: AdminViewMode;

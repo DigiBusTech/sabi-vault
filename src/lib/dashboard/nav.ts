@@ -30,6 +30,7 @@ export const NAV_BY_ROLE: Record<string, ShellNavItem[]> = {
     { id: "organizations", label: "Organizations", href: "/dashboard/admin/organizations" },
     { id: "config", label: "Configuration", href: "/dashboard/admin/config" },
     { id: "telemetry", label: "Live Telemetry", href: "/dashboard/admin/telemetry" },
+    { id: "broadcasts", label: "Live Broadcasts", href: "/dashboard/admin/broadcasts" },
   ],
 };
 

@@ -2537,3 +2537,46 @@
   - `tests/test_enterprise_security.mjs`: 6/6 suites passed (100%).
   - `npx tsc --noEmit`: 0 errors.
 - **Note:** Committed without Copilot trailer per user instruction.
+
+
+---
+
+## Entry #072 — Live Multi-Tenant Notification Broadcast System & Super Admin Console
+- **User Prompt:**
+  > "1. see screenshot to see that i have set this on super admin, also set google auth in supabase auth config page,
+  > 2. build a live notification system where super admin can send updates to appear on user screen, also option to make it appear in org dashboard, and option for general to appear in all dashbaords with cancel or close icon, type of header section notification that appears, more than one can be sent, the bar can be colored based on the message content which will be set for each message by super admin. expand on these and give me a clear implementation plan before we begin."
+- **Architectural Scope & Strategy:**
+  1. **Audience Scoping**:
+     - `all` (General): Broadcasts to every dashboard session (Citizens, Organizations, and Admins).
+     - `citizen`: Broadcasts specifically to citizen talent vaults.
+     - `enterprise`: Broadcasts to organization screening and candidate review workspaces.
+     - `super_admin`: Internal control plane alerts.
+  2. **Thematic Color Palettes & Custom Overrides**:
+     - 5 presets: `info` (blue), `success` (green), `warning` (amber), `danger` (red), `purple` (sovereign purple).
+     - Full custom hex picker (`custom_bg_color`, `custom_text_color`) for custom branding or urgent announcements.
+  3. **Header Alert Docking & Stacking**:
+     - Integrated directly into `DashboardShell.tsx` above main content.
+     - Supports stacking multiple simultaneous broadcasts ordered by priority.
+     - Dismissible via close ("X") button, persisted in `localStorage` under `sabi_dismissed_bcast_${id}`.
+     - Call-to-action (CTA) action link support (`action_label` + `action_url`).
+  4. **Super Admin Management Plane**:
+     - Live WYSIWYG preview card reflecting theme, custom hex colors, text, and action buttons in real time.
+     - CRUD control (publish, edit, activate/deactivate toggle, delete).
+     - Dedicated page `/dashboard/admin/broadcasts` and tab in `NAV_BY_ROLE.super_admin`.
+- **Implementation Artifacts:**
+  - `supabase/migrations/20261023120000_broadcast_notifications.sql`: PostgreSQL table with active indexing and RLS policies.
+  - `src/types/broadcast.ts`: TypeScript contracts for broadcast inputs and entities.
+  - `src/core/notifications/broadcast_store.ts`: Database store with resilient in-memory fallback.
+  - `src/app/api/v1/broadcasts/route.ts`: Public/authenticated active feed endpoint.
+  - `src/app/api/v1/admin/broadcasts/route.ts` & `[id]/route.ts`: Protected admin CRUD endpoints with `authenticateAdmin` guard.
+  - `src/components/notifications/BroadcastBannerBar.tsx`: Real-time WebSocket + SWR polling header banner with local dismissal.
+  - `src/components/admin/BroadcastManager.tsx`: Interactive Super Admin composer with live preview.
+  - `src/components/dashboard/DashboardShell.tsx`: Mounted header banner bar across all platform roles.
+- **Validation:**
+  - `tests/test_broadcast_notifications.mjs`: 6/6 suites passed (100%).
+  - `tests/test_google_auth_and_skills.mjs`: 6/6 suites passed (100%).
+  - `tests/test_camera_upload_telemetry.mjs`: 6/6 suites passed (100%).
+  - `tests/test_security_hardening.mjs`: 6/6 suites passed (100%).
+  - `tests/test_enterprise_security.mjs`: 6/6 suites passed (100%).
+  - `npx tsc --noEmit`: 0 errors.
+- **Note:** Committed without Copilot trailer per user instruction.

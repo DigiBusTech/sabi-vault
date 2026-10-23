@@ -23,10 +23,12 @@ import {
   Laptop,
   Lock,
   Activity,
+  Megaphone,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { logoutAndResetSession, getStoredAccessToken } from "@/lib/security/silent_refresh.client";
 import { getDeviceFingerprint } from "@/lib/security/fingerprint.client";
+import { BroadcastBannerBar } from "@/components/notifications/BroadcastBannerBar";
 
 export interface ShellNavItem {
   id: string;
@@ -59,6 +61,7 @@ const NAV_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   fraud: ShieldCheck,
   devices: Laptop,
   telemetry: Activity,
+  broadcasts: Megaphone,
 };
 
 function roleLabel(role: string): string {
@@ -408,7 +411,10 @@ export function DashboardShell({ role, email, orgName, navItems, children }: Das
 
       {/* Content */}
       <main className="relative z-10 lg:pl-[260px]">
-        <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</div>
+        <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+          <BroadcastBannerBar role={role} className="mb-6" />
+          {children}
+        </div>
       </main>
       {/* Real-time Multi-Device Authorization Challenge Modal */}
       {pendingChallenge && (
