@@ -29,10 +29,19 @@ export function GoogleAuthButton({
     try {
       const supabase = createClient();
       const callbackOrigin = window.location.origin;
+      const cleanCallback = `${callbackOrigin}/auth/callback`;
+
+      // When targeting default /dashboard and citizen role, provide exact clean callback URI
+      // so Supabase exact-match against Redirect URLs list succeeds without wildcard rejection
+      const redirectTo =
+        next === "/dashboard" && role === "citizen"
+          ? cleanCallback
+          : `${cleanCallback}?next=${encodeURIComponent(next)}&role=${role}`;
+
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${callbackOrigin}/auth/callback?next=${encodeURIComponent(next)}&role=${role}`,
+          redirectTo,
           queryParams: {
             access_type: "offline",
             prompt: "select_account",

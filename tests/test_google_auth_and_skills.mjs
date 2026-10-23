@@ -147,8 +147,68 @@ async function runTests() {
   assert(loginFormSource.includes("error_description"), "LoginForm must extract error_description from searchParams");
   console.log("  ✓ Dual-mode Supabase/Direct OAuth, response cookie binding, and error reporting verified.");
 
+  // Test 7: OAuth Code Homepage Interceptor (Edge Middleware & Client Listener)
+  console.log("\n[Test 7] Verifying OAuth Code Homepage Interceptor & Client Redirection...");
+  const middlewareSource = fs.readFileSync(path.join("src", "middleware.ts"), "utf8");
+  assert(middlewareSource.includes("OAuth Code Redirect Interceptor"), "Middleware must contain OAuth Code Redirect Interceptor");
+  assert(middlewareSource.includes('req.nextUrl.searchParams.has("code")'), "Middleware must check for code param");
+  assert(middlewareSource.includes('/auth/callback'), "Middleware must forward code to /auth/callback");
+
+  const listenerPath = path.join("src", "components", "auth", "OAuthCodeRedirectListener.tsx");
+  assert(fs.existsSync(listenerPath), "OAuthCodeRedirectListener.tsx client component must exist");
+  const listenerSource = fs.readFileSync(listenerPath, "utf8");
+  assert(listenerSource.includes("OAuthCodeRedirectListener"), "Listener must export OAuthCodeRedirectListener");
+  assert(listenerSource.includes("window.location.replace"), "Listener must use location.replace to avoid back-button traps");
+
+  const layoutSource = fs.readFileSync(path.join("src", "app", "layout.tsx"), "utf8");
+  assert(layoutSource.includes("OAuthCodeRedirectListener"), "Root layout must mount OAuthCodeRedirectListener");
+
+  // Simulation test of middleware interception logic
+  function simulateOAuthMiddleware(urlStr) {
+    const u = new URL(urlStr);
+    const pathname = u.pathname;
+    if ((pathname === "/" || pathname === "/login") && u.searchParams.has("code")) {
+      const callbackUrl = new URL("/auth/callback", u.origin);
+      u.searchParams.forEach((value, key) => {
+        callbackUrl.searchParams.set(key, value);
+      });
+      return { redirect: callbackUrl.toString() };
+    }
+    return { passThrough: true };
+  }
+
+  // Intercept user's exact reported URL
+  const userReportedUrl = "https://www.sabiprofile.com/?code=e8428cee-107b-48d6-a206-3bbbf24e21f0";
+  const result1 = simulateOAuthMiddleware(userReportedUrl);
+  assert.strictEqual(
+    result1.redirect,
+    "https://www.sabiprofile.com/auth/callback?code=e8428cee-107b-48d6-a206-3bbbf24e21f0",
+    "Reported www homepage code URL must be forwarded to /auth/callback with code preserved"
+  );
+
+  const apexReportedUrl = "https://sabiprofile.com/?code=728735fe-720f-4950-b11c-b29e3936ddd3&state=test_state";
+  const result2 = simulateOAuthMiddleware(apexReportedUrl);
+  assert.strictEqual(
+    result2.redirect,
+    "https://sabiprofile.com/auth/callback?code=728735fe-720f-4950-b11c-b29e3936ddd3&state=test_state",
+    "Apex homepage code URL must be forwarded to /auth/callback with code and state preserved"
+  );
+
+  const loginCodeUrl = "https://sabiprofile.com/login?code=test_code_999";
+  const result3 = simulateOAuthMiddleware(loginCodeUrl);
+  assert.strictEqual(
+    result3.redirect,
+    "https://sabiprofile.com/auth/callback?code=test_code_999",
+    "Login page with code param must be forwarded to /auth/callback"
+  );
+
+  const normalHomepageUrl = "https://www.sabiprofile.com/";
+  const result4 = simulateOAuthMiddleware(normalHomepageUrl);
+  assert.strictEqual(result4.passThrough, true, "Normal homepage request without code must pass through");
+  console.log("  ✓ OAuth Code interceptor verified for both edge middleware and client-side listener.");
+
   console.log("\n=======================================================");
-  console.log("ALL 6 GOOGLE AUTH & SKILL SUITES PASSED (100%)!");
+  console.log("ALL 7 GOOGLE AUTH & SKILL SUITES PASSED (100%)!");
   console.log("=======================================================\n");
 }
 

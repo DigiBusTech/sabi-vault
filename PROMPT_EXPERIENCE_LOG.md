@@ -2580,3 +2580,27 @@
   - `tests/test_enterprise_security.mjs`: 6/6 suites passed (100%).
   - `npx tsc --noEmit`: 0 errors.
 - **Note:** Committed without Copilot trailer per user instruction.
+
+
+---
+
+## Entry #073 — OAuth Code Homepage Interception & Fast-Redirect Fix
+- **User Prompt:**
+  > "after choosing google account to login the redirect takes to homepage instead of dashboard also see the link \"https://www.sabiprofile.com/?code=e8428cee-107b-48d6-a206-3bbbf24e21f0\""
+- **Root Cause Analysis:**
+  1. Supabase Auth URL Configuration: When `redirectTo` in `signInWithOAuth` contained query parameters (e.g. `?next=%2Fdashboard&role=citizen`) or had subdomain variations (`www.sabiprofile.com` vs `sabiprofile.com`) not matching the Redirect URLs whitelist wildcard pattern, Supabase rejected the `redirectTo` param and defaulted to redirecting to the project's configured Site URL (`https://www.sabiprofile.com/` or `https://sabiprofile.com/`) with `?code=<auth-code>`.
+  2. Because `/` was rendering the static marketing homepage without inspecting or exchanging `code`, the user was left stranded on the homepage.
+- **Two-Pronged Resilient Interception Architecture:**
+  1. **Layer 1 (Server/Edge Middleware):**
+     - In `src/middleware.ts`, added the OAuth Code Redirect Interceptor at step 0 (before scraper defense and route guards).
+     - Whenever a request to `/` or `/login` has `?code=...`, edge middleware instantly returns an HTTP 307 redirect to `/auth/callback` with all query parameters intact.
+     - `/auth/callback` immediately executes `supabase.auth.exchangeCodeForSession(code)` (with direct fallback to Google userinfo if needed), registers the user session, sets the cryptographic auth tokens and cookies, and forwards the authenticated citizen to `/dashboard`.
+  2. **Layer 2 (Client-Side Listener):**
+     - Built `src/components/auth/OAuthCodeRedirectListener.tsx` and mounted it globally in `src/app/layout.tsx`.
+     - In the event of edge HTML caching or implicit hash tokens (`#access_token=...`), the client component instantly detects the credentials and executes `window.location.replace('/auth/callback' + search + hash)`.
+  3. **Exact Callback Alignment:**
+     - Updated `src/components/auth/GoogleAuthButton.tsx` to provide clean `${callbackOrigin}/auth/callback` for standard logins, aligning 1:1 with whitelisted redirect URLs in Supabase and Google Cloud Console.
+- **Validation:**
+  - `tests/test_google_auth_and_skills.mjs`: Added Test 7 suite testing simulation of user's reported URL `https://www.sabiprofile.com/?code=e8428cee-107b-48d6-a206-3bbbf24e21f0`, apex URLs, and login URLs. 7/7 suites passed (100%).
+  - `npx tsc --noEmit`: 0 errors.
+- **Git Commit:** Committed and pushed to `main` and `master` with no Copilot trailers.

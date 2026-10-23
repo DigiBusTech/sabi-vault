@@ -41,3 +41,4 @@ export interface CreateBroadcastInput {
 export interface UpdateBroadcastInput extends Partial<CreateBroadcastInput> {
   id: string;
 }
+

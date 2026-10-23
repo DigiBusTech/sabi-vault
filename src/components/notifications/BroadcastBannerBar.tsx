@@ -231,3 +231,4 @@ export function BroadcastBannerBar({ role = "citizen", className = "" }: Broadca
     </div>
   );
 }
+

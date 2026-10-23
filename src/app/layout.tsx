@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Preloader } from "@/components/Preloader";
 import { PwaRegister } from "@/components/pwa/PwaRegister";
+import { OAuthCodeRedirectListener } from "@/components/auth/OAuthCodeRedirectListener";
 import { getDynamicSEO } from "@/lib/seo";
 import { getConfigValueSync } from "@/core/config/platform_config";
 
@@ -119,6 +120,7 @@ export default function RootLayout({
       <body className="min-h-screen bg-white text-[#0f172a] font-sans antialiased selection:bg-[#059669] selection:text-white">
         <Preloader />
         <PwaRegister />
+        <OAuthCodeRedirectListener />
         {children}
       </body>
     </html>

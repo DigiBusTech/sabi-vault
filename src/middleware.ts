@@ -15,6 +15,17 @@ export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const userAgent = req.headers.get("user-agent") || "";
 
+  // 0. OAuth Code Redirect Interceptor
+  // If Supabase or Google OAuth redirects to Site URL root (/) or /login with ?code=...,
+  // immediately forward to /auth/callback so the server can exchange the code and establish the session.
+  if ((pathname === "/" || pathname === "/login") && req.nextUrl.searchParams.has("code")) {
+    const callbackUrl = new URL("/auth/callback", req.url);
+    req.nextUrl.searchParams.forEach((value, key) => {
+      callbackUrl.searchParams.set(key, value);
+    });
+    return NextResponse.redirect(callbackUrl);
+  }
+
   // 1. Bot & AI Scraper Defense System
   const scraperCheck = isScraperOrHeadless(userAgent);
   const isProtectedPath =
@@ -64,7 +75,6 @@ export function middleware(req: NextRequest) {
       return NextResponse.redirect(loginUrl);
     }
   }
-
 
   // 3. Forward request and apply strict enterprise security headers
   const response = NextResponse.next();
