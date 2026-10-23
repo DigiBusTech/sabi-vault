@@ -11,10 +11,13 @@ import {
   UploadCloud,
   Unlink,
   Loader2,
+  Camera,
+  ExternalLink,
 } from "lucide-react";
 import { VaultCategory } from "@/types/vault";
 import { ScanPipeline } from "./ScanPipeline";
 import { CloudConnectModal } from "./CloudConnectModal";
+import { CameraScannerModal } from "./CameraScannerModal";
 import { optimizeDocumentForUpload } from "@/lib/utils/image_compressor";
 import { Sparkles, Cpu, CheckCircle } from "lucide-react";
 
@@ -46,6 +49,12 @@ interface SyncResult {
   sha256Hash: string;
   verificationTier: number;
   onChainCommit?: { txHash: string; isSimulated: boolean; timestamp: number };
+  cloudFileRef?: {
+    provider: string;
+    fileId: string;
+    webViewLink?: string;
+    uploadedAt?: string;
+  };
 }
 
 interface DocumentIntakeProps {
@@ -84,6 +93,7 @@ export function DocumentIntake({ onSynced }: DocumentIntakeProps) {
   const [cloudModal, setCloudModal] = useState<"google_drive" | "dropbox" | null>(null);
   const [integrations, setIntegrations] = useState<CloudIntegrationInfo[]>([]);
   const [disconnecting, setDisconnecting] = useState<string | null>(null);
+  const [showCameraScanner, setShowCameraScanner] = useState<boolean>(false);
 
   const refreshIntegrations = async () => {
     try {
@@ -103,6 +113,9 @@ export function DocumentIntake({ onSynced }: DocumentIntakeProps) {
       const params = new URLSearchParams(window.location.search);
       if (params.get("cloudConnected")) {
         refreshIntegrations();
+      }
+      if (params.get("mode") === "scan") {
+        setShowCameraScanner(true);
       }
     }
   }, []);
@@ -222,6 +235,7 @@ export function DocumentIntake({ onSynced }: DocumentIntakeProps) {
         sha256Hash: data.sha256Hash,
         verificationTier: data.verificationTier,
         onChainCommit: data.onChainCommit,
+        cloudFileRef: data.cloudFileRef,
       });
       onSynced(data.category);
     } catch (err: any) {
@@ -336,6 +350,30 @@ export function DocumentIntake({ onSynced }: DocumentIntakeProps) {
                 <span className="mt-1 text-[11px] text-slate-500">
                   PDF, image, or text up to 8 MB. Scanned, hashed, anchored. Never stored.
                 </span>
+                <div className="flex flex-wrap items-center justify-center gap-2 mt-4">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      inputRef.current?.click();
+                    }}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-xs hover:border-slate-400 hover:bg-slate-50 transition-all"
+                  >
+                    <FileUp className="h-3.5 w-3.5 text-slate-500" />
+                    Browse Files
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowCameraScanner(true);
+                    }}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-emerald-700 transition-all"
+                  >
+                    <Camera className="h-3.5 w-3.5" />
+                    Scan with Camera
+                  </button>
+                </div>
               </>
             )}
           </button>
@@ -490,6 +528,20 @@ export function DocumentIntake({ onSynced }: DocumentIntakeProps) {
                         </span>
                       </div>
                     )}
+                    {result.cloudFileRef?.webViewLink && (
+                      <a
+                        href={result.cloudFileRef.webViewLink}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex items-center justify-between rounded-lg bg-emerald-50 px-2.5 py-2 ring-1 ring-emerald-200 text-[11px] font-semibold text-emerald-700 hover:bg-emerald-100 transition-colors"
+                      >
+                        <span className="flex items-center gap-1.5">
+                          <UploadCloud className="h-3.5 w-3.5" />
+                          Saved in Private {result.cloudFileRef.provider === "google_drive" ? "Google Drive" : "Dropbox"}
+                        </span>
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      </a>
+                    )}
                   </div>
                 </div>
               )}
@@ -520,6 +572,15 @@ export function DocumentIntake({ onSynced }: DocumentIntakeProps) {
           }}
         />
       )}
+
+      <CameraScannerModal
+        isOpen={showCameraScanner}
+        onClose={() => setShowCameraScanner(false)}
+        onFileCaptured={(file) => {
+          setShowCameraScanner(false);
+          handleFile(file);
+        }}
+      />
     </div>
   );
 }

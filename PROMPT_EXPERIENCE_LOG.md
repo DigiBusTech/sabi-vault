@@ -2660,3 +2660,45 @@
   - All 7 suites PASS: hardening 7/7, full 8/8, quota 8/8, profile/advisor 5/5, scan/cloud 26/26, devices 5/5, google auth 8/8.
 - **Ops Note:** Vercel project Node version is configured in dashboard settings (no vercel.json); set it to 26.x when available in the project's Node version selector.
 - **Follow-up (same day):** Vercel only exposes LTS lines (22.x/24.x); Node 26 is "Current" and unsupported by Vercel until LTS promotion. Relaxed `engines` to `node >=24.16.0` / `npm >=11.13.0` so local Node 26.12.1 and Vercel 24.x both satisfy the range; `.nvmrc` keeps 26.12.1 as the local development preference. Vercel dashboard set to 24.x (which carries the same security backports on the LTS line).
+
+
+---
+
+## Entry #077 — Unified Document Intake, Google Drive Auto-Sync, Groq Vision Models & Supabase Vault Persistence
+- **Date & Timestamp:** 2026-10-23 16:30:00 (Local)
+- **User Prompt:**
+  > "there are few problems
+  > 1. In the add document page the document was uploaded and scanned, hashed, but not stored in the vault under a category nor original docuement stored in the drive nothing was found on drive.
+  > 2. the dashboard overview scan and upload is not working it was supposed to be button that action takes users to the add document page or vault to add documents.
+  > 3. still showing that AI extraction service not available which groq is set. and all these should happen in add documents not it existing as different features.
+  > Use the backend skills and multiagent skills, to analyse this audit this and come up with a great fixes plan"
+- **Root Cause Analysis:**
+  1. **Missing Cloud Storage Dispatch in /api/v1/vault/sync:** Unlike `scan/route.ts`, `sync/route.ts` only inspected a client-provided `cloudFileId` and never checked if the citizen had a connected cloud drive via `getUserCloudIntegration(targetVaultId, "google_drive")`. Consequently, files uploaded via Add Documents never streamed to Google Drive.
+  2. **Volatile In-Memory Vault Store Across Serverless Lambdas:** `UserVaultMasterStore` kept credentials only in a memory Map. When deployed to Vercel, requests to `/api/v1/vault/sync` and `/api/v1/vault/credentials` execute on separate serverless instances, causing added credentials to vanish and returning empty counts. Furthermore, `portfolio` category discarded uploaded document payloads because `PortfolioSchema` lacked an `items` array.
+  3. **Fragmented Overview Quick Actions:** Overview quick actions ("Scan Document" / "Upload File") triggered an isolated modal (`showAddModal`) that called `/api/v1/vault/scan` with a hardcoded category ("Academics") instead of routing to the unified Add Documents workflow.
+  4. **Decommissioned Groq Vision Model IDs:** Groq permanently decommissioned `llama-3.2-11b-vision-preview` and `llama-3.2-90b-vision-preview` with HTTP 400 `model_decommissioned`. When Gemini ran out of unpaid credits, Groq immediately crashed and returned "AI extraction service is currently unavailable".
+- **Architectural Remediations:**
+  1. **Automatic Google Drive & Dropbox Dispatch (`src/app/api/v1/vault/sync/route.ts`):**
+     - Automatically queries `getUserCloudIntegration(targetVaultId, "google_drive")` (falling back to Dropbox).
+     - Ephemerally uploads the file stream to the citizen's private `"SabiProfile Vault"` folder and binds the generated `cloudFileRef` (`fileId`, `webViewLink`, `uploadedAt`) to the structured record.
+  2. **Supabase PostgreSQL Persistence for Vault Records (`src/core/vault/user_store.ts`):**
+     - Engineered `addCredentialAsync`, `getVaultAsync`, `deleteCredentialAsync`, and `ensureVaultProfileInDb`.
+     - Automatically synchronizes category JSONs with the sovereign node's `vault_records` table on every addition, deletion, and query, ensuring zero state evaporation across serverless restarts.
+     - Updated `src/types/vault.ts` to add `items?: PortfolioItemSchema[]` to `PortfolioSchema`.
+  3. **Groq Vision Upgrade & Resilient JSON Sanitization (`src/core/parser/vision_extractor.ts`):**
+     - Configured active multimodal models: `["qwen/qwen3.8-27b", "meta-models/muse-spark-open"]`.
+     - Engineered `parseJsonSafely` to strip `<think>...</think>` reasoning tokens and markdown fences.
+     - Added secondary text-reasoning failover via `llama-3.3-70b-versatile` so extraction never throws an unhandled 503.
+  4. **Unified Navigation & Category Display (`src/components/CitizenVaultView.tsx` & `DocumentIntake.tsx`):**
+     - Rewired Overview "Scan Document" and "Upload File" buttons to navigate directly to `/dashboard/documents?mode=scan` and `/dashboard/documents`.
+     - Enabled `CameraScannerModal` inside `DocumentIntake.tsx` with automatic camera viewfinder trigger on `mode=scan`.
+     - Updated `CitizenVaultView.tsx` to count and render uploaded portfolio documents alongside bio/links with direct "View on Drive" links.
+- **Validation:**
+  - `tests/test_unified_vault_and_ingestion.mjs`: All 7 verification suites passed (100%).
+  - `tests/test_google_auth_and_skills.mjs`: All 8 suites passed (100%).
+  - `tests/test_security_hardening.mjs`: All 7 suites passed (100%).
+  - `tests/test_storage_quota_and_skills.mjs`: All 8 suites passed (100%).
+  - `tests/test_document_scan_and_cloud.mjs`: All 26 suites passed (100%).
+  - `tests/test_full_suite.mjs`: All 8 suites passed (100%).
+  - `npx tsc --noEmit`: 0 errors.
+- **Git Commit:** Committed and pushed to `main` and `master` without Copilot trailers.

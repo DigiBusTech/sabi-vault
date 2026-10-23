@@ -1,3 +1,4 @@
+import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { computeSha256 } from "@/core/crypto/hasher";
 import { generateScopedApiKey, verifyScopedApiKey } from "@/core/crypto/scoped_key";
 import { FullUserVault, VaultCategory, VerificationTier, StorageTier, UserStorageQuota, STORAGE_TIER_CONFIGS } from "@/types/vault";
@@ -327,13 +328,19 @@ class UserVaultMasterStore {
       userVault.achievements = userVault.achievements || { userId, achievements: [] };
       userVault.achievements.achievements.push(enrichedItem);
     } else if (category === "portfolio") {
-      userVault.portfolio = {
+      userVault.portfolio = userVault.portfolio || {
         userId,
-        headline: itemData.headline || userVault.portfolio?.headline || "",
-        bio: itemData.bio || userVault.portfolio?.bio || "",
-        publicLinks: itemData.publicLinks || userVault.portfolio?.publicLinks || [],
-        personalStatement: itemData.personalStatement || userVault.portfolio?.personalStatement,
+        headline: "",
+        bio: "",
+        publicLinks: [],
+        items: [],
       };
+      userVault.portfolio.items = userVault.portfolio.items || [];
+      userVault.portfolio.items.push(enrichedItem);
+      if (itemData.headline) userVault.portfolio.headline = itemData.headline;
+      if (itemData.bio) userVault.portfolio.bio = itemData.bio;
+      if (itemData.publicLinks) userVault.portfolio.publicLinks = itemData.publicLinks;
+      if (itemData.personalStatement) userVault.portfolio.personalStatement = itemData.personalStatement;
     } else if (category === "identification") {
       userVault.identification = userVault.identification || { userId, identifications: [] };
       userVault.identification.identifications.push(enrichedItem);
@@ -401,12 +408,131 @@ class UserVaultMasterStore {
       userVault.legal.instruments = userVault.legal.instruments.filter((l) => l.id !== itemId && (l as any).hashRef !== itemId);
     } else if (category === "receipts" && userVault.receipts) {
       userVault.receipts.receipts = userVault.receipts.receipts.filter((r) => r.id !== itemId && (r as any).hashRef !== itemId);
+    } else if (category === "portfolio" && userVault.portfolio) {
+      if (userVault.portfolio.items) {
+        userVault.portfolio.items = userVault.portfolio.items.filter((p: any) => p.id !== itemId && p.hashRef !== itemId);
+      }
+      if (userVault.portfolio.publicLinks) {
+        userVault.portfolio.publicLinks = userVault.portfolio.publicLinks.filter((l: any) => l.url !== itemId && l.label !== itemId);
+      }
     }
     userVault.lastSyncedAt = new Date().toISOString();
     this.vaults.set(userId, userVault);
     return true;
   }
 
+
+
+  private async ensureVaultProfileInDb(userId: string): Promise<void> {
+    try {
+      const admin = createAdminSupabaseClient();
+      const { data: existing } = await admin
+        .from("vault_profiles")
+        .select("user_id")
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (!existing) {
+        const fallbackEmail = `${userId}@citizen.sabiprofile.com`;
+        await admin.from("vault_profiles").insert({
+          user_id: userId,
+          email: fallbackEmail,
+          citizenship_country: "NGA",
+          residence_country: "NGA",
+          sovereign_node_id: "ng-west-africa",
+          status: "ACTIVE",
+        });
+      }
+    } catch (err: any) {
+      console.warn("[UserVaultMasterStore] ensureVaultProfileInDb notice:", err.message);
+    }
+  }
+
+  public async getVaultAsync(userId: string = "usr_chinwe_okafor_7721"): Promise<FullUserVault> {
+    const userVault = this.getVault(userId);
+    try {
+      const admin = createAdminSupabaseClient();
+      const { data, error } = await admin
+        .from("vault_records")
+        .select("*")
+        .eq("vault_id", userId);
+
+      if (!error && data && data.length > 0) {
+        for (const row of data) {
+          const cat = row.category as VaultCategory;
+          if (cat && row.structured_json) {
+            (userVault as any)[cat] = row.structured_json;
+          }
+        }
+        this.vaults.set(userId, userVault);
+      }
+    } catch (err: any) {
+      console.warn(`[UserVaultMasterStore] DB vault read notice for ${userId}:`, err.message);
+    }
+    return { ...userVault };
+  }
+
+  public async addCredentialAsync(
+    category: VaultCategory,
+    itemData: any,
+    userId: string = "usr_chinwe_okafor_7721",
+    commitMeta?: { isSimulated?: boolean; gasUsedUnits?: string }
+  ): Promise<{ success: boolean; hash: string; item: any }> {
+    const result = this.addCredential(category, itemData, userId, commitMeta);
+    try {
+      const admin = createAdminSupabaseClient();
+      await this.ensureVaultProfileInDb(userId);
+      const userVault = this.getVault(userId);
+      const categoryData = (userVault as any)[category];
+
+      const { error } = await admin.from("vault_records").upsert(
+        {
+          vault_id: userId,
+          category,
+          structured_json: categoryData,
+          sha256_hash: result.hash,
+          verification_tier: result.item.tier || 1,
+          on_chain_tx_hash: result.item.onChainTxHash || (commitMeta?.isSimulated ? null : "0x" + result.hash),
+          on_chain_committed_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "vault_id,category" }
+      );
+      if (error) {
+        console.warn("[UserVaultMasterStore] vault_records upsert notice:", error.message);
+      }
+    } catch (err: any) {
+      console.warn("[UserVaultMasterStore] DB persistence notice:", err.message);
+    }
+    return result;
+  }
+
+  public async deleteCredentialAsync(
+    category: VaultCategory,
+    itemId: string,
+    userId: string = "usr_chinwe_okafor_7721"
+  ): Promise<boolean> {
+    const success = this.deleteCredential(category, itemId, userId);
+    if (!success) return false;
+    try {
+      const admin = createAdminSupabaseClient();
+      const userVault = this.getVault(userId);
+      const categoryData = (userVault as any)[category];
+      await admin.from("vault_records").upsert(
+        {
+          vault_id: userId,
+          category,
+          structured_json: categoryData,
+          sha256_hash: computeSha256(categoryData),
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "vault_id,category" }
+      );
+    } catch (err: any) {
+      console.warn(`[UserVaultMasterStore] DB delete notice for ${userId}:`, err.message);
+    }
+    return true;
+  }
 
   // --- SCOPED KEYS MANAGEMENT ---
   public listKeys(userId?: string): ScopedKeyRecord[] {

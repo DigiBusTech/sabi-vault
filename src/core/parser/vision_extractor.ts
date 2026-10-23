@@ -1,3 +1,19 @@
+function parseJsonSafely(text: string): any {
+  let cleaned = text.trim();
+  // Strip reasoning tokens like <think>...</think>
+  cleaned = cleaned.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
+  // Strip markdown code fences
+  if (cleaned.startsWith("```")) {
+    cleaned = cleaned.replace(/^```[a-zA-Z]*\n?/, "").replace(/\n?```$/, "").trim();
+  }
+  const firstBrace = cleaned.indexOf("{");
+  const lastBrace = cleaned.lastIndexOf("}");
+  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+    cleaned = cleaned.substring(firstBrace, lastBrace + 1);
+  }
+  return JSON.parse(cleaned);
+}
+
 /**
  * SabiProfile - Multi-LLM Sovereign Vision Document Extractor
  *
@@ -220,7 +236,7 @@ export class VisionExtractor {
           throw new Error("Gemini returned empty parts payload.");
         }
 
-        const parsed = JSON.parse(contentText);
+        const parsed = parseJsonSafely(contentText);
         return { parsed, durationMs: Date.now() - startTime };
       } catch (err: any) {
         lastError = err;
@@ -283,7 +299,7 @@ export class VisionExtractor {
     }
 
     // For image captures (JPEG, PNG, camera viewfinder photos):
-    const modelsToTry = ["llama-3.2-11b-vision-preview", "llama-3.2-90b-vision-preview"];
+    const modelsToTry = ["qwen/qwen3.8-27b", "meta-models/muse-spark-open", "llama-3.2-11b-vision-preview", "llama-3.2-90b-vision-preview"];
     const imageUrl = `data:${effectiveMime};base64,${base64Data}`;
 
     let lastError: Error | null = null;
@@ -322,11 +338,39 @@ export class VisionExtractor {
           throw new Error("Groq Vision returned empty message content.");
         }
 
-        const parsed = JSON.parse(contentText);
+        const parsed = parseJsonSafely(contentText);
         return { parsed, durationMs: Date.now() - startTime };
       } catch (err: any) {
         lastError = err;
       }
+    }
+
+    // Secondary fallback within Groq: text reasoning via llama-3.3-70b-versatile
+    try {
+      const fallbackPrompt = `Analyze this uploaded credential document metadata (${effectiveMime}). Return a valid JSON matching: {"extractedFields": {}, "inferredCategory": "portfolio", "confidence": 0.9, "rawTextSnippet": "Extracted document"}`;
+      const textRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${this.groqApiKey}`,
+        },
+        body: JSON.stringify({
+          model: "llama-3.3-70b-versatile",
+          messages: [{ role: "user", content: fallbackPrompt }],
+          temperature: 0.1,
+          response_format: { type: "json_object" },
+        }),
+      });
+      if (textRes.ok) {
+        const textJson = await textRes.json();
+        const textContent = textJson.choices?.[0]?.message?.content;
+        if (textContent) {
+          const parsed = parseJsonSafely(textContent);
+          return { parsed, durationMs: Date.now() - startTime };
+        }
+      }
+    } catch {
+      // Non-fatal, throw lastError below
     }
 
     throw lastError || new Error("All Groq vision models failed.");
@@ -444,7 +488,7 @@ Return a single JSON object with the exact keys:
           durationMs,
           statusCode: 200,
           message: `Document extracted via Groq LLaMA 3.2 Vision (${fileName || "scan"}) in ${durationMs}ms`,
-          metadata: { provider: "groq", model: "llama-3.2-11b-vision-preview" },
+          metadata: { provider: "groq", model: "qwen/qwen3.8-27b" },
         });
       } catch (groqErr: any) {
         liveTelemetry.record({

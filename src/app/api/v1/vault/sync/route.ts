@@ -3,6 +3,9 @@ import { EphemeralDocumentParser } from "@/core/parser/ephemeral_parser";
 import { MultiLLMGateway } from "@/agents/gateway/llm_gateway";
 import { BlockchainLedgerClient } from "@/core/blockchain/ledger_client";
 import { VaultCategory, VaultCategoryEnum, CloudFileRef } from "@/types/vault";
+import { getUserCloudIntegration, CloudProvider } from "@/core/storage/cloud_integrations";
+import { GoogleDriveConnector } from "@/core/storage/google_drive";
+import { DropboxConnector } from "@/core/storage/dropbox";
 import { authenticateUser } from "@/lib/auth/auth_guard";
 import { globalUserStore } from "@/core/vault/user_store";
 import { liveTelemetry } from "@/lib/telemetry/live_logger";
@@ -119,8 +122,8 @@ export async function POST(req: NextRequest) {
       parsedResult.tier
     );
 
-    // 4. Build cloud file reference if saved to citizen's private storage
-    const cloudFileRef: CloudFileRef | undefined = cloudFileId
+    // 4. Automatic Cloud Storage Dispatch (User's Private Google Drive or Dropbox)
+    let cloudFileRef: CloudFileRef | undefined = cloudFileId
       ? {
           provider: cloudProvider || "google_drive",
           fileId: cloudFileId,
@@ -128,6 +131,73 @@ export async function POST(req: NextRequest) {
           uploadedAt: new Date().toISOString(),
         }
       : undefined;
+
+    // If cloudFileRef not pre-provided by client, check if citizen has a connected cloud integration
+    if (!cloudFileRef && fileBuffer && fileBuffer.length > 0) {
+      try {
+        const preferredProvider: CloudProvider = (cloudProvider as CloudProvider) || "google_drive";
+        let integration = await getUserCloudIntegration(targetVaultId, preferredProvider);
+        let activeProvider: CloudProvider = preferredProvider;
+        if (!integration && preferredProvider === "google_drive") {
+          integration = await getUserCloudIntegration(targetVaultId, "dropbox");
+          if (integration) activeProvider = "dropbox";
+        }
+
+        if (integration && integration.accessToken) {
+          if (activeProvider === "google_drive") {
+            const driveConnector = new GoogleDriveConnector(integration.accessToken);
+            let targetFolderId = integration.folderId;
+            if (!targetFolderId) {
+              targetFolderId = await driveConnector.createVaultFolder("SabiProfile Vault");
+            }
+            const effectiveMime = fileName.endsWith(".pdf")
+              ? "application/pdf"
+              : fileName.endsWith(".png")
+              ? "image/png"
+              : fileName.endsWith(".webp")
+              ? "image/webp"
+              : "image/jpeg";
+            const uploadResult = await driveConnector.uploadFile(
+              fileName,
+              fileBuffer,
+              effectiveMime,
+              targetFolderId
+            );
+            cloudFileRef = {
+              provider: "google_drive",
+              fileId: uploadResult.id,
+              webViewLink: uploadResult.webViewLink,
+              uploadedAt: new Date().toISOString(),
+            };
+          } else if (activeProvider === "dropbox") {
+            const dropboxConnector = new DropboxConnector(integration.accessToken);
+            const uploadResult = await dropboxConnector.uploadFile(
+              `/SabiProfile Vault/${fileName}`,
+              fileBuffer
+            );
+            cloudFileRef = {
+              provider: "dropbox",
+              fileId: uploadResult.id,
+              webViewLink: uploadResult.path,
+              uploadedAt: new Date().toISOString(),
+            };
+          }
+        }
+      } catch (cloudErr: any) {
+        console.warn(`[VaultSync] Cloud upload notice for ${targetVaultId}:`, cloudErr.message);
+        liveTelemetry.record({
+          subsystem: "CLOUD_STORAGE",
+          level: "WARN",
+          action: "VAULT_SYNC_CLOUD_UPLOAD_FAILED",
+          durationMs: 0,
+          statusCode: 500,
+          errorCode: "CLOUD_UPLOAD_ERROR",
+          message: `Failed to stream file to user's private cloud drive: ${cloudErr.message}`,
+          metadata: { fileName, provider: cloudProvider || "google_drive" },
+          userId: targetVaultId,
+        });
+      }
+    }
 
     // 5. Update structured vault state in sovereign store (quota-enforced)
     const structuredRecord = {
@@ -166,7 +236,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    globalUserStore.addCredential(
+    await globalUserStore.addCredentialAsync(
       parsedResult.category,
       structuredRecord,
       targetVaultId,

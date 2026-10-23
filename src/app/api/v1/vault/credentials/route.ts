@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: auth.error || "Authentication required" }, { status: auth.status });
   }
 
-  const vault = globalUserStore.getVault(auth.user.userId);
+  const vault = await globalUserStore.getVaultAsync(auth.user.userId);
   return NextResponse.json({
     success: true,
     vault,
@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const result = globalUserStore.addCredential(category as VaultCategory, itemData, auth.user.userId);
+    const result = await globalUserStore.addCredentialAsync(category as VaultCategory, itemData, auth.user.userId);
     return NextResponse.json({
       success: true,
       result,
@@ -83,7 +83,7 @@ export async function DELETE(req: NextRequest) {
       );
     }
 
-    const success = globalUserStore.deleteCredential(category, itemId, auth.user.userId);
+    const success = await globalUserStore.deleteCredentialAsync(category, itemId, auth.user.userId);
     return NextResponse.json({
       success,
       vault: globalUserStore.getVault(auth.user.userId),

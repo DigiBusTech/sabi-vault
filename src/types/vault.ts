@@ -88,17 +88,40 @@ export const FinanceSchema = z.object({
 export type FinanceData = z.infer<typeof FinanceSchema>;
 
 // --- 2. PORTFOLIO CATEGORY SCHEMA ---
+export const PortfolioItemSchema = z.object({
+  id: z.string(),
+  title: z.string().optional(),
+  documentName: z.string().optional(),
+  description: z.string().optional(),
+  tier: z.nativeEnum(VerificationTier).optional(),
+  hashRef: z.string(),
+  cloudFileRef: z
+    .object({
+      provider: z.string(),
+      fileId: z.string(),
+      webViewLink: z.string().optional(),
+      uploadedAt: z.string().optional(),
+    })
+    .optional(),
+  extractedFields: z.record(z.any()).optional(),
+  uploadedAt: z.string().optional(),
+});
+
 export const PortfolioSchema = z.object({
   userId: z.string(),
-  headline: z.string(),
-  bio: z.string(),
-  publicLinks: z.array(
-    z.object({
-      label: z.string(),
-      url: z.string().url(),
-    })
-  ),
+  headline: z.string().optional().default(""),
+  bio: z.string().optional().default(""),
+  publicLinks: z
+    .array(
+      z.object({
+        label: z.string(),
+        url: z.string().url(),
+      })
+    )
+    .optional()
+    .default([]),
   personalStatement: z.string().optional(),
+  items: z.array(PortfolioItemSchema).optional(),
 });
 export type PortfolioData = z.infer<typeof PortfolioSchema>;
 
