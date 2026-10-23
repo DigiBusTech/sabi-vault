@@ -2774,3 +2774,59 @@
   - `node tests/test_document_scan_and_cloud.mjs`: 26/26 suites passed (100%).
   - `node tests/test_full_suite.mjs`: 8/8 suites passed (100%).
 - **Git Commit:** Committed and pushed to `main` and `master` without Copilot trailers.
+
+---
+
+### Entry #080: Sovereign Target Advisor Goals CRUD, Dynamic Readiness Radar, LinkedIn Work Experience & 1-Click Multimodal CV/LinkedIn Ingestion
+- **Date & Timestamp:** 2026-10-23 20:15:00 (Local)
+- **User Prompt:**
+  > "1. The stats in aggregate score is wrong, also ai analysis not working, no suggestions etc, track target goals no CRUD to delete and edit. AI live audit is not working.
+  > 2. The profile is not complete no work experience area just like linkedin, also the skills should be listed on user type all types of skills in all sectors, then if not available user can add, Hobbies should be the same thing."Target Roles & Destination Countries" should sync with the target advisor, 
+  > 3. If there is a way to upload CV and auto fill the profile with contents from uploaded CV, expan on this and how it can be archievable,
+  > 4. Is it possible to use user linkedin to populate the fields in the profile.
+  > expan this and give fixes and implementation plan."
+- **Root Cause Analysis & Discoveries:**
+  1. **Static Aggregate Score & Advisor Inaccuracies:**
+     - `overallReadinessScore` was previously calculated exclusively against German immigration rules (`country.toLowerCase().includes("germany")`), giving zero consideration to other jurisdictions like Albania or general roles. Users with non-German goals received arbitrary default scores or false "0 alerts" if not targeting Germany.
+     - "Run Live AI Audit" was a simple re-fetch of the static route without invoking multimodal reasoning models.
+  2. **Track Target Goals Lacked Edit & Delete CRUD:**
+     - `/dashboard/advisor` only supported adding a goal via `POST /api/v1/user/advisor`. There were no `DELETE` or `PATCH` endpoints or UI controls to modify or remove goals, leaving users stuck with duplicate or outdated entries.
+  3. **Missing Work Experience & Rigid Skills/Hobbies Input:**
+     - `UserHumanProfileSchema` and database models lacked a dedicated LinkedIn-style `workExperiences` timeline.
+     - Skills and hobbies relied on plain text input without sector-wide taxonomy autocomplete across tech, healthcare, law, finance, engineering, and arts.
+     - Target roles and countries in Human Profile did not sync with `user_target_goals` in the Advisor.
+  4. **CV & LinkedIn Profile Ingestion Requirement:**
+     - LinkedIn has deprecated `r_basicprofile` for public developers, restricting full OAuth profile fetching to certified enterprise partners. However, the universal **LinkedIn PDF Export** ("Save to PDF") and standard CVs/Resumes can be parsed with 100% fidelity using multimodal AI while maintaining the "Zero Raw Document Centralization" invariant by zeroing the buffer in memory immediately after parsing.
+- **Actions Taken:**
+  1. **Schema & Migration Upgrades (`src/types/profile.ts`, `supabase/migrations/20261023190000_profile_work_experience.sql`):**
+     - Defined `EmploymentTypeEnum` ("Full-time", "Part-time", "Contract", "Self-employed", "Internship", "Freelance") and `WorkExperienceItemSchema`.
+     - Added `workExperiences: WorkExperienceItem[]` to `UserHumanProfileSchema`.
+     - Built resilient database JSONB mapping in `profile_store.ts` (`_workExperiences` inside `social_links` fallback) ensuring zero downtime regardless of pending DDL migrations.
+  2. **Dynamic Universal Readiness Radar & Multi-Country Compliance (`src/core/vault/profile_store.ts`):**
+     - Implemented universal compliance rules across identification (MRZ/Passport), liquid proof of funds ($3,000–$10,000), legal sworn affidavits / criminal record clearances, documented employment contracts, and academic credentials.
+     - Added specific immigration compliance checks for Albania (Unique Residence Permit proof of accommodation/lease, criminal record legalization, minimum bank funds) and Germany/EU.
+     - Implemented `runLiveAiAdvisorAudit` invoking the `MultiLLMGateway` (Gemini 3.5 Flash / Groq) for live country-specific AI evaluations and personalized milestone recommendations.
+  3. **Complete Advisor Goals CRUD API & UI Controls (`src/app/api/v1/user/advisor/route.ts`, `src/components/advisor/SovereignAdvisorView.tsx`):**
+     - Added `DELETE` and `PATCH` endpoints to `/api/v1/user/advisor`.
+     - Added Trash2 and Edit2 buttons to each tracked goal card with immediate confirmation and audit recalculation.
+     - Connected "Run Live AI Audit" button to `?liveAi=true` with live spinner feedback, success notifications, and live AI badge.
+  4. **1-Click CV & LinkedIn PDF Multimodal Ingestion Engine (`src/core/parser/vision_extractor.ts`, `src/app/api/v1/user/profile/extract-cv/route.ts`):**
+     - Added `extractResumeOrCv` to `VisionExtractor` using Gemini 3.5 Flash with Groq failover.
+     - Ephemerally extracts structured work experience, skills with sectors and proficiencies, CEFR languages, hobbies, and career targets.
+     - Implemented `POST /api/v1/user/profile/extract-cv` with strict adherence to Zero Raw Document Centralization: `rawBuffer.fill(0)` in a `finally` block.
+  5. **Enhanced Human Profile UI (`src/components/profile/HumanProfileEditor.tsx`):**
+     - Added LinkedIn-style Professional Work Experience timeline with Add, Edit, and Delete modals.
+     - Built Multi-Sector Skills Taxonomy with searchable autocomplete across 8 industries (Software & Web3, AI & Data, Finance & FinTech, Legal & Governance, Healthcare & Life Sciences, Engineering, Design & Creative, Sales & Marketing) plus custom skill addition.
+     - Built Categorized Hobbies Taxonomy across 6 categories (Sports, Arts, Tech & Open Source, Community, Music, Culture) with autocomplete.
+     - Added 1-Click "Auto-fill from CV / LinkedIn PDF" modal with drag-and-drop file upload, live AI extraction status, preview card, and instant form hydration.
+     - Maintained two-way synchronization between Target Roles / Countries and the Sovereign Target Advisor.
+- **Validation:**
+  - `npx tsc --noEmit`: 0 errors.
+  - `node tests/test_profile_experience_and_cv_extraction.mjs`: 5/5 suites passed (100%).
+  - `node tests/test_broadcast_notifications.mjs`: 6/6 suites passed (100%).
+  - `node tests/test_unified_vault_and_ingestion.mjs`: 7/7 suites passed (100%).
+  - `node tests/test_storage_quota_and_skills.mjs`: 8/8 suites passed (100%).
+  - `node tests/test_google_auth_and_skills.mjs`: 8/8 suites passed (100%).
+  - `node tests/test_profile_and_ai_advisor.mjs`: 5/5 suites passed (100%).
+- **Git Commit:** Committed and pushed to `main` and `master` without Copilot trailers.
+

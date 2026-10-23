@@ -18,6 +18,10 @@ import {
   ArrowRight,
   ExternalLink,
   Target,
+  Trash2,
+  Edit2,
+  Check,
+  X,
 } from "lucide-react";
 import { SovereignAdvisorAudit, TargetGoal, AdvisorGapAlert } from "@/types/profile";
 import Link from "next/link";
@@ -26,12 +30,17 @@ export function SovereignAdvisorView() {
   const [audit, setAudit] = useState<SovereignAdvisorAudit | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [reAuditing, setReAuditing] = useState<boolean>(false);
-  const [showAddGoalModal, setShowAddGoalModal] = useState<boolean>(false);
+  const [liveAiActive, setLiveAiActive] = useState<boolean>(false);
+  const [actionMessage, setActionMessage] = useState<string | null>(null);
 
-  // New goal draft
+  // Modal State
+  const [showGoalModal, setShowGoalModal] = useState<boolean>(false);
+  const [editingGoalId, setEditingGoalId] = useState<string | null>(null);
   const [goalType, setGoalType] = useState<"job" | "relocation" | "academic" | "procurement">("relocation");
   const [goalTitle, setGoalTitle] = useState<string>("");
   const [targetCountry, setTargetCountry] = useState<string>("");
+  const [savingGoal, setSavingGoal] = useState<boolean>(false);
+  const [deletingGoalId, setDeletingGoalId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchAudit();
@@ -52,13 +61,21 @@ export function SovereignAdvisorView() {
     }
   };
 
-  const handleRunReAudit = async () => {
+  const handleRunReAudit = async (useLiveAi: boolean = true) => {
     try {
       setReAuditing(true);
-      const res = await fetch("/api/v1/user/advisor");
+      const url = useLiveAi ? "/api/v1/user/advisor?liveAi=true" : "/api/v1/user/advisor";
+      const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
         setAudit(data.audit);
+        setLiveAiActive(useLiveAi);
+        setActionMessage(
+          useLiveAi
+            ? "Live AI Audit complete: Evaluated against sovereign visa regulations, job benchmarks, and vault proofs."
+            : "Audit refreshed against active goals."
+        );
+        setTimeout(() => setActionMessage(null), 6000);
       }
     } catch (err) {
       console.error("Re-audit failed:", err);
@@ -67,28 +84,73 @@ export function SovereignAdvisorView() {
     }
   };
 
-  const handleCreateGoal = async () => {
+  const openCreateModal = () => {
+    setEditingGoalId(null);
+    setGoalType("relocation");
+    setGoalTitle("");
+    setTargetCountry("");
+    setShowGoalModal(true);
+  };
+
+  const openEditModal = (goal: TargetGoal) => {
+    setEditingGoalId(goal.id);
+    setGoalType(goal.type);
+    setGoalTitle(goal.title);
+    setTargetCountry(goal.targetCountry || "");
+    setShowGoalModal(true);
+  };
+
+  const handleSaveGoal = async () => {
     if (!goalTitle.trim()) return;
     try {
+      setSavingGoal(true);
       const res = await fetch("/api/v1/user/advisor", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          ...(editingGoalId ? { id: editingGoalId } : {}),
           type: goalType,
-          title: goalTitle,
-          targetCountry: targetCountry || "Global",
+          title: goalTitle.trim(),
+          targetCountry: targetCountry.trim() || "Global",
           status: "active",
         }),
       });
       if (res.ok) {
         const data = await res.json();
         setAudit(data.audit);
-        setShowAddGoalModal(false);
+        setShowGoalModal(false);
+        setEditingGoalId(null);
         setGoalTitle("");
         setTargetCountry("");
+        setActionMessage(editingGoalId ? "Target goal updated." : "Target goal added.");
+        setTimeout(() => setActionMessage(null), 4000);
       }
     } catch (err) {
-      console.error("Create goal failed:", err);
+      console.error("Save goal failed:", err);
+    } finally {
+      setSavingGoal(false);
+    }
+  };
+
+  const handleDeleteGoal = async (goalId: string, goalTitle: string) => {
+    if (!confirm(`Are you sure you want to remove the goal "${goalTitle}"?`)) {
+      return;
+    }
+    try {
+      setDeletingGoalId(goalId);
+      const res = await fetch(`/api/v1/user/advisor?id=${encodeURIComponent(goalId)}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setAudit(data.audit);
+        setActionMessage(`Goal "${goalTitle}" removed.`);
+        setTimeout(() => setActionMessage(null), 4000);
+      }
+    } catch (err) {
+      console.error("Delete goal failed:", err);
+    } finally {
+      setDeletingGoalId(null);
     }
   };
 
@@ -102,8 +164,6 @@ export function SovereignAdvisorView() {
   }
 
   const score = audit?.overallReadinessScore || 0;
-  const scoreColor =
-    score >= 80 ? "text-emerald-600 bg-emerald-50 border-emerald-200" : score >= 50 ? "text-amber-600 bg-amber-50 border-amber-200" : "text-red-600 bg-red-50 border-red-200";
 
   return (
     <div className="space-y-8">
@@ -123,30 +183,50 @@ export function SovereignAdvisorView() {
 
         <div className="flex items-center gap-3">
           <button
-            onClick={() => setShowAddGoalModal(true)}
+            onClick={openCreateModal}
             className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-bold text-slate-800 shadow-sm hover:bg-slate-50 active:scale-95 transition-all"
           >
-            <Plus className="h-4 w-4" /> Add Target Goal
+            <Plus className="h-4 w-4 text-emerald-600" /> Add Target Goal
           </button>
           <button
-            onClick={handleRunReAudit}
+            onClick={() => handleRunReAudit(true)}
             disabled={reAuditing}
             className="flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-emerald-700 active:scale-95 transition-all disabled:opacity-60"
           >
             <RefreshCw className={`h-4 w-4 ${reAuditing ? "animate-spin" : ""}`} />
-            {reAuditing ? "Auditing Vault..." : "Run Live AI Audit"}
+            {reAuditing ? "Analyzing with AI..." : "Run Live AI Audit"}
           </button>
         </div>
       </div>
+
+      {/* Action Notification Banner */}
+      {actionMessage && (
+        <div className="flex items-center justify-between rounded-xl bg-emerald-50 border border-emerald-200 px-4 py-3 text-xs font-semibold text-emerald-800 animate-in fade-in slide-in-from-top-1">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-emerald-600 shrink-0" />
+            <span>{actionMessage}</span>
+          </div>
+          <button onClick={() => setActionMessage(null)} className="text-emerald-700 hover:text-emerald-900">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
 
       {/* Readiness Radar & Active Goals Overview */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
         {/* Score Card (4 cols) */}
         <div className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-6 shadow-sm lg:col-span-4">
           <div>
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-              Aggregate Readiness Radar
-            </span>
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                Aggregate Readiness Radar
+              </span>
+              {liveAiActive && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-purple-50 px-2 py-0.5 text-[10px] font-bold text-purple-700 ring-1 ring-purple-200">
+                  <Sparkles className="h-3 w-3" /> Live AI Powered
+                </span>
+              )}
+            </div>
             <div className="mt-4 flex items-baseline gap-2">
               <span className="font-heading text-5xl font-extrabold text-slate-900">{score}%</span>
               <span className="text-xs font-bold text-slate-500">Readiness Score</span>
@@ -189,10 +269,31 @@ export function SovereignAdvisorView() {
             <h3 className="flex items-center gap-2 text-sm font-bold text-slate-900">
               <Target className="h-4 w-4 text-emerald-600" /> Tracked Target Goals ({audit?.activeGoals?.length || 0})
             </h3>
-            <span className="text-[11px] text-slate-400">Multi-target evaluation enabled</span>
+            <button
+              onClick={openCreateModal}
+              className="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1"
+            >
+              <Plus className="h-3.5 w-3.5" /> Add Goal
+            </button>
           </div>
 
           <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {(!audit?.activeGoals || audit.activeGoals.length === 0) && (
+              <div className="col-span-2 rounded-xl border border-dashed border-slate-200 p-8 text-center">
+                <Target className="mx-auto h-8 w-8 text-slate-300" />
+                <p className="mt-2 text-xs font-semibold text-slate-600">No active target goals configured</p>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  Add target destinations or roles (e.g. Albania, Germany, Senior Fullstack) to activate automated compliance auditing.
+                </p>
+                <button
+                  onClick={openCreateModal}
+                  className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-emerald-700"
+                >
+                  <Plus className="h-3.5 w-3.5" /> Add First Goal
+                </button>
+              </div>
+            )}
+
             {audit?.activeGoals?.map((goal) => {
               const typeIcon =
                 goal.type === "relocation" ? (
@@ -203,20 +304,41 @@ export function SovereignAdvisorView() {
                   <Briefcase className="h-4 w-4 text-emerald-600" />
                 );
 
+              const isDeleting = deletingGoalId === goal.id;
+
               return (
                 <div
                   key={goal.id}
-                  className="rounded-xl border border-slate-100 bg-slate-50/70 p-4 space-y-2 hover:border-slate-200 transition-colors"
+                  className="group relative rounded-xl border border-slate-200 bg-slate-50/70 p-4 space-y-2 hover:border-slate-300 hover:bg-white transition-all shadow-2xs"
                 >
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-start justify-between gap-2">
                     <span className="flex items-center gap-1.5 text-xs font-bold text-slate-900">
                       {typeIcon} {goal.title}
                     </span>
-                    <span className="rounded bg-white px-1.5 py-0.5 text-[9px] font-bold uppercase text-slate-600 border border-slate-200">
-                      {goal.type}
-                    </span>
+                    <div className="flex items-center gap-1">
+                      <span className="rounded bg-white px-1.5 py-0.5 text-[9px] font-bold uppercase text-slate-600 border border-slate-200">
+                        {goal.type}
+                      </span>
+                      {/* Edit Button */}
+                      <button
+                        onClick={() => openEditModal(goal)}
+                        title="Edit Goal"
+                        className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors"
+                      >
+                        <Edit2 className="h-3.5 w-3.5" />
+                      </button>
+                      {/* Delete Button */}
+                      <button
+                        onClick={() => handleDeleteGoal(goal.id, goal.title)}
+                        disabled={isDeleting}
+                        title="Delete Goal"
+                        className="rounded p-1 text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors disabled:opacity-50"
+                      >
+                        <Trash2 className={`h-3.5 w-3.5 ${isDeleting ? "animate-spin" : ""}`} />
+                      </button>
+                    </div>
                   </div>
-                  <p className="text-[11px] text-slate-500">Destination: {goal.targetCountry}</p>
+                  <p className="text-[11px] text-slate-500">Destination: {goal.targetCountry || "Global"}</p>
                   {goal.mandatoryCredentials && goal.mandatoryCredentials.length > 0 && (
                     <div className="text-[10px] text-slate-600 space-y-0.5 pt-1">
                       <span className="font-semibold text-slate-700">Audit Rules:</span>
@@ -250,73 +372,83 @@ export function SovereignAdvisorView() {
           </span>
         </div>
 
-        <div className="space-y-3">
-          {audit?.gapAlerts?.map((alert) => {
-            const isCritical = alert.severity === "critical";
-            const isWarning = alert.severity === "warning";
+        {(!audit?.gapAlerts || audit.gapAlerts.length === 0) ? (
+          <div className="rounded-xl border border-emerald-100 bg-emerald-50/50 p-6 text-center">
+            <CheckCircle2 className="mx-auto h-8 w-8 text-emerald-600" />
+            <h4 className="mt-2 text-xs font-bold text-emerald-900">Zero Critical Gaps Detected!</h4>
+            <p className="text-[11px] text-emerald-700 mt-0.5 max-w-md mx-auto">
+              Your cryptographic credential vault satisfies the mandatory entry prerequisites for your tracked target goals.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {audit?.gapAlerts?.map((alert) => {
+              const isCritical = alert.severity === "critical";
+              const isWarning = alert.severity === "warning";
 
-            return (
-              <div
-                key={alert.id}
-                className={`flex flex-col gap-3 rounded-xl border p-4 sm:flex-row sm:items-start sm:justify-between transition-all ${
-                  isCritical
-                    ? "border-red-200 bg-red-50/50"
-                    : isWarning
-                    ? "border-amber-200 bg-amber-50/50"
-                    : "border-sky-200 bg-sky-50/50"
-                }`}
-              >
-                <div className="flex items-start gap-3">
-                  <span
-                    className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${
-                      isCritical
-                        ? "bg-red-100 text-red-600"
-                        : isWarning
-                        ? "bg-amber-100 text-amber-600"
-                        : "bg-sky-100 text-sky-600"
-                    }`}
-                  >
-                    {isCritical ? (
-                      <AlertOctagon className="h-3.5 w-3.5" />
-                    ) : (
-                      <Lightbulb className="h-3.5 w-3.5" />
-                    )}
-                  </span>
+              return (
+                <div
+                  key={alert.id}
+                  className={`flex flex-col gap-3 rounded-xl border p-4 sm:flex-row sm:items-start sm:justify-between transition-all ${
+                    isCritical
+                      ? "border-red-200 bg-red-50/50"
+                      : isWarning
+                      ? "border-amber-200 bg-amber-50/50"
+                      : "border-sky-200 bg-sky-50/50"
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    <span
+                      className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${
+                        isCritical
+                          ? "bg-red-100 text-red-600"
+                          : isWarning
+                          ? "bg-amber-100 text-amber-600"
+                          : "bg-sky-100 text-sky-600"
+                      }`}
+                    >
+                      {isCritical ? (
+                        <AlertOctagon className="h-3.5 w-3.5" />
+                      ) : (
+                        <Lightbulb className="h-3.5 w-3.5" />
+                      )}
+                    </span>
 
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-slate-900">{alert.title}</span>
-                      <span
-                        className={`rounded px-1.5 py-0.2 text-[9px] font-bold uppercase ${
-                          isCritical
-                            ? "bg-red-200 text-red-800"
-                            : isWarning
-                            ? "bg-amber-200 text-amber-800"
-                            : "bg-sky-200 text-sky-800"
-                        }`}
-                      >
-                        {alert.severity}
-                      </span>
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-slate-900">{alert.title}</span>
+                        <span
+                          className={`rounded px-1.5 py-0.2 text-[9px] font-bold uppercase ${
+                            isCritical
+                              ? "bg-red-200 text-red-800"
+                              : isWarning
+                              ? "bg-amber-200 text-amber-800"
+                              : "bg-sky-200 text-sky-800"
+                          }`}
+                        >
+                          {alert.severity}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-700 leading-relaxed">{alert.message}</p>
+                      <p className="text-[11px] font-semibold text-emerald-800 flex items-center gap-1 pt-1">
+                        <ArrowRight className="h-3 w-3" /> Action: {alert.suggestedAction}
+                      </p>
                     </div>
-                    <p className="text-xs text-slate-700 leading-relaxed">{alert.message}</p>
-                    <p className="text-[11px] font-semibold text-emerald-800 flex items-center gap-1 pt-1">
-                      <ArrowRight className="h-3 w-3" /> Action: {alert.suggestedAction}
-                    </p>
+                  </div>
+
+                  <div className="sm:self-center shrink-0">
+                    <Link
+                      href="/dashboard/documents"
+                      className="inline-flex items-center gap-1 rounded-lg bg-white px-3 py-1.5 text-xs font-bold text-slate-800 border border-slate-200 hover:bg-slate-50 transition-colors shadow-xs"
+                    >
+                      Upload & Resolve
+                    </Link>
                   </div>
                 </div>
-
-                <div className="sm:self-center shrink-0">
-                  <Link
-                    href="/dashboard/documents"
-                    className="inline-flex items-center gap-1 rounded-lg bg-white px-3 py-1.5 text-xs font-bold text-slate-800 border border-slate-200 hover:bg-slate-50 transition-colors shadow-xs"
-                  >
-                    Upload & Resolve
-                  </Link>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Two-column Bottom: Strengths & Next Milestones */}
@@ -327,6 +459,9 @@ export function SovereignAdvisorView() {
             <ShieldCheck className="h-4 w-4 text-emerald-600" /> Cryptographic Vault Strengths
           </h3>
           <ul className="space-y-2">
+            {(!audit?.strengths || audit.strengths.length === 0) && (
+              <li className="text-xs text-slate-400 italic">No verified vault credentials analyzed yet.</li>
+            )}
             {audit?.strengths?.map((st, i) => (
               <li key={i} className="flex items-start gap-2 text-xs text-slate-700">
                 <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 mt-0.5" />
@@ -342,6 +477,9 @@ export function SovereignAdvisorView() {
             <TrendingUp className="h-4 w-4 text-emerald-600" /> Next Recommended Action Milestones
           </h3>
           <ul className="space-y-2">
+            {(!audit?.nextMilestones || audit.nextMilestones.length === 0) && (
+              <li className="text-xs text-slate-400 italic">No pending milestones. Your targets are on track!</li>
+            )}
             {audit?.nextMilestones?.map((ms, i) => (
               <li key={i} className="flex items-start gap-2 text-xs text-slate-700">
                 <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-[10px] font-bold text-emerald-800 mt-0.5">
@@ -354,11 +492,22 @@ export function SovereignAdvisorView() {
         </div>
       </div>
 
-      {/* Add Goal Modal */}
-      {showAddGoalModal && (
+      {/* Add / Edit Goal Modal */}
+      {showGoalModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs">
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl border border-slate-100 space-y-4">
-            <h3 className="text-base font-bold text-slate-900">Add Sovereign Target Goal</h3>
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 className="text-base font-bold text-slate-900">
+                {editingGoalId ? "Edit Sovereign Target Goal" : "Add Sovereign Target Goal"}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowGoalModal(false)}
+                className="text-slate-400 hover:text-slate-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
 
             <div className="space-y-3">
               <div>
@@ -381,7 +530,7 @@ export function SovereignAdvisorView() {
                   type="text"
                   value={goalTitle}
                   onChange={(e) => setGoalTitle(e.target.value)}
-                  placeholder="e.g. Canada Express Entry / Staff Engineer"
+                  placeholder="e.g. Albania Residence Permit / Senior Software Engineer"
                   className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs text-slate-900 focus:outline-none"
                 />
               </div>
@@ -392,26 +541,27 @@ export function SovereignAdvisorView() {
                   type="text"
                   value={targetCountry}
                   onChange={(e) => setTargetCountry(e.target.value)}
-                  placeholder="e.g. Canada, Germany, United States"
+                  placeholder="e.g. Albania, Germany, Canada, United Kingdom"
                   className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs text-slate-900 focus:outline-none"
                 />
               </div>
             </div>
 
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
               <button
                 type="button"
-                onClick={() => setShowAddGoalModal(false)}
+                onClick={() => setShowGoalModal(false)}
                 className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50"
               >
                 Cancel
               </button>
               <button
                 type="button"
-                onClick={handleCreateGoal}
-                className="rounded-xl bg-emerald-600 px-5 py-2 text-xs font-bold text-white hover:bg-emerald-700"
+                disabled={savingGoal || !goalTitle.trim()}
+                onClick={handleSaveGoal}
+                className="rounded-xl bg-emerald-600 px-5 py-2 text-xs font-bold text-white hover:bg-emerald-700 disabled:opacity-50"
               >
-                Add Target Goal
+                {savingGoal ? "Saving..." : editingGoalId ? "Update Target Goal" : "Add Target Goal"}
               </button>
             </div>
           </div>
@@ -420,4 +570,3 @@ export function SovereignAdvisorView() {
     </div>
   );
 }
-

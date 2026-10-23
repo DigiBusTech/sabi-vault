@@ -197,7 +197,17 @@ export class MultiLLMGateway {
 
   private async callGemini(options: LLMRequestOptions): Promise<string> {
     const prompt = options.messages.map((m) => `${m.role.toUpperCase()}: ${m.content}`).join("\n\n");
-    const modelsToTry = [this.geminiModel, "gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"];
+    const candidateModels = [
+      this.geminiModel,
+      "gemini-3.5-flash",
+      "gemini-3.8-flash",
+      "gemini-flash-latest",
+      "gemini-2.5-flash",
+      "gemini-2.0-flash",
+    ];
+    const modelsToTry = candidateModels.filter(
+      (m) => m && typeof m === "string" && !m.startsWith("AQ.") && !m.startsWith("AIza") && m.length < 40
+    );
     const uniqueModels = Array.from(new Set(modelsToTry));
 
     let lastError: Error | null = null;
@@ -218,8 +228,8 @@ export class MultiLLMGateway {
           }
         );
 
-        if (response.status === 404) {
-          // Model string not recognized, try next model in fallback list
+        if (response.status === 404 || response.status === 503) {
+          // Model unavailable or spike in demand, try next model in fallback list
           continue;
         }
 
@@ -238,26 +248,38 @@ export class MultiLLMGateway {
   }
 
   private async callGroq(options: LLMRequestOptions): Promise<string> {
-    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${this.groqApiKey}`,
-      },
-      body: JSON.stringify({
-        model: "llama-3.3-70b-versatile",
-        messages: options.messages,
-        temperature: options.temperature ?? 0.1,
-        response_format: options.jsonSchema ? { type: "json_object" } : undefined,
-      }),
-    });
+    const groqModels = ["openai/gpt-oss-120b", "llama-3.3-70b-versatile", "qwen/qwen3.8-27b"];
+    let lastError: Error | null = null;
+    for (const model of groqModels) {
+      try {
+        const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${this.groqApiKey}`,
+          },
+          body: JSON.stringify({
+            model,
+            messages: options.messages,
+            temperature: options.temperature ?? 0.1,
+            response_format: options.jsonSchema ? { type: "json_object" } : undefined,
+          }),
+        });
 
-    if (!response.ok) {
-      throw new Error(`Groq API HTTP ${response.status}: ${await response.text()}`);
+        if (response.status === 404) continue;
+
+        if (!response.ok) {
+          throw new Error(`Groq API HTTP ${response.status}: ${await response.text()}`);
+        }
+
+        const json = await response.json();
+        return json.choices[0].message.content;
+      } catch (err: any) {
+        lastError = err;
+      }
     }
 
-    const json = await response.json();
-    return json.choices[0].message.content;
+    throw lastError || new Error("All Groq models failed");
   }
 
   private async callOpenAI(options: LLMRequestOptions): Promise<string> {

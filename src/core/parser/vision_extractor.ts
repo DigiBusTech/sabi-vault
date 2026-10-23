@@ -564,4 +564,258 @@ Return a single JSON object with the exact keys:
       providerUsed,
     };
   }
+
+  /**
+   * Dedicated CV / Resume & LinkedIn PDF Extractor
+   * Ephemerally processes uploaded CV/Resume or LinkedIn Profile PDF export.
+   * Extracts 100% structured career data (work experiences, skills taxonomy, languages, hobbies).
+   */
+  async extractResumeOrCv(
+    base64Data: string,
+    mimeType: string,
+    fileName?: string
+  ): Promise<ExtractedCvResult> {
+    if (!this.geminiApiKey || !this.groqApiKey) {
+      await primeConfigCache();
+      this.geminiApiKey =
+        this.geminiApiKey ||
+        (await getConfigValue("ai.gemini_api_key")) ||
+        process.env.GEMINI_API_KEY ||
+        process.env.GOOGLE_GEMINI_API_KEY ||
+        process.env.GOOGLE_API_KEY ||
+        process.env.NEXT_PUBLIC_GEMINI_API_KEY ||
+        undefined;
+
+      this.groqApiKey =
+        this.groqApiKey ||
+        (await getConfigValue("ai.groq_api_key")) ||
+        process.env.GROQ_API_KEY ||
+        process.env.GROQ_VISION_API_KEY ||
+        undefined;
+
+      const model = await getConfigValue("ai.gemini_model");
+      if (model) this.geminiModel = model;
+    }
+
+    const effectiveMime = mimeType?.toLowerCase().includes("pdf")
+      ? "application/pdf"
+      : mimeType || "image/jpeg";
+
+    const cvPrompt = `
+You are the SabiProfile Sovereign Profile & CV Extraction Engine.
+Analyze this resume, CV, or LinkedIn Profile PDF export document.
+Extract strictly factual, complete candidate career and profile data. Do NOT extrapolate or hallucinate unverified details.
+Return a SINGLE valid JSON object with the following schema:
+{
+  "fullName": string,
+  "headline": string (professional headline e.g. "Senior Fullstack Engineer | Distributed Systems"),
+  "bio": string (summary / professional bio overview),
+  "residenceCity": string (city where candidate resides, or "" if not found),
+  "residenceCountry": string (country where candidate resides, or "" if not found),
+  "nationality": string (or "" if not found),
+  "socialLinks": {
+    "linkedin": string (URL or ""),
+    "github": string (URL or ""),
+    "twitter": string (URL or ""),
+    "portfolio": string (URL or ""),
+    "other": string (URL or "")
+  },
+  "workExperiences": [
+    {
+      "company": string,
+      "title": string,
+      "employmentType": "Full-time" | "Part-time" | "Contract" | "Self-employed" | "Internship" | "Freelance",
+      "location": string,
+      "startDate": "YYYY-MM" or "YYYY",
+      "endDate": "YYYY-MM" or "YYYY" (or empty string/null if current),
+      "isCurrent": boolean,
+      "description": string (bullet points or achievements in this role),
+      "skillsUsed": string[] (list of technical or core skills applied in this role)
+    }
+  ],
+  "skills": [
+    {
+      "name": string,
+      "category": string (e.g. "Engineering & Architecture", "AI & Data", "Cloud & DevOps", "Design & Product", "Leadership"),
+      "proficiency": "BEGINNER" | "INTERMEDIATE" | "ADVANCED" | "EXPERT",
+      "yearsOfExperience": number
+    }
+  ],
+  "languages": [
+    {
+      "language": string,
+      "level": "A1" | "A2" | "B1" | "B2" | "C1" | "C2" | "NATIVE",
+      "isNative": boolean
+    }
+  ],
+  "hobbies": string[] (personal interests, passions, or extracurricular activities mentioned),
+  "targetRoles": string[] (roles or career targets mentioned or inferred from their experience),
+  "targetCountries": string[] (destinations or countries mentioned for relocation or target markets),
+  "confidence": number (between 0.0 and 1.0)
+}
+`;
+
+    let parsedResult: any = null;
+    let providerUsed: "gemini" | "groq" | undefined;
+
+    // 1. Try Gemini Vision first
+    if (this.geminiApiKey) {
+      try {
+        const { parsed, durationMs } = await this.extractWithGemini(cvPrompt, effectiveMime, base64Data);
+        parsedResult = parsed;
+        providerUsed = "gemini";
+        liveTelemetry.record({
+          subsystem: "AI_AGENTS",
+          level: "SUCCESS",
+          action: "GEMINI_CV_EXTRACT",
+          durationMs,
+          statusCode: 200,
+          message: `CV parsed via Gemini Vision (${fileName || "document"}) in ${durationMs}ms`,
+        });
+      } catch (geminiErr: any) {
+        console.warn(`[VisionExtractor] Gemini CV extraction failed: ${geminiErr.message}. Trying Groq failover.`);
+      }
+    }
+
+    // 2. Failover to Groq Vision
+    if (!parsedResult && this.groqApiKey) {
+      try {
+        const { parsed, durationMs } = await this.extractWithGroq(cvPrompt, effectiveMime, base64Data);
+        parsedResult = parsed;
+        providerUsed = "groq";
+        liveTelemetry.record({
+          subsystem: "AI_AGENTS",
+          level: "SUCCESS",
+          action: "GROQ_CV_EXTRACT",
+          durationMs,
+          statusCode: 200,
+          message: `CV parsed via Groq Vision (${fileName || "document"}) in ${durationMs}ms`,
+        });
+      } catch (groqErr: any) {
+        console.warn(`[VisionExtractor] Groq CV extraction also failed: ${groqErr.message}`);
+      }
+    }
+
+    if (!parsedResult) {
+      throw new VisionExtractionUnavailableError(
+        "Could not extract CV/LinkedIn document. Please ensure the file is clear and API keys are set."
+      );
+    }
+
+    // Format work experiences with resilient IDs and valid employmentType
+    const validEmploymentTypes = [
+      "Full-time",
+      "Part-time",
+      "Contract",
+      "Self-employed",
+      "Internship",
+      "Freelance",
+    ] as const;
+
+    const workExperiences = Array.isArray(parsedResult.workExperiences)
+      ? parsedResult.workExperiences.map((w: any, idx: number) => ({
+          id: `exp_${Date.now()}_${idx}_${Math.random().toString(36).slice(2, 7)}`,
+          company: String(w.company || "Unknown Company"),
+          title: String(w.title || "Specialist"),
+          employmentType: validEmploymentTypes.includes(w.employmentType)
+            ? w.employmentType
+            : "Full-time",
+          location: w.location ? String(w.location) : undefined,
+          startDate: String(w.startDate || "2020"),
+          endDate: w.endDate ? String(w.endDate) : undefined,
+          isCurrent: Boolean(w.isCurrent || !w.endDate),
+          description: String(w.description || ""),
+          skillsUsed: Array.isArray(w.skillsUsed) ? w.skillsUsed.map(String) : [],
+        }))
+      : [];
+
+    // Format skills
+    const validProficiencies = ["BEGINNER", "INTERMEDIATE", "ADVANCED", "EXPERT"] as const;
+    const skills = Array.isArray(parsedResult.skills)
+      ? parsedResult.skills.map((s: any, idx: number) => ({
+          id: `skl_${Date.now()}_${idx}_${Math.random().toString(36).slice(2, 7)}`,
+          name: String(s.name || ""),
+          category: String(s.category || "General"),
+          proficiency: validProficiencies.includes(s.proficiency) ? s.proficiency : "INTERMEDIATE",
+          yearsOfExperience: typeof s.yearsOfExperience === "number" ? Math.max(0, s.yearsOfExperience) : 2,
+        })).filter((s: any) => s.name.trim().length > 0)
+      : [];
+
+    // Format languages
+    const validLevels = ["A1", "A2", "B1", "B2", "C1", "C2", "NATIVE"] as const;
+    const languages = Array.isArray(parsedResult.languages)
+      ? parsedResult.languages.map((l: any, idx: number) => ({
+          id: `lang_${Date.now()}_${idx}_${Math.random().toString(36).slice(2, 7)}`,
+          language: String(l.language || ""),
+          level: validLevels.includes(l.level) ? l.level : "B2",
+          isNative: Boolean(l.isNative || l.level === "NATIVE"),
+        })).filter((l: any) => l.language.trim().length > 0)
+      : [];
+
+    return {
+      fullName: parsedResult.fullName || undefined,
+      headline: parsedResult.headline || undefined,
+      bio: parsedResult.bio || undefined,
+      residenceCity: parsedResult.residenceCity || undefined,
+      residenceCountry: parsedResult.residenceCountry || undefined,
+      nationality: parsedResult.nationality || undefined,
+      socialLinks: parsedResult.socialLinks || {},
+      workExperiences,
+      skills,
+      languages,
+      hobbies: Array.isArray(parsedResult.hobbies) ? parsedResult.hobbies.map(String) : [],
+      targetRoles: Array.isArray(parsedResult.targetRoles) ? parsedResult.targetRoles.map(String) : [],
+      targetCountries: Array.isArray(parsedResult.targetCountries) ? parsedResult.targetCountries.map(String) : [],
+      confidence: typeof parsedResult.confidence === "number" ? parsedResult.confidence : 0.92,
+      rawTextSnippet: parsedResult.rawTextSnippet || `Extracted profile from ${fileName || "CV"}`,
+      providerUsed,
+    };
+  }
+}
+
+export interface ExtractedCvResult {
+  fullName?: string;
+  headline?: string;
+  bio?: string;
+  residenceCity?: string;
+  residenceCountry?: string;
+  nationality?: string;
+  socialLinks?: {
+    linkedin?: string;
+    github?: string;
+    twitter?: string;
+    portfolio?: string;
+    other?: string;
+  };
+  workExperiences: Array<{
+    id: string;
+    company: string;
+    title: string;
+    employmentType: "Full-time" | "Part-time" | "Contract" | "Self-employed" | "Internship" | "Freelance";
+    location?: string;
+    startDate: string;
+    endDate?: string;
+    isCurrent: boolean;
+    description: string;
+    skillsUsed: string[];
+  }>;
+  skills: Array<{
+    id: string;
+    name: string;
+    category: string;
+    proficiency: "BEGINNER" | "INTERMEDIATE" | "ADVANCED" | "EXPERT";
+    yearsOfExperience: number;
+  }>;
+  languages: Array<{
+    id: string;
+    language: string;
+    level: "A1" | "A2" | "B1" | "B2" | "C1" | "C2" | "NATIVE";
+    isNative: boolean;
+  }>;
+  hobbies: string[];
+  targetRoles: string[];
+  targetCountries: string[];
+  confidence: number;
+  rawTextSnippet?: string;
+  providerUsed?: "gemini" | "groq";
 }

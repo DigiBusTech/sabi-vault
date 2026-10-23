@@ -38,6 +38,32 @@ export const SocialLinksSchema = z.object({
 });
 export type SocialLinks = z.infer<typeof SocialLinksSchema>;
 
+// --- Work Experience Item (LinkedIn-Style Professional History) ---
+export const EmploymentTypeEnum = z.enum([
+  "Full-time",
+  "Part-time",
+  "Contract",
+  "Self-employed",
+  "Internship",
+  "Freelance",
+]);
+export type EmploymentType = z.infer<typeof EmploymentTypeEnum>;
+
+export const WorkExperienceItemSchema = z.object({
+  id: z.string(),
+  company: z.string(),
+  title: z.string(),
+  employmentType: EmploymentTypeEnum.default("Full-time"),
+  location: z.string().optional(),
+  startDate: z.string(),
+  endDate: z.string().optional(),
+  isCurrent: z.boolean().default(false),
+  description: z.string().default(""),
+  skillsUsed: z.array(z.string()).default([]),
+  credentialRef: z.string().optional(),
+});
+export type WorkExperienceItem = z.infer<typeof WorkExperienceItemSchema>;
+
 // --- Human Profile Full Schema ---
 export const UserHumanProfileSchema = z.object({
   userId: z.string(),
@@ -52,6 +78,7 @@ export const UserHumanProfileSchema = z.object({
   socialLinks: SocialLinksSchema,
   languages: z.array(LanguageProficiencySchema).default([]),
   skills: z.array(SkillItemSchema).default([]),
+  workExperiences: z.array(WorkExperienceItemSchema).default([]),
   hobbies: z.array(z.string()).default([]),
   targetRoles: z.array(z.string()).default([]),
   targetCountries: z.array(z.string()).default([]),

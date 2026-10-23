@@ -7,6 +7,7 @@ import {
 } from "@/types/profile";
 import { globalUserStore } from "./user_store";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
+import { MultiLLMGateway } from "@/agents/gateway/llm_gateway";
 import { randomBytes } from "crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -51,6 +52,10 @@ class ProfileAndAdvisorStore {
   // --- ROW MAPPERS (snake_case DB <-> camelCase domain) ---
 
   private profileToRow(p: UserHumanProfile) {
+    const rawSocial = { ...(p.socialLinks ?? {}) };
+    // Preserves workExperiences in social_links JSONB for 100% resilient DB persistence
+    (rawSocial as any)._workExperiences = p.workExperiences ?? [];
+
     return {
       user_id: p.userId,
       full_name: p.fullName,
@@ -61,7 +66,7 @@ class ProfileAndAdvisorStore {
       residence_city: p.residenceCity,
       residence_country: p.residenceCountry,
       nationality: p.nationality,
-      social_links: p.socialLinks ?? {},
+      social_links: rawSocial,
       languages: p.languages ?? [],
       skills: p.skills ?? [],
       hobbies: p.hobbies ?? [],
@@ -72,6 +77,10 @@ class ProfileAndAdvisorStore {
   }
 
   private rowToProfile(row: any): UserHumanProfile {
+    const rawSocial = row.social_links ?? {};
+    const workExperiences = row.work_experiences ?? rawSocial._workExperiences ?? [];
+    const { _workExperiences, ...cleanSocial } = rawSocial;
+
     return {
       userId: row.user_id,
       fullName: row.full_name,
@@ -82,9 +91,10 @@ class ProfileAndAdvisorStore {
       residenceCity: row.residence_city,
       residenceCountry: row.residence_country,
       nationality: row.nationality,
-      socialLinks: row.social_links ?? {},
+      socialLinks: cleanSocial,
       languages: row.languages ?? [],
       skills: row.skills ?? [],
+      workExperiences,
       hobbies: row.hobbies ?? [],
       targetRoles: row.target_roles ?? [],
       targetCountries: row.target_countries ?? [],
@@ -172,6 +182,7 @@ class ProfileAndAdvisorStore {
       socialLinks: {},
       languages: [{ id: "lang_1", language: "English", level: "NATIVE", isNative: true }],
       skills: [],
+      workExperiences: [],
       hobbies: [],
       targetRoles: [],
       targetCountries: [],
@@ -221,11 +232,54 @@ class ProfileAndAdvisorStore {
       socialLinks: { ...existing.socialLinks, ...(updates.socialLinks || {}) },
       languages: updates.languages || existing.languages,
       skills: updates.skills || existing.skills,
+      workExperiences: updates.workExperiences || existing.workExperiences,
       hobbies: updates.hobbies || existing.hobbies,
       targetRoles: updates.targetRoles || existing.targetRoles,
       targetCountries: updates.targetCountries || existing.targetCountries,
       updatedAt: new Date().toISOString(),
     };
+
+    // Synchronize work experiences with vault_records 'experience' category
+    if (updates.workExperiences && updates.workExperiences.length > 0) {
+      try {
+        await globalUserStore.addCredentialAsync(
+          "experience",
+          {
+            experiences: updates.workExperiences.map((w) => ({
+              company: w.company,
+              jobTitle: w.title,
+              employmentType: w.employmentType,
+              startDate: w.startDate,
+              endDate: w.endDate || null,
+              isCurrent: w.isCurrent,
+              location: w.location || null,
+              summary: w.description,
+            })),
+          },
+          userId
+        );
+      } catch (expErr: any) {
+        console.warn("[ProfileStore] Experience vault sync notice:", expErr.message);
+      }
+    }
+
+    // Two-way synchronization: sync new target countries & roles to target goals
+    if (updates.targetCountries || updates.targetRoles) {
+      const activeGoals = await this.listGoals(userId);
+      const existingCountries = new Set(activeGoals.map((g) => g.targetCountry.toLowerCase()));
+      const countriesToAdd = (updates.targetCountries || []).filter(
+        (c) => c && !existingCountries.has(c.toLowerCase())
+      );
+      for (const country of countriesToAdd) {
+        const goalRole = updates.targetRoles?.[0] || "Skilled Migration & Career";
+        await this.addOrUpdateGoal(userId, {
+          type: "relocation",
+          title: goalRole,
+          targetCountry: country,
+          status: "active",
+        });
+      }
+    }
 
     const db = this.getDb();
     if (db) {
@@ -381,7 +435,6 @@ class ProfileAndAdvisorStore {
         .from("user_target_goals")
         .upsert(this.goalToRow(record), { onConflict: "id" });
       if (error) throw new Error(`Goal save failed: ${error.message}`);
-      return record;
     }
 
     const userGoals = this.goals.get(userId) || [];
@@ -392,10 +445,39 @@ class ProfileAndAdvisorStore {
       userGoals.push(record);
     }
     this.goals.set(userId, userGoals);
+
+    // Two-way synchronization: ensure target country & role exist in user profile
+    if (record.targetCountry && record.targetCountry !== "Global") {
+      try {
+        const p = await this.getProfile(userId);
+        let changed = false;
+        if (!p.targetCountries.includes(record.targetCountry)) {
+          p.targetCountries.push(record.targetCountry);
+          changed = true;
+        }
+        if (record.title && !p.targetRoles.includes(record.title)) {
+          p.targetRoles.push(record.title);
+          changed = true;
+        }
+        if (changed) {
+          await this.updateProfile(userId, {
+            targetCountries: p.targetCountries,
+            targetRoles: p.targetRoles,
+          });
+        }
+      } catch {
+        // Non-fatal
+      }
+    }
+
     return record;
   }
 
   public async deleteGoal(userId: string, goalId: string): Promise<boolean> {
+    const userGoals = this.goals.get(userId) || [];
+    const filtered = userGoals.filter((g) => g.id !== goalId);
+    this.goals.set(userId, filtered);
+
     const db = this.getDb();
     if (db) {
       const { error, count } = await db
@@ -407,9 +489,6 @@ class ProfileAndAdvisorStore {
       return (count ?? 0) > 0;
     }
 
-    const userGoals = this.goals.get(userId) || [];
-    const filtered = userGoals.filter((g) => g.id !== goalId);
-    this.goals.set(userId, filtered);
     return filtered.length < userGoals.length;
   }
 
@@ -417,7 +496,7 @@ class ProfileAndAdvisorStore {
 
   public async runAdvisorAudit(userId: string): Promise<SovereignAdvisorAudit> {
     const profile = await this.getProfile(userId);
-    const userVault = globalUserStore.getVault(userId);
+    const userVault = await globalUserStore.getVaultAsync(userId);
     const activeGoals = (await this.listGoals(userId)).filter((g) => g.status === "active");
 
     const gapAlerts: AdvisorGapAlert[] = [];
@@ -428,99 +507,187 @@ class ProfileAndAdvisorStore {
     const hasPassport = (userVault.identification?.identifications?.length || 0) > 0;
     const hasDegree = (userVault.academics?.degrees?.length || 0) > 0;
     const hasTier2Degree = userVault.academics?.degrees?.some((d: any) => d.isNotarized || d.tier === 2);
-    const hasExperience = (userVault.experience?.experiences?.length || 0) > 0;
-    const hasFinance = (userVault.finance?.bankRecords?.length || 0) > 0;
+    const hasExperience =
+      (userVault.experience?.experiences?.length || 0) > 0 ||
+      (profile.workExperiences && profile.workExperiences.length > 0);
+    const hasFinance = (userVault.finance?.bankRecords?.length || 0) > 0 || !!userVault.finance?.taxClearance;
     const hasLegal = (userVault.legal?.instruments?.length || 0) > 0;
     const hasEnglishC1OrNative = profile.languages.some(
       (l) => l.language.toLowerCase().includes("english") && (l.isNative || ["C1", "C2", "NATIVE"].includes(l.level))
-    );
-    const hasGermanB1OrHigher = profile.languages.some(
-      (l) => l.language.toLowerCase().includes("german") && ["B1", "B2", "C1", "C2", "NATIVE"].includes(l.level)
     );
 
     // Strengths
     if (hasDegree && hasTier2Degree) {
       strengths.push("Tier-2 Notarized University Degree on-chain with authentic institutional attestation.");
+    } else if (hasDegree) {
+      strengths.push("Verified Higher Education Degree on-chain in sovereign vault.");
     }
     if (hasExperience) {
-      strengths.push("Verified senior software engineering tenure with email-verified reference.");
+      strengths.push("Verified professional employment history and engineering tenure documented.");
     }
     if (hasPassport) {
       strengths.push("Valid International Passport with machine-readable MRZ code verified.");
     }
-    if (profile.skills.length >= 4) {
-      strengths.push(`Rich technical skills matrix (${profile.skills.length} domains evaluated with Expert mastery).`);
+    if (hasFinance) {
+      strengths.push("Verified liquid proof of funds and solvency statement committed on-chain.");
+    }
+    if (profile.skills.length >= 3) {
+      strengths.push(`Rich technical skills matrix (${profile.skills.length} domains evaluated with depth).`);
     }
 
-    // Evaluate against each goal
+    // Universal Country & Target Evaluation
     for (const goal of activeGoals) {
-      if (goal.type === "relocation" && goal.targetCountry.toLowerCase().includes("germany")) {
+      const country = goal.targetCountry || "Global";
+      const countryLower = country.toLowerCase();
+
+      if (goal.type === "relocation") {
         if (!hasPassport) {
           gapAlerts.push({
-            id: `gap_${randomBytes(3).toString("hex")}`,
+            id: `gap_pass_${goal.id}_${randomBytes(2).toString("hex")}`,
             goalId: goal.id,
             category: "identification",
             severity: "critical",
-            title: "Missing International Passport",
-            message: "German Chancenkarte & EU Blue Card require a valid international passport with > 6 months validity.",
+            title: `Missing Valid Passport for ${country} Relocation`,
+            message: `International relocation and visa applications to ${country} strictly mandate a valid international passport with > 6 months validity and MRZ verification.`,
             missingCredentialType: "International Passport",
             suggestedAction: "Upload or scan your valid passport under Vault > Identification.",
             isResolved: false,
           });
         }
 
-        if (!hasTier2Degree) {
+        if (!hasFinance) {
           gapAlerts.push({
-            id: `gap_${randomBytes(3).toString("hex")}`,
+            id: `gap_fin_${goal.id}_${randomBytes(2).toString("hex")}`,
             goalId: goal.id,
-            category: "academics",
+            category: "finance",
             severity: "critical",
-            title: "Degree Lacks Tier-2 Apostille / Notarization",
-            message: "German embassy requirements mandate that university transcripts possess Tier-2 legal attestation or Anabin certification.",
-            missingCredentialType: "Tier-2 Legalized Transcript",
-            suggestedAction: "Request institutional attestation or upload a notarized certificate with notary stamp.",
+            title: `Proof of Financial Solvency Required for ${country}`,
+            message: `${country} consular authorities require verified bank statements showing sufficient liquid balance to demonstrate independent financial support.`,
+            missingCredentialType: "Proof of Funds / Bank Statement",
+            suggestedAction: "Upload your recent 3-6 month official bank statement under Vault > Finance.",
             isResolved: false,
           });
         }
 
-        if (!hasGermanB1OrHigher) {
+        if (!hasLegal) {
           gapAlerts.push({
-            id: `gap_${randomBytes(3).toString("hex")}`,
+            id: `gap_leg_${goal.id}_${randomBytes(2).toString("hex")}`,
             goalId: goal.id,
-            category: "profile_languages",
+            category: "legal",
             severity: "warning",
-            title: "German Language Readiness at B1 (Target: B2)",
-            message: "Upgrading from B1 to B2 significantly accelerates Chancenkarte points scoring from 3 to 4 points.",
-            missingCredentialType: "Goethe / TELC B2 Certificate",
-            suggestedAction: "Upload Goethe-Zertifikat B2 exam confirmation to claim maximum points.",
+            title: `Sworn Affidavit / Police Character Certificate for ${country}`,
+            message: `Immigration and residence permits for ${country} require a notarized certificate of clean criminal record or sworn affidavit.`,
+            missingCredentialType: "Police Character Certificate / Affidavit",
+            suggestedAction: "Upload a sworn declaration or police character clearance under Vault > Legal.",
             isResolved: false,
           });
+        }
+
+        if (!hasExperience && (goal.title.toLowerCase().includes("employment") || goal.title.toLowerCase().includes("work"))) {
+          gapAlerts.push({
+            id: `gap_exp_${goal.id}_${randomBytes(2).toString("hex")}`,
+            goalId: goal.id,
+            category: "experience",
+            severity: "warning",
+            title: `Documented Work History & Contracts for ${country}`,
+            message: `Professional relocation or self-employment permit in ${country} mandates documented proof of professional tenure and client contracts.`,
+            missingCredentialType: "Employment Contract / Work Verification",
+            suggestedAction: "Add your work experience in Human Profile and upload prior contracts under Vault > Experience.",
+            isResolved: false,
+          });
+        }
+
+        // Country-specific language & immigration rules
+        if (countryLower.includes("albania")) {
+          const hasAccommodationProof = userVaultRecords.some(
+            (r) => r.category === "legal" && (r.title.toLowerCase().includes("lease") || r.title.toLowerCase().includes("rent") || r.title.toLowerCase().includes("accommodation"))
+          );
+          if (!hasAccommodationProof) {
+            gapAlerts.push({
+              id: `gap_alb_lease_${goal.id}_${randomBytes(2).toString("hex")}`,
+              goalId: goal.id,
+              category: "legal",
+              severity: "warning",
+              title: "Albania Unique Permit: Proof of Accommodation / Residential Lease",
+              message: "Albanian immigration authorities require a notarized residential lease contract or registered address in Albania for Unique Residence Permit issuance.",
+              missingCredentialType: "Residential Lease Agreement / Notarized Host Declaration",
+              suggestedAction: "Upload your registered Albanian lease agreement or host notarization under Vault > Legal.",
+              isResolved: false,
+            });
+          }
+        }
+
+        if (countryLower.includes("germany") || countryLower.includes("austria")) {
+          const hasGerman = profile.languages.some((l) => l.language.toLowerCase().includes("german") && ["B1", "B2", "C1", "C2", "NATIVE"].includes(l.level));
+          if (!hasGerman) {
+            gapAlerts.push({
+              id: `gap_lang_${goal.id}_${randomBytes(2).toString("hex")}`,
+              goalId: goal.id,
+              category: "profile_languages",
+              severity: "warning",
+              title: "German Language Attestation (Target: B1/B2)",
+              message: "Chancenkarte points scoring and EU Blue Card require B1/B2 German language attestation.",
+              missingCredentialType: "Goethe / TELC B1+ Certificate",
+              suggestedAction: "Add German proficiency or upload Goethe exam confirmation.",
+              isResolved: false,
+            });
+          }
         }
       }
 
       if (goal.type === "job") {
         if (!hasEnglishC1OrNative) {
           gapAlerts.push({
-            id: `gap_${randomBytes(3).toString("hex")}`,
+            id: `gap_eng_${goal.id}_${randomBytes(2).toString("hex")}`,
             goalId: goal.id,
             category: "profile_languages",
             severity: "warning",
-            title: "Fluent English Proficiency Verification Recommended",
-            message: "Global remote engineering positions require verified C1 or Native English proficiency.",
-            suggestedAction: "Set English to C1/Native in Human Profile or link IELTS/Duolingo attestation.",
+            title: "Fluent Professional English Verification Recommended",
+            message: "Global remote positions mandate verified C1 or Native English proficiency.",
+            suggestedAction: "Set English to C1/Native in Human Profile or link language attestation.",
             isResolved: false,
           });
         }
 
-        if ((userVault.experience?.experiences?.length || 0) < 2) {
+        if (!hasExperience) {
           gapAlerts.push({
-            id: `gap_${randomBytes(3).toString("hex")}`,
+            id: `gap_exp_${goal.id}_${randomBytes(2).toString("hex")}`,
             goalId: goal.id,
             category: "experience",
-            severity: "recommendation",
-            title: "Additional Prior Experience Record Recommended",
-            message: "Adding your previous intermediate or startup engineering roles solidifies your 5+ year track record.",
-            suggestedAction: "Upload prior offer letter or work contract to strengthen employment tenure.",
+            severity: "critical",
+            title: "Documented Work Experience Required",
+            message: "Recruiters and screening agents evaluate verified prior tenure and responsibilities.",
+            suggestedAction: "Populate your Work Experience timeline in Human Profile or upload experience certificates.",
+            isResolved: false,
+          });
+        }
+      }
+
+      if (goal.type === "academic") {
+        if (!hasDegree) {
+          gapAlerts.push({
+            id: `gap_deg_${goal.id}_${randomBytes(2).toString("hex")}`,
+            goalId: goal.id,
+            category: "academics",
+            severity: "critical",
+            title: `Degree & Transcripts Required for ${country}`,
+            message: "Academic admissions require prior diploma and official transcripts.",
+            suggestedAction: "Upload degree certificate and transcript under Vault > Academics.",
+            isResolved: false,
+          });
+        }
+      }
+
+      if (goal.type === "procurement") {
+        if (!hasLegal) {
+          gapAlerts.push({
+            id: `gap_proc_${goal.id}_${randomBytes(2).toString("hex")}`,
+            goalId: goal.id,
+            category: "legal",
+            severity: "critical",
+            title: "Corporate Legal Instruments & MOUs Required",
+            message: "Enterprise procurement criteria demand legal incorporation and sworn vendor agreements.",
+            suggestedAction: "Upload partnership agreement or corporate charter under Vault > Legal.",
             isResolved: false,
           });
         }
@@ -529,26 +696,132 @@ class ProfileAndAdvisorStore {
 
     // Milestones
     if (gapAlerts.some((g) => g.severity === "critical")) {
-      nextMilestones.push("Resolve critical missing credential blockers (e.g. Passport or Tier-2 Legalization).");
+      nextMilestones.push("Resolve critical missing credential blockers (Passport, Proof of Funds, or Legal Affidavits).");
     }
-    nextMilestones.push("Generate Scoped API Key for target consulate / recruiter with tailored Niche profile.");
-    nextMilestones.push("Review auto-synthesized Zero-CV dossier in Persona Niche Studio.");
+    if (gapAlerts.some((g) => g.severity === "warning")) {
+      nextMilestones.push("Complete language attestations and employment contracts for target destination.");
+    }
+    nextMilestones.push("Generate Scoped API Key for destination embassy / recruiter with verified credentials.");
+    nextMilestones.push("Synthesize tailored Zero-CV dossier in Persona Niche Studio.");
 
-    // Score calculation
-    let calculatedScore = 88; // Base healthy score
-    const criticalPenalty = gapAlerts.filter((g) => g.severity === "critical").length * 20;
-    const warningPenalty = gapAlerts.filter((g) => g.severity === "warning").length * 8;
-    calculatedScore = Math.max(20, Math.min(100, calculatedScore - criticalPenalty - warningPenalty));
+    // Dynamic Mathematical Score Calculation
+    let calculatedScore = 100;
+    if (activeGoals.length === 0) {
+      // Base profile completeness
+      calculatedScore = 40;
+      if (hasPassport) calculatedScore += 15;
+      if (hasFinance) calculatedScore += 15;
+      if (hasExperience) calculatedScore += 15;
+      if (hasDegree) calculatedScore += 15;
+    } else {
+      const criticalPenalty = gapAlerts.filter((g) => g.severity === "critical").length * 20;
+      const warningPenalty = gapAlerts.filter((g) => g.severity === "warning").length * 10;
+      const recPenalty = gapAlerts.filter((g) => g.severity === "recommendation").length * 5;
+      calculatedScore = Math.max(15, Math.min(100, calculatedScore - criticalPenalty - warningPenalty - recPenalty));
+    }
 
     return {
       userId,
       overallReadinessScore: calculatedScore,
       activeGoals,
       gapAlerts,
-      strengths,
-      nextMilestones,
+      strengths: Array.from(new Set(strengths)),
+      nextMilestones: Array.from(new Set(nextMilestones)),
       lastAuditedAt: new Date().toISOString(),
     };
+  }
+
+  /**
+   * Real Multimodal AI Sovereign Advisor Audit
+   * Invokes Gemini 3.5 Flash (with Groq failover) for country-specific deep intelligence.
+   */
+  public async runLiveAiAdvisorAudit(userId: string): Promise<SovereignAdvisorAudit> {
+    const fallbackAudit = await this.runAdvisorAudit(userId);
+    const activeGoals = fallbackAudit.activeGoals;
+
+    if (activeGoals.length === 0) {
+      return fallbackAudit;
+    }
+
+    try {
+      const profile = await this.getProfile(userId);
+      const userVault = await globalUserStore.getVaultAsync(userId);
+
+      const prompt = `
+You are the SabiProfile Sovereign Target Advisor AI.
+Evaluate this citizen's multi-target goals against their verified credentials.
+
+Active Goals:
+${JSON.stringify(activeGoals, null, 2)}
+
+User Profile & Credentials Summary:
+- Full Name: ${profile.fullName} (${profile.headline})
+- Residence: ${profile.residenceCity}, ${profile.residenceCountry}
+- Nationality: ${profile.nationality}
+- Languages: ${profile.languages.map((l) => `${l.language} (${l.level})`).join(", ")}
+- Skills: ${profile.skills.map((s) => `${s.name} (${s.proficiency})`).join(", ")}
+- Work History: ${(profile.workExperiences || []).map((w) => `${w.title} at ${w.company} (${w.startDate} - ${w.isCurrent ? "Present" : w.endDate})`).join("; ")}
+- Vault Identification: ${userVault.identification?.identifications?.length || 0} verified documents
+- Vault Academics: ${userVault.academics?.degrees?.length || 0} degrees
+- Vault Finance: ${userVault.finance?.bankRecords?.length || 0} bank records / proof of funds
+- Vault Legal: ${userVault.legal?.instruments?.length || 0} sworn affidavits / contracts
+
+Generate a rigorous, country-specific immigration and qualification audit tailored to the exact destination countries (${activeGoals.map((g) => g.targetCountry).join(", ")}).
+Return valid JSON matching:
+{
+  "overallReadinessScore": number between 15 and 95,
+  "gapAlerts": [
+    {
+      "id": "gap_ai_1",
+      "goalId": "${activeGoals[0]?.id}",
+      "category": "identification" | "finance" | "legal" | "experience" | "academics" | "profile_languages",
+      "severity": "critical" | "warning" | "recommendation",
+      "title": "Clear concise gap title",
+      "message": "Specific explanation referencing destination country immigration or employer criteria",
+      "missingCredentialType": "e.g. Bank Statement showing minimum liquid funds",
+      "suggestedAction": "Exact steps to resolve in SabiProfile",
+      "isResolved": false
+    }
+  ],
+  "strengths": ["Strong verified asset 1", "Strong verified asset 2"],
+  "nextMilestones": ["Actionable next step 1", "Actionable next step 2"]
+}
+`;
+
+      const gateway = new MultiLLMGateway();
+      const response = await gateway.complete({
+        messages: [{ role: "user", content: prompt }],
+        jsonSchema: true,
+        temperature: 0.1,
+      });
+
+      let parsed: any;
+      try {
+        parsed = JSON.parse(response.content);
+      } catch {
+        const first = response.content.indexOf("{");
+        const last = response.content.lastIndexOf("}");
+        if (first !== -1 && last > first) {
+          parsed = JSON.parse(response.content.substring(first, last + 1));
+        }
+      }
+
+      if (parsed && Array.isArray(parsed.gapAlerts)) {
+        return {
+          userId,
+          overallReadinessScore: typeof parsed.overallReadinessScore === "number" ? parsed.overallReadinessScore : fallbackAudit.overallReadinessScore,
+          activeGoals,
+          gapAlerts: parsed.gapAlerts.length > 0 ? parsed.gapAlerts : fallbackAudit.gapAlerts,
+          strengths: Array.isArray(parsed.strengths) && parsed.strengths.length > 0 ? parsed.strengths : fallbackAudit.strengths,
+          nextMilestones: Array.isArray(parsed.nextMilestones) && parsed.nextMilestones.length > 0 ? parsed.nextMilestones : fallbackAudit.nextMilestones,
+          lastAuditedAt: new Date().toISOString(),
+        };
+      }
+    } catch (aiErr: any) {
+      console.warn("[ProfileStore] Live AI audit failover to sovereign rules:", aiErr.message);
+    }
+
+    return fallbackAudit;
   }
 
   /**
@@ -593,6 +866,31 @@ class ProfileAndAdvisorStore {
         { id: "sk_go", name: "Go (Golang)", category: "Backend & Systems", proficiency: "ADVANCED", yearsOfExperience: 4 },
         { id: "sk_sol", name: "Solidity & EVM Smart Contracts", category: "Web3 & Blockchain", proficiency: "ADVANCED", yearsOfExperience: 3 },
         { id: "sk_pg", name: "PostgreSQL & Database Partitioning", category: "Databases", proficiency: "ADVANCED", yearsOfExperience: 5 },
+      ],
+      workExperiences: [
+        {
+          id: "exp_seed_1",
+          company: "Helios Financial Systems",
+          title: "Principal Distributed Systems Architect",
+          employmentType: "Full-time",
+          location: "Berlin, Germany (Hybrid)",
+          startDate: "2023-01",
+          isCurrent: true,
+          description: "Led high-throughput settlement engine processing €40M+ daily. Implemented sovereign data enclave satisfying BaFin & GDPR requirements.",
+          skillsUsed: ["TypeScript", "Distributed Systems", "PostgreSQL", "Go"],
+        },
+        {
+          id: "exp_seed_2",
+          company: "Kora Core Technologies",
+          title: "Lead Infrastructure Engineer",
+          employmentType: "Full-time",
+          location: "Lagos, Nigeria",
+          startDate: "2020-03",
+          endDate: "2022-12",
+          isCurrent: false,
+          description: "Designed multi-region payment switch handling 12,000 TPS with 99.999% uptime across West African clearing corridors.",
+          skillsUsed: ["Go", "Kafka", "Docker", "Kubernetes", "AWS"],
+        },
       ],
       hobbies: [
         "African Classical & Afrobeat Drumming",
