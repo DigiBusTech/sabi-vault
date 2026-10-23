@@ -2659,3 +2659,4 @@
   - `npx tsc --noEmit`: 0 errors.
   - All 7 suites PASS: hardening 7/7, full 8/8, quota 8/8, profile/advisor 5/5, scan/cloud 26/26, devices 5/5, google auth 8/8.
 - **Ops Note:** Vercel project Node version is configured in dashboard settings (no vercel.json); set it to 26.x when available in the project's Node version selector.
+- **Follow-up (same day):** Vercel only exposes LTS lines (22.x/24.x); Node 26 is "Current" and unsupported by Vercel until LTS promotion. Relaxed `engines` to `node >=24.16.0` / `npm >=11.13.0` so local Node 26.12.1 and Vercel 24.x both satisfy the range; `.nvmrc` keeps 26.12.1 as the local development preference. Vercel dashboard set to 24.x (which carries the same security backports on the LTS line).
