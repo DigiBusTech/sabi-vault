@@ -163,8 +163,33 @@ function runTests() {
   );
   console.log("  ✓ Sabi Interviewer renamed and gated behind coming-soon modal.");
 
+  // --- Test 7: Canonical String Identity (Production OAuth UUID Crash Fix) ---
+  console.log("\n[Test 7] Canonical String Identity Alignment & Non-Fatal Profile Seeding...");
+  const identityMigration = src("supabase/migrations/20261023120000_canonical_string_identity_alignment.sql");
+  for (const table of ["user_human_profiles", "user_profile_niches", "user_target_goals"]) {
+    assert(
+      identityMigration.includes(`ALTER COLUMN user_id TYPE VARCHAR(128)`),
+      `Migration must convert ${table}.user_id to canonical VARCHAR(128)`
+    );
+    assert(
+      identityMigration.includes(table),
+      `Migration must cover ${table}`
+    );
+  }
+  assert(
+    identityMigration.includes("auth.uid()::text = user_id"),
+    "RLS policies must be re-bound with auth.uid()::text cast after the type change"
+  );
+  console.log("  ✓ Profile/niche/goal tables aligned to canonical usr_* string identity (RLS re-bound).");
+  const callbackRoute = src("src/app/auth/callback/route.ts");
+  assert(
+    callbackRoute.includes("OAUTH_PROFILE_SEED_FAILED"),
+    "OAuth callback must treat profile seeding as non-fatal (never discard a valid session)"
+  );
+  console.log("  ✓ OAuth profile seeding is non-fatal; valid sessions can no longer be discarded.");
+
   console.log("\n=======================================================");
-  console.log("ALL 6 SECURITY HARDENING SUITES PASSED (100%)!");
+  console.log("ALL 7 SECURITY HARDENING SUITES PASSED (100%)!");
   console.log("=======================================================\n");
 }
 

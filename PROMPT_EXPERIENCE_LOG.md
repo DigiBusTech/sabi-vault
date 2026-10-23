@@ -2628,3 +2628,20 @@
   - `tests/test_google_auth_and_skills.mjs`: Test 8 passed, all 8 suites passed (100%).
   - `npx tsc --noEmit`: 0 errors.
 - **Git Commit:** Committed and pushed to `main` and `master` with no Copilot trailers.
+
+---
+
+## Entry #075 — Production OAuth Hotfix: Canonical String Identity Alignment (UUID Crash)
+- **User Prompt:**
+  > Screenshot of production error after Google sign-in: `Profile fetch failed: invalid input syntax for type uuid: "usr_0d52b645"` on sabiprofile.com/login.
+- **Root Cause:**
+  - Migration `20261023000000` (Entry #057) defined `user_human_profiles.user_id` (and niches/goals) as `UUID REFERENCES auth.users(id)`, but the platform's canonical identity is the VARCHAR string form (`usr_...`) — matching `vault_profiles.user_id VARCHAR(128)` in the sovereign nodes schema.
+  - The OAuth callback seeds profiles via `profileAndAdvisorStore.updateProfile("usr_xxx")`, which Postgres rejected with a UUID cast error. Worse, the seeding ran inside the session-exchange try block, so a valid OAuth session was discarded and the user bounced to /login.
+- **Fixes:**
+  1. **New migration `20261023120000_canonical_string_identity_alignment.sql`:** converts `user_human_profiles`, `user_profile_niches`, `user_target_goals` `user_id` columns to `VARCHAR(128)` (dropping the auth.users FK), and re-binds all three RLS policies with `auth.uid()::text = user_id`.
+  2. **Non-fatal profile seeding (`src/app/auth/callback/route.ts`):** profile/vault seeding in both the Supabase exchange path and the direct Google fallback is now wrapped in its own try/catch with `OAUTH_PROFILE_SEED_FAILED` telemetry — a profile hiccup can never again discard a valid authenticated session.
+- **Validation:**
+  - `npx tsc --noEmit`: 0 errors.
+  - `node tests/test_security_hardening.mjs`: 7/7 suites PASSED (new Test 7 covers the migration + non-fatal seeding guard).
+  - `test_google_auth_and_skills` 8/8, `test_storage_quota_and_skills` 8/8, `test_full_suite` 8/8 — all PASSED.
+- **Action Required (Ops):** Apply migration `20261023120000` to the production Supabase node before/alongside this deploy.

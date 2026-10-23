@@ -169,12 +169,26 @@ export async function GET(request: NextRequest) {
         const avatarUrl = user.user_metadata?.avatar_url || user.user_metadata?.picture;
         const userId = `usr_${user.id.substring(0, 8)}`;
 
-        // Seed user vault and profile
-        globalUserStore.getVault(userId);
-        await profileAndAdvisorStore.updateProfile(userId, {
-          fullName,
-          avatarUrl,
-        });
+        // Seed user vault and profile (non-fatal: a profile sync hiccup must
+        // never discard a valid OAuth session)
+        try {
+          globalUserStore.getVault(userId);
+          await profileAndAdvisorStore.updateProfile(userId, {
+            fullName,
+            avatarUrl,
+          });
+        } catch (seedErr: any) {
+          console.warn("[Auth Callback] Profile seeding warning (non-fatal):", seedErr?.message);
+          telemetryLogger.record({
+            subsystem: "SECURITY_AUTH",
+            level: "WARN",
+            action: "OAUTH_PROFILE_SEED_FAILED",
+            durationMs: 0,
+            userId,
+            message: `Profile seeding failed for ${email}: ${seedErr?.message || "unknown"}`,
+            metadata: { email, host: requestHost },
+          });
+        }
 
         // Register authenticated SabiProfile session
         const userAgent = request.headers.get("user-agent") || "";
@@ -310,11 +324,25 @@ export async function GET(request: NextRequest) {
             const picture = googleUser.picture;
 
             const userId = `usr_${googleUser.sub?.substring(0, 8) || "google"}`;
-            globalUserStore.getVault(userId);
-            await profileAndAdvisorStore.updateProfile(userId, {
-              fullName: name,
-              avatarUrl: picture,
-            });
+            // Seed vault and profile (non-fatal: never block a valid Google sign-in)
+            try {
+              globalUserStore.getVault(userId);
+              await profileAndAdvisorStore.updateProfile(userId, {
+                fullName: name,
+                avatarUrl: picture,
+              });
+            } catch (seedErr: any) {
+              console.warn("[Auth Callback] Profile seeding warning (non-fatal):", seedErr?.message);
+              telemetryLogger.record({
+                subsystem: "SECURITY_AUTH",
+                level: "WARN",
+                action: "OAUTH_PROFILE_SEED_FAILED",
+                durationMs: 0,
+                userId,
+                message: `Profile seeding failed for ${email}: ${seedErr?.message || "unknown"}`,
+                metadata: { email, host: requestHost },
+              });
+            }
 
             const userAgent = request.headers.get("user-agent") || "";
             const ipAddress =
