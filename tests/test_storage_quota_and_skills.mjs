@@ -129,11 +129,15 @@ const lockContent = fs.readFileSync(lockPath, "utf8");
 const lock = JSON.parse(lockContent);
 assert(lock.skills["prompt-enhancer"], "skills-lock.json must pin prompt-enhancer");
 assert(lock.skills["api-skills"], "skills-lock.json must pin api-skills");
+assert(lock.skills["logo-design"], "skills-lock.json must pin logo-design");
 const crypto = await import("crypto");
 const peHash = crypto.createHash("sha256").update(fs.readFileSync(promptEnhancerPath)).digest("hex");
 const apiHash = crypto.createHash("sha256").update(fs.readFileSync(apiSkillsPath)).digest("hex");
+const logoSkillPath = path.join(process.cwd(), ".agents", "skills", "logo-design", "SKILL.md");
+const logoHash = crypto.createHash("sha256").update(fs.readFileSync(logoSkillPath)).digest("hex");
 assert.strictEqual(lock.skills["prompt-enhancer"].computedHash, peHash, "prompt-enhancer lock hash must match installed file");
 assert.strictEqual(lock.skills["api-skills"].computedHash, apiHash, "api-skills lock hash must match installed file");
+assert.strictEqual(lock.skills["logo-design"].computedHash, logoHash, "logo-design lock hash must match installed file");
 console.log("  ✓ Third-party skills content-pinned in skills-lock.json (hashes verified against installed files).");
 
 console.log("\n=======================================================");

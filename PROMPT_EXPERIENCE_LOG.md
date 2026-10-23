@@ -2702,3 +2702,29 @@
   - `tests/test_full_suite.mjs`: All 8 suites passed (100%).
   - `npx tsc --noEmit`: 0 errors.
 - **Git Commit:** Committed and pushed to `main` and `master` without Copilot trailers.
+
+
+---
+
+## Entry #078 — Logo Design Skill Integration & Provenance Content-Pinning
+- **Date & Timestamp:** 2026-10-23 16:38:00 (Local)
+- **User Prompt:**
+  > "add this skills to this project "https://github.com/kaankiziltug/logo-design-skill""
+- **Actions Taken:**
+  1. **Cloned and Installed Skill Suite:**
+     - Cloned `https://github.com/kaankiziltug/logo-design-skill` and installed the complete skill suite into `.agents/skills/logo-design/`.
+     - Installed `SKILL.md` (frontmatter name: `logo-design`) defining professional identity design workflows: design brief generation, concept generation, mark types (wordmark, monogram, letterform, pictorial, abstract, emblem, mascot, combination), clean geometric SVG construction, optical refinement, color palette & typography selection, testing checklists (16px, 1-color, inverted, shelf test), presentation mockups, and brand guidelines export.
+  2. **Bundled Assets, References, Scripts & Templates:**
+     - `assets/library/`: Searchable dataset of 1,400+ real-world reference SVGs with `catalog.json`, `classifications.json`, `gallery.html`, and `stats.json`.
+     - `references/`: 14 deep-dive markdown guides covering principles, color, typography, SVG construction, mark types, visual techniques, critique rubrics, redesign strategies, discovery briefs, identity systems, testing checklists, presentation & delivery, library guide, and iterative process.
+     - `scripts/`: Dependency-free Python utilities (`concept_sheet.py`, `search_library.py`, `svg_audit.py`, `preview_sheet.py`, `presentation_board.py`, `render_png.py`, `export_variants.py`, `svglib.py`, `build_catalog.py`).
+     - `templates/`: Brand guidelines markdown template and presentation JSON schema.
+  3. **Cryptographic Provenance Pinning:**
+     - Calculated SHA-256 digest of `SKILL.md` (`e78ba6a5cf33757f2fdadd0426fa6c235c607b8c9dbbb9123fe5395651d97d4b`).
+     - Added `logo-design` entry to `skills-lock.json` with source `kaankiziltug/logo-design-skill`.
+     - Extended test suite in `tests/test_storage_quota_and_skills.mjs` (Test 8e) to continuously assert that the installed `logo-design/SKILL.md` strictly matches the pinned hash in `skills-lock.json`.
+- **Validation:**
+  - `node tests/test_storage_quota_and_skills.mjs`: 8/8 suites passed (100%).
+  - `node tests/test_unified_vault_and_ingestion.mjs`: 7/7 suites passed (100%).
+  - `npx tsc --noEmit`: 0 errors.
+- **Git Commit:** Committed and pushed to `main` and `master` without Copilot trailers.
