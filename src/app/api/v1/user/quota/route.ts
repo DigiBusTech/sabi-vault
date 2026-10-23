@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
       // Supabase unconfigured: in-memory quota state is authoritative (dev mode)
     }
 
-    const quota = globalUserStore.getUserQuota(auth.user.userId);
+    const quota = await globalUserStore.getUserQuotaAsync(auth.user.userId);
 
     return NextResponse.json({
       status: "SUCCESS",

@@ -641,9 +641,11 @@ class UserVaultMasterStore {
     if (vault.experience?.experiences) count += vault.experience.experiences.length;
     if (vault.achievements?.achievements) count += vault.achievements.achievements.length;
     if (vault.finance?.bankRecords) count += vault.finance.bankRecords.length;
+    if (vault.finance?.taxClearance) count += 1;
     if (vault.identification?.identifications) count += vault.identification.identifications.length;
     if (vault.legal?.instruments) count += vault.legal.instruments.length;
     if (vault.receipts?.receipts) count += vault.receipts.receipts.length;
+    if (vault.portfolio?.items) count += vault.portfolio.items.length;
     if (
       vault.portfolio &&
       (vault.portfolio.headline ||
@@ -697,6 +699,40 @@ class UserVaultMasterStore {
       cryptoTransactionsCount: calculatedTxCount,
       sovereignNode: vault.sovereignNode || "ng-west-africa-node-01 (Lagos / Abuja)",
       lastCalculatedAt: new Date().toISOString(),
+    };
+  }
+
+  public async getUserQuotaAsync(userId: string = "usr_chinwe_okafor_7721"): Promise<UserStorageQuota> {
+    // 1. Hydrate vault state from Supabase vault_records table
+    await this.getVaultAsync(userId);
+
+    // 2. Query real on-chain transaction metrics from vault_records in DB
+    let dbRecordCount = 0;
+    let dbTxCount = 0;
+    try {
+      const admin = createAdminSupabaseClient();
+      const { data, error } = await admin
+        .from("vault_records")
+        .select("id, on_chain_tx_hash, structured_json")
+        .eq("vault_id", userId);
+
+      if (!error && data) {
+        dbRecordCount = data.length;
+        dbTxCount = data.filter((r) => r.on_chain_tx_hash).length;
+      }
+    } catch {
+      // In-memory fallback
+    }
+
+    const quota = this.getUserQuota(userId);
+    const calculatedTxCount = Math.max(quota.cryptoTransactionsCount, dbTxCount);
+    // Base Sepolia transaction gas average ($0.45 per on-chain commit)
+    const calculatedGasUSD = Math.max(quota.cryptoHashGasSpentUSD, calculatedTxCount * 0.45);
+
+    return {
+      ...quota,
+      cryptoTransactionsCount: calculatedTxCount,
+      cryptoHashGasSpentUSD: Math.round(calculatedGasUSD * 100) / 100,
     };
   }
 

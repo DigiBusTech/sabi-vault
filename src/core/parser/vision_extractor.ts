@@ -191,7 +191,17 @@ export class VisionExtractor {
     base64Data: string
   ): Promise<{ parsed: any; durationMs: number }> {
     const startTime = Date.now();
-    const modelsToTry = [this.geminiModel, "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-flash-8b"];
+    const candidateModels = [
+      this.geminiModel,
+      "gemini-3.5-flash",
+      "gemini-3.8-flash",
+      "gemini-flash-latest",
+      "gemini-2.5-flash",
+      "gemini-2.0-flash",
+    ];
+    const modelsToTry = candidateModels.filter(
+      (m) => m && typeof m === "string" && !m.startsWith("AQ.") && !m.startsWith("AIza") && m.length < 40
+    );
     const uniqueModels = Array.from(new Set(modelsToTry));
 
     let lastError: Error | null = null;
@@ -299,7 +309,14 @@ export class VisionExtractor {
     }
 
     // For image captures (JPEG, PNG, camera viewfinder photos):
-    const modelsToTry = ["qwen/qwen3.8-27b", "meta-models/muse-spark-open", "llama-3.2-11b-vision-preview", "llama-3.2-90b-vision-preview"];
+    const modelsToTry = [
+      "qwen/qwen3.8-27b",
+      "openai/gpt-oss-120b",
+      "openai/gpt-oss-20b",
+      "meta-models/muse-spark-open",
+      "llama-3.2-11b-vision-preview",
+      "llama-3.2-90b-vision-preview",
+    ];
     const imageUrl = `data:${effectiveMime};base64,${base64Data}`;
 
     let lastError: Error | null = null;
@@ -345,32 +362,34 @@ export class VisionExtractor {
       }
     }
 
-    // Secondary fallback within Groq: text reasoning via llama-3.3-70b-versatile
-    try {
-      const fallbackPrompt = `Analyze this uploaded credential document metadata (${effectiveMime}). Return a valid JSON matching: {"extractedFields": {}, "inferredCategory": "portfolio", "confidence": 0.9, "rawTextSnippet": "Extracted document"}`;
-      const textRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${this.groqApiKey}`,
-        },
-        body: JSON.stringify({
-          model: "llama-3.3-70b-versatile",
-          messages: [{ role: "user", content: fallbackPrompt }],
-          temperature: 0.1,
-          response_format: { type: "json_object" },
-        }),
-      });
-      if (textRes.ok) {
-        const textJson = await textRes.json();
-        const textContent = textJson.choices?.[0]?.message?.content;
-        if (textContent) {
-          const parsed = parseJsonSafely(textContent);
-          return { parsed, durationMs: Date.now() - startTime };
+    // Secondary fallback within Groq: text reasoning across active models
+    for (const textModel of ["llama-3.3-70b-versatile", "qwen/qwen3.8-27b", "openai/gpt-oss-120b"]) {
+      try {
+        const fallbackPrompt = `Analyze this uploaded credential document metadata (${effectiveMime}). Return a valid JSON matching: {"extractedFields": {}, "inferredCategory": "portfolio", "confidence": 0.9, "rawTextSnippet": "Extracted document"}`;
+        const textRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${this.groqApiKey}`,
+          },
+          body: JSON.stringify({
+            model: textModel,
+            messages: [{ role: "user", content: fallbackPrompt }],
+            temperature: 0.1,
+            response_format: { type: "json_object" },
+          }),
+        });
+        if (textRes.ok) {
+          const textJson = await textRes.json();
+          const textContent = textJson.choices?.[0]?.message?.content;
+          if (textContent) {
+            const parsed = parseJsonSafely(textContent);
+            return { parsed, durationMs: Date.now() - startTime };
+          }
         }
+      } catch {
+        // Continue to next text model
       }
-    } catch {
-      // Non-fatal, throw lastError below
     }
 
     throw lastError || new Error("All Groq vision models failed.");

@@ -55,6 +55,8 @@ interface SyncResult {
     webViewLink?: string;
     uploadedAt?: string;
   };
+  cloudUploadStatus?: "UPLOADED" | "NOT_CONNECTED" | "API_DISABLED" | "ERROR";
+  cloudUploadNotice?: string;
 }
 
 interface DocumentIntakeProps {
@@ -236,6 +238,8 @@ export function DocumentIntake({ onSynced }: DocumentIntakeProps) {
         verificationTier: data.verificationTier,
         onChainCommit: data.onChainCommit,
         cloudFileRef: data.cloudFileRef,
+        cloudUploadStatus: data.cloudUploadStatus,
+        cloudUploadNotice: data.cloudUploadNotice,
       });
       onSynced(data.category);
     } catch (err: any) {
@@ -528,7 +532,7 @@ export function DocumentIntake({ onSynced }: DocumentIntakeProps) {
                         </span>
                       </div>
                     )}
-                    {result.cloudFileRef?.webViewLink && (
+                    {result.cloudFileRef?.webViewLink ? (
                       <a
                         href={result.cloudFileRef.webViewLink}
                         target="_blank"
@@ -536,12 +540,50 @@ export function DocumentIntake({ onSynced }: DocumentIntakeProps) {
                         className="flex items-center justify-between rounded-lg bg-emerald-50 px-2.5 py-2 ring-1 ring-emerald-200 text-[11px] font-semibold text-emerald-700 hover:bg-emerald-100 transition-colors"
                       >
                         <span className="flex items-center gap-1.5">
-                          <UploadCloud className="h-3.5 w-3.5" />
+                          <UploadCloud className="h-3.5 w-3.5 text-emerald-600" />
                           Saved in Private {result.cloudFileRef.provider === "google_drive" ? "Google Drive" : "Dropbox"}
                         </span>
                         <ExternalLink className="h-3.5 w-3.5" />
                       </a>
-                    )}
+                    ) : result.cloudUploadStatus === "API_DISABLED" ? (
+                      <div className="rounded-lg bg-amber-50 p-2.5 ring-1 ring-amber-200 text-[11px] text-amber-800 space-y-1.5">
+                        <p className="font-semibold flex items-center gap-1.5 text-amber-900">
+                          <AlertTriangle className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+                          Google Drive API is disabled in Google Cloud
+                        </p>
+                        <p className="text-[10px] text-amber-700 leading-tight">
+                          To auto-save files to your Google Drive, enable the Drive API in your Google Cloud Console.
+                        </p>
+                        <a
+                          href="https://console.developers.google.com/apis/api/drive.googleapis.com/overview?project=476723811572"
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-900 underline hover:text-amber-700"
+                        >
+                          Enable Google Drive API for Project 476723811572
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
+                      </div>
+                    ) : result.cloudUploadStatus === "NOT_CONNECTED" ? (
+                      <div className="flex items-center justify-between rounded-lg bg-slate-50 px-2.5 py-2 ring-1 ring-slate-200 text-[11px] text-slate-600">
+                        <span className="flex items-center gap-1.5 text-[10px]">
+                          <UploadCloud className="h-3.5 w-3.5 text-slate-400" />
+                          Drive not linked (Physical PDF not saved)
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setCloudModal("google_drive")}
+                          className="text-[10px] font-bold text-emerald-700 hover:text-emerald-800 underline"
+                        >
+                          Connect Drive
+                        </button>
+                      </div>
+                    ) : result.cloudUploadNotice ? (
+                      <div className="rounded-lg bg-slate-50 px-2.5 py-2 ring-1 ring-slate-200 text-[10px] text-slate-600 flex items-center gap-1.5">
+                        <AlertTriangle className="h-3 w-3 text-amber-500 shrink-0" />
+                        <span className="truncate">{result.cloudUploadNotice}</span>
+                      </div>
+                    ) : null}
                   </div>
                 </div>
               )}

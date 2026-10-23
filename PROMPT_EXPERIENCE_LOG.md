@@ -2728,3 +2728,49 @@
   - `node tests/test_unified_vault_and_ingestion.mjs`: 7/7 suites passed (100%).
   - `npx tsc --noEmit`: 0 errors.
 - **Git Commit:** Committed and pushed to `main` and `master` without Copilot trailers.
+
+---
+
+## Entry #079 — Vision AI Ingestion Hardening, Google Drive Refresh & Accurate Database Stats
+- **Date & Timestamp:** 2026-10-23 18:55:00 (Local)
+- **User Prompt:**
+  > "1. The scanned document was ID passport, but it saved in in portfolio category.
+  > 2. dashboard overview do not capture real stats and storage.
+  > 3. NO document saved on drive.
+  > 4. Super admin stats are not correct too,"
+- **Root Cause Analysis & Discoveries:**
+  1. **Issue 1 (ID Saved in Portfolio):** `/api/v1/vault/sync/route.ts` previously only invoked `EphemeralDocumentParser.processDocumentStream()`, which parsed the binary image as UTF-8, encountered null bytes, and fell back to simple substring checks on the filename. Because WhatsApp image filenames contain no category keywords, it defaulted to `"portfolio"`. It never called `VisionExtractor`. Furthermore, `ai.gemini_model` in the database had been inadvertently set to the API key string, while Google Gemini now defaults to `gemini-3.5-flash` / `gemini-3.8-flash`.
+  2. **Issue 2 (Dashboard Overview Stats at 0 MB / 0 Docs):** `GET /api/v1/user/quota` invoked `globalUserStore.getUserQuota()` synchronously against an in-memory map that is empty on fresh serverless invocations. Furthermore, `countTotalDocuments()` did not count `vault.portfolio.items?.length`.
+  3. **Issue 3 (No Document Saved on Google Drive):** Twofold root cause:
+     - Google OAuth access tokens expire after 1 hour (3600s). The user's token had expired and `cloud_integrations.ts` lacked an automatic refresh token handler, throwing 401 Unauthorized.
+     - In Google Cloud Console for project `476723811572`, the "Google Drive API" was disabled/not enabled in the project library, returning HTTP 403 `PERMISSION_DENIED`. The error was previously caught and swallowed without actionable user alerts.
+  4. **Issue 4 (Super Admin Stats at 0 MB / 0 Docs across all users):** `GET /api/v1/admin/users` queried the in-memory store for quota and metrics, which reported 0 MB, 0 docs, and $0.00 across all registered users.
+- **Actions Taken:**
+  1. **Vision Multimodal Extraction in Sync Route (`src/app/api/v1/vault/sync/route.ts`):**
+     - Wired `VisionExtractor` into `/api/v1/vault/sync` for all images, scans, and PDFs (and whenever category is `auto_detect` or undefined).
+     - Multimodal AI inspects document layout, photos, and MRZ stamps to factually classify international passports and national IDs into the `identification` category with strict schema fields.
+  2. **Active Multimodal Models & Model Sanitization (`src/core/parser/vision_extractor.ts`):**
+     - Updated Gemini models to `["gemini-3.5-flash", "gemini-3.8-flash", "gemini-flash-latest"]`.
+     - Filtered out invalid model names or accidentally pasted API keys.
+     - Updated Groq vision and text fallbacks to active models (`qwen/qwen3.8-27b`, `openai/gpt-oss-120b`, `openai/gpt-oss-20b`).
+     - Corrected `ai.gemini_model` in Supabase `platform_config` to `gemini-3.5-flash`.
+  3. **Google OAuth Token Refresh & Resilient Database Upsert (`src/core/storage/cloud_integrations.ts`):**
+     - Implemented `refreshGoogleDriveAccessToken()` using `refresh_token` whenever access tokens expire.
+     - Added defensive select-then-update/insert in `saveUserCloudIntegration` to eliminate PostgREST constraint mismatch issues.
+     - Added clear cloud upload status flags (`UPLOADED`, `NOT_CONNECTED`, `API_DISABLED`, `ERROR`) and descriptive notices in the sync response.
+  4. **Dynamic Database Quota & Super Admin Statistics (`src/core/vault/user_store.ts` & Admin Route):**
+     - Implemented `getUserQuotaAsync()` in `user_store.ts` to hydrate vaults directly from `vault_records`.
+     - Updated `countTotalDocuments()` to inspect `portfolio.items` and all 9 standardized categories.
+     - Wired `/api/v1/user/quota` to use `getUserQuotaAsync()`.
+     - Updated `/api/v1/admin/users` to aggregate real document counts, bytes used, and blockchain transactions from Supabase `vault_records` per user.
+  5. **Actionable UI Status in Document Intake (`src/components/dashboard/DocumentIntake.tsx`):**
+     - Added real-time cloud dispatch status rendering: shows direct "Saved in Private Google Drive" link on success, direct "Connect Drive" button when unlinked, and direct Google Cloud Console activation link if the Drive API is disabled on project 476723811572.
+- **Validation:**
+  - `npx tsc --noEmit`: 0 errors.
+  - `node tests/test_unified_vault_and_ingestion.mjs`: 7/7 suites passed (100%).
+  - `node tests/test_storage_quota_and_skills.mjs`: 8/8 suites passed (100%).
+  - `node tests/test_google_auth_and_skills.mjs`: 8/8 suites passed (100%).
+  - `node tests/test_security_hardening.mjs`: 7/7 suites passed (100%).
+  - `node tests/test_document_scan_and_cloud.mjs`: 26/26 suites passed (100%).
+  - `node tests/test_full_suite.mjs`: 8/8 suites passed (100%).
+- **Git Commit:** Committed and pushed to `main` and `master` without Copilot trailers.

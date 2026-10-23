@@ -30,6 +30,36 @@ export async function GET(req: NextRequest) {
 
     const profileByUserId = new Map((profiles || []).map((p: any) => [p.auth_user_id, p]));
 
+    const { data: allRecords } = await admin
+      .from("vault_records")
+      .select("vault_id, category, structured_json, on_chain_tx_hash");
+
+    const statsByVaultId = new Map<string, { totalDocs: number; usedBytes: number; txCount: number }>();
+    if (allRecords) {
+      for (const rec of allRecords) {
+        const existing = statsByVaultId.get(rec.vault_id) || { totalDocs: 0, usedBytes: 0, txCount: 0 };
+        const sJson = rec.structured_json || {};
+        let docCountInCat = 0;
+        if (Array.isArray(sJson.items)) docCountInCat += sJson.items.length;
+        if (Array.isArray(sJson.identifications)) docCountInCat += sJson.identifications.length;
+        if (Array.isArray(sJson.instruments)) docCountInCat += sJson.instruments.length;
+        if (Array.isArray(sJson.receipts)) docCountInCat += sJson.receipts.length;
+        if (Array.isArray(sJson.bankRecords)) docCountInCat += sJson.bankRecords.length;
+        if (Array.isArray(sJson.degrees)) docCountInCat += sJson.degrees.length;
+        if (Array.isArray(sJson.certifications)) docCountInCat += sJson.certifications.length;
+        if (Array.isArray(sJson.experiences)) docCountInCat += sJson.experiences.length;
+        if (Array.isArray(sJson.achievements)) docCountInCat += sJson.achievements.length;
+        if (sJson.taxClearance) docCountInCat += 1;
+        if (docCountInCat === 0) docCountInCat = 1;
+
+        const recordBytes = Buffer.byteLength(JSON.stringify(sJson), "utf8");
+        existing.totalDocs += docCountInCat;
+        existing.usedBytes += recordBytes;
+        if (rec.on_chain_tx_hash) existing.txCount += 1;
+        statsByVaultId.set(rec.vault_id, existing);
+      }
+    }
+
     const users = data.users.map((u) => {
       const profile = profileByUserId.get(u.id) as any;
       const storeRecord = globalAdminStore.getUser(u.id);
@@ -37,6 +67,16 @@ export async function GET(req: NextRequest) {
       // quota state survives restarts and is consistent across instances.
       globalUserStore.hydrateQuotaFromMetadata(u.id, u.app_metadata);
       const quota = globalUserStore.getUserQuota(u.id);
+
+      const dbStats = statsByVaultId.get(u.id);
+      const totalDocs = Math.max(quota.totalDocumentsCount, dbStats?.totalDocs || 0);
+      const usedBytes = Math.max(quota.usedBytes, dbStats?.usedBytes || 0);
+      const usedMB = Math.round((usedBytes / (1024 * 1024)) * 100) / 100;
+      const allocatedBytes = quota.allocatedMB * 1024 * 1024;
+      const percentageUsed = Math.min(100, Math.round((usedBytes / allocatedBytes) * 1000) / 10);
+      const txCount = Math.max(quota.cryptoTransactionsCount, dbStats?.txCount || 0);
+      const gasSpent = Math.max(quota.cryptoHashGasSpentUSD, Math.round(txCount * 0.45 * 100) / 100);
+
       return {
         id: u.id,
         email: u.email || "",
@@ -51,12 +91,12 @@ export async function GET(req: NextRequest) {
         lastSignInAt: u.last_sign_in_at,
         storageTier: quota.tier,
         allocatedMB: quota.allocatedMB,
-        usedMB: quota.usedMB,
-        usedBytes: quota.usedBytes,
-        percentageUsed: quota.percentageUsed,
-        totalDocuments: quota.totalDocumentsCount,
-        cryptoHashGasSpentUSD: quota.cryptoHashGasSpentUSD,
-        cryptoTransactionsCount: quota.cryptoTransactionsCount,
+        usedMB,
+        usedBytes,
+        percentageUsed,
+        totalDocuments: totalDocs,
+        cryptoHashGasSpentUSD: gasSpent,
+        cryptoTransactionsCount: txCount,
       };
     });
 

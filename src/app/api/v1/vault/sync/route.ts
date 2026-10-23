@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { EphemeralDocumentParser } from "@/core/parser/ephemeral_parser";
+import { VisionExtractor } from "@/core/parser/vision_extractor";
+import { computeSha256 } from "@/core/crypto/hasher";
 import { MultiLLMGateway } from "@/agents/gateway/llm_gateway";
 import { BlockchainLedgerClient } from "@/core/blockchain/ledger_client";
 import { VaultCategory, VaultCategoryEnum, CloudFileRef } from "@/types/vault";
@@ -104,14 +106,58 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 2. Process via Ephemeral Parser (memory zeroed in finally block)
-    const gateway = new MultiLLMGateway();
-    const parser = new EphemeralDocumentParser(gateway);
-    const parsedResult = await parser.processDocumentStream(
-      fileBuffer,
-      fileName,
-      category as VaultCategory | undefined
-    );
+    // 2. Intelligent Document Extraction (Vision AI Multimodal Primary for Images/Scans/Auto-Detect)
+    let parsedResult: any = null;
+    const isImageOrPdf =
+      fileName.endsWith(".pdf") ||
+      fileName.endsWith(".png") ||
+      fileName.endsWith(".webp") ||
+      fileName.endsWith(".jpg") ||
+      fileName.endsWith(".jpeg") ||
+      contentType.includes("image/");
+
+    if (isImageOrPdf || !category) {
+      try {
+        const extractor = new VisionExtractor();
+        const base64Data = fileBuffer.toString("base64");
+        const effectiveMime = fileName.endsWith(".pdf")
+          ? "application/pdf"
+          : fileName.endsWith(".png")
+          ? "image/png"
+          : fileName.endsWith(".webp")
+          ? "image/webp"
+          : "image/jpeg";
+
+        const visionResult = await extractor.extractDocumentFields(
+          base64Data,
+          effectiveMime,
+          category as VaultCategory | undefined,
+          fileName
+        );
+
+        parsedResult = {
+          documentName: fileName,
+          category: visionResult.inferredCategory,
+          tier: visionResult.tier,
+          sha256Hash: computeSha256(fileBuffer),
+          structuredData: visionResult.extractedFields,
+          extractedTextSnippet: visionResult.rawTextSnippet,
+          processedAt: visionResult.extractedAt,
+        };
+      } catch (visionErr: any) {
+        console.warn(`[VaultSync] Vision extraction notice (${visionErr.message}), falling back to text heuristics.`);
+      }
+    }
+
+    if (!parsedResult) {
+      const gateway = new MultiLLMGateway();
+      const parser = new EphemeralDocumentParser(gateway);
+      parsedResult = await parser.processDocumentStream(
+        fileBuffer,
+        fileName,
+        category as VaultCategory | undefined
+      );
+    }
 
     // 3. Commit Hash to Blockchain Ledger
     const ledgerClient = new BlockchainLedgerClient();
@@ -131,6 +177,9 @@ export async function POST(req: NextRequest) {
           uploadedAt: new Date().toISOString(),
         }
       : undefined;
+
+    let cloudUploadStatus: "UPLOADED" | "NOT_CONNECTED" | "API_DISABLED" | "ERROR" = "NOT_CONNECTED";
+    let cloudUploadNotice: string | undefined = undefined;
 
     // If cloudFileRef not pre-provided by client, check if citizen has a connected cloud integration
     if (!cloudFileRef && fileBuffer && fileBuffer.length > 0) {
@@ -169,6 +218,8 @@ export async function POST(req: NextRequest) {
               webViewLink: uploadResult.webViewLink,
               uploadedAt: new Date().toISOString(),
             };
+            cloudUploadStatus = "UPLOADED";
+            cloudUploadNotice = "Document backed up in your private Google Drive (SabiProfile Vault).";
           } else if (activeProvider === "dropbox") {
             const dropboxConnector = new DropboxConnector(integration.accessToken);
             const uploadResult = await dropboxConnector.uploadFile(
@@ -181,10 +232,26 @@ export async function POST(req: NextRequest) {
               webViewLink: uploadResult.path,
               uploadedAt: new Date().toISOString(),
             };
+            cloudUploadStatus = "UPLOADED";
+            cloudUploadNotice = "Document backed up in your private Dropbox (SabiProfile Vault).";
           }
+        } else {
+          cloudUploadStatus = "NOT_CONNECTED";
+          cloudUploadNotice = "Cloud storage not linked. Connect your Google Drive in the side panel to auto-backup original documents.";
         }
       } catch (cloudErr: any) {
         console.warn(`[VaultSync] Cloud upload notice for ${targetVaultId}:`, cloudErr.message);
+        if (
+          cloudErr.message?.includes("Google Drive API has not been used") ||
+          cloudErr.message?.includes("PERMISSION_DENIED") ||
+          cloudErr.message?.includes("disabled")
+        ) {
+          cloudUploadStatus = "API_DISABLED";
+          cloudUploadNotice = "Google Drive API is disabled in your Google Cloud Project. Please enable it in Google Cloud Console: https://console.developers.google.com/apis/api/drive.googleapis.com/overview?project=476723811572";
+        } else {
+          cloudUploadStatus = "ERROR";
+          cloudUploadNotice = `Cloud upload error: ${cloudErr.message}`;
+        }
         liveTelemetry.record({
           subsystem: "CLOUD_STORAGE",
           level: "WARN",
@@ -278,6 +345,8 @@ export async function POST(req: NextRequest) {
       },
       structuredData: parsedResult.structuredData,
       cloudFileRef,
+      cloudUploadStatus,
+      cloudUploadNotice,
       zeroRawFileGuarantee: {
         bufferOverwrittenInMemory: true,
         savedToDisk: false,

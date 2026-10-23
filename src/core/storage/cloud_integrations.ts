@@ -1,6 +1,7 @@
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from "crypto";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { toValidUuid } from "@/lib/security/session";
+import { getConfigValue } from "@/core/config/platform_config";
 
 export type CloudProvider = "google_drive" | "dropbox";
 
@@ -59,6 +60,50 @@ export function decryptCloudToken(ciphertext: string): string {
 }
 
 /**
+ * Refreshes an expired Google Drive OAuth access token using its refresh token.
+ */
+export async function refreshGoogleDriveAccessToken(
+  refreshToken: string
+): Promise<{ accessToken: string; expiresIn: number } | null> {
+  const clientId =
+    (await getConfigValue("integrations.google_drive_client_id")) ||
+    process.env.GOOGLE_DRIVE_CLIENT_ID;
+  const clientSecret =
+    (await getConfigValue("integrations.google_drive_client_secret")) ||
+    process.env.GOOGLE_DRIVE_CLIENT_SECRET;
+
+  if (!clientId || !clientSecret || !refreshToken) return null;
+
+  try {
+    const res = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        client_id: clientId,
+        client_secret: clientSecret,
+        refresh_token: refreshToken,
+        grant_type: "refresh_token",
+      }),
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      console.warn("[CloudIntegrations] Google Drive token refresh failed:", res.status, errText);
+      return null;
+    }
+
+    const json = await res.json();
+    return {
+      accessToken: json.access_token,
+      expiresIn: json.expires_in || 3600,
+    };
+  } catch (err: any) {
+    console.warn("[CloudIntegrations] Error refreshing Google token:", err.message);
+    return null;
+  }
+}
+
+/**
  * Saves or updates a user's cloud integration tokens securely.
  */
 export async function saveUserCloudIntegration(
@@ -89,8 +134,28 @@ export async function saveUserCloudIntegration(
 
   try {
     const supabase = createAdminSupabaseClient();
-    const { error } = await supabase.from("user_cloud_integrations").upsert(
-      {
+    // Check if row already exists for (user_uuid, provider)
+    const { data: existing } = await supabase
+      .from("user_cloud_integrations")
+      .select("id")
+      .eq("user_uuid", userUuid)
+      .eq("provider", provider)
+      .maybeSingle();
+
+    if (existing?.id) {
+      await supabase
+        .from("user_cloud_integrations")
+        .update({
+          encrypted_access_token: encryptedAccess,
+          encrypted_refresh_token: encryptedRefresh || undefined,
+          token_expires_at: tokenExpiresAt?.toISOString(),
+          drive_folder_id: tokens.folderId || undefined,
+          is_active: true,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", existing.id);
+    } else {
+      await supabase.from("user_cloud_integrations").insert({
         user_uuid: userUuid,
         provider,
         encrypted_access_token: encryptedAccess,
@@ -98,21 +163,18 @@ export async function saveUserCloudIntegration(
         token_expires_at: tokenExpiresAt?.toISOString(),
         drive_folder_id: tokens.folderId || null,
         is_active: true,
+        connected_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-      },
-      { onConflict: "user_uuid,provider" }
-    );
-
-    if (error) {
-      console.warn("[CloudIntegrations] Supabase upsert error (using in-memory fallback):", error.message);
+      });
     }
   } catch (err: any) {
-    // Non-fatal: in-memory state remains intact
+    console.warn("[CloudIntegrations] Supabase write notice (in-memory preserved):", err.message);
   }
 }
 
 /**
  * Retrieves and decrypts the active cloud integration for a user.
+ * Automatically refreshes expired OAuth access tokens when a refresh token exists.
  */
 export async function getUserCloudIntegration(
   userId: string,
@@ -156,10 +218,30 @@ export async function getUserCloudIntegration(
     return null;
   }
 
-  const accessToken = decryptCloudToken(record.encryptedAccessToken);
+  let accessToken = decryptCloudToken(record.encryptedAccessToken);
   const refreshToken = record.encryptedRefreshToken
     ? decryptCloudToken(record.encryptedRefreshToken)
     : undefined;
+
+  // Auto-refresh token if expired (or within 2 minutes of expiry)
+  const isExpired =
+    record.tokenExpiresAt &&
+    record.tokenExpiresAt.getTime() <= Date.now() + 2 * 60 * 1000;
+
+  if (isExpired && refreshToken) {
+    if (provider === "google_drive") {
+      const refreshed = await refreshGoogleDriveAccessToken(refreshToken);
+      if (refreshed?.accessToken) {
+        accessToken = refreshed.accessToken;
+        await saveUserCloudIntegration(userId, provider, {
+          accessToken,
+          refreshToken,
+          expiresIn: refreshed.expiresIn,
+          folderId: record.driveFolderId || undefined,
+        });
+      }
+    }
+  }
 
   return {
     accessToken,
