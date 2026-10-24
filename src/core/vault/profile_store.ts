@@ -599,8 +599,8 @@ class ProfileAndAdvisorStore {
 
         // Country-specific language & immigration rules
         if (countryLower.includes("albania")) {
-          const hasAccommodationProof = userVaultRecords.some(
-            (r) => r.category === "legal" && (r.title.toLowerCase().includes("lease") || r.title.toLowerCase().includes("rent") || r.title.toLowerCase().includes("accommodation"))
+          const hasAccommodationProof = userVault.legal?.instruments?.some(
+            (r: any) => r.title.toLowerCase().includes("lease") || r.title.toLowerCase().includes("rent") || r.title.toLowerCase().includes("accommodation")
           );
           if (!hasAccommodationProof) {
             gapAlerts.push({

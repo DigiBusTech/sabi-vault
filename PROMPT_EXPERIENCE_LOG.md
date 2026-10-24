@@ -2830,3 +2830,23 @@
   - `node tests/test_profile_and_ai_advisor.mjs`: 5/5 suites passed (100%).
 - **Git Commit:** Committed and pushed to `main` and `master` without Copilot trailers.
 
+---
+
+### Entry #081: Production Build Deployment Fix (Resolved userVault.legal?.instruments Reference)
+- **Date & Timestamp:** 2026-10-24 05:42:00 (Local)
+- **User Prompt:**
+  > "last push failed deployment"
+- **Root Cause Analysis:**
+  - Vercel production build ran `next build` and failed with TypeScript error:
+    `./src/core/vault/profile_store.ts:602:41 - Type error: Cannot find name 'userVaultRecords'`.
+  - In `runAdvisorAudit`, the newly added Albania lease verification logic erroneously referenced `userVaultRecords` instead of accessing the hydrated `userVault.legal?.instruments`.
+- **Actions Taken:**
+  1. Updated [`src/core/vault/profile_store.ts`](file:///c:/Users/ekpou/Desktop/sabiprofile/src/core/vault/profile_store.ts) to correctly inspect `userVault.legal?.instruments?.some(...)`.
+  2. Executed full local Next.js production build (`npm run build`). Confirmed all 74 static and dynamic routes compiled, type-checked, and optimized cleanly with exit code 0.
+  3. Ran complete suite of regression tests (`test_profile_experience_and_cv_extraction.mjs`, `test_profile_and_ai_advisor.mjs`, `test_unified_vault_and_ingestion.mjs`, `test_storage_quota_and_skills.mjs`). All suites passed 100%.
+- **Validation:**
+  - `npm run build`: 74/74 pages generated with 0 errors.
+  - All test suites: 100% passed.
+- **Git Commit:** Committed and pushed to `main` and `master` without Copilot trailers.
+
+
