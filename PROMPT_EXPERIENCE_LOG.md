@@ -2850,3 +2850,50 @@
 - **Git Commit:** Committed and pushed to `main` and `master` without Copilot trailers.
 
 
+
+
+---
+
+### Entry #082: Autonomous Consular Immigration Officer, Financial Forensics & Admissibility Checklist Engine
+- **Date & Timestamp:** 2026-10-24 19:15:00 (Local)
+- **User Prompts:**
+  > "lets work on the target advisor, the gaps should be consistent, when it is queried analysis ran, the system should search the user target country and role/route, then get immigration info from thier portal based on users country requirements for visa, etc. like Nigerian choosing target to relocate to UK, the agent should be able to check bank balance needed, consistency of transactions etc, flag inconsistent bank records, tell user if the financials or other categories are enough and tick them, the agent should be able act as immigration officer for each countries of the world and monintor for requirements and checklist by the target country and flag whats to be flaged and human to upload better documents to fix or correct that. etc. i need a rubust solution that will attract users to the platform asides smart cv etc. this solution should replace immigration agencies that help people in filling etc or create room for immigration agengies to use the system create account unbehalf of users and upload the applicants documents to screen for flags etc, the agent must be very strict with scrutiny of documents etc."
+  > "HOPE YOU UNDERSTAND THIS IS NOT DIFFERENT FROM THE AI TARGET ADVISOR AND ALSO IT USES THE USER VAULT AND PROFILE ETC TO MATCH REQUIREMENTS, AND I DO NOT UNDERSTAND IF THE AGENCIES WILL HAVE A DIFFERENT DASHBOARD OR CAN CREATE A USER ACCOUNT UNBEHALF OF USER WHAT IS THE BEST PRACTICE, BECAUSE ACCORDING TO THIS PROJECT WE HAVE MULTI DASHBOARD ALREADY AND MULTI AGENT ETC. AUDIT THE WHOLE PROJECT AND CHECK HOW BEST THIS WILL BE IMPLEMENTED AND UPDATED THE IMPLEMENETATION PLAN."
+- **Architectural Analysis & Decisions:**
+  1. **Zero-Fragmentation Core Invariant:**
+     - The Consular Immigration Officer is directly built into `/dashboard/advisor` and operates natively across the user's sovereign Citizen Vault (`finance`, `identification`, `legal`, `academics`, `experience`).
+  2. **Agency / Immigration Firm Architecture:**
+     - Audited multi-dashboard architecture. Confirmed agencies do NOT require a 5th dashboard.
+     - Immigration agencies and visa consultancies operate via the existing **Organization Workspace (`/dashboard/enterprise`)** as `enterprise_admin`, creating applicant dossiers or screening clients using the exact same shared Consular Target Advisor engine.
+  3. **Statutory Consular Catalog (`src/core/advisor/consular_routes_catalog.ts`):**
+     - Codified official requirements for UKVI (Skilled Worker £1,270 for 28 consecutive days, Student Visa £9,207-£12,006, CAS, Appendix Finance), Germany BAMF/AufenthG (Chancenkarte €12,324 blocked account/€1,027/mo, EU Blue Card €45,300 salary, Anabin H+), Albania Law No. 79/2021 (Unique Residence Permit €3,000+ liquid proof, apostilled police certificate, residential lease/accommodation), Canada IRCC Express Entry (C$14,690 unencumbered settlement funds), US USCIS H-1B/O-1, and Global relocation fallback.
+  4. **Deep Financial Forensics Engine (`src/core/advisor/financial_forensics.ts`):**
+     - Statutory forex conversion from source currency (NGN, GHS, KES, INR, ZAR, ALL) to destination currency (GBP, EUR, CAD, USD).
+     - **Strict Consecutive Holding Verification:** Enforces 28-day (UKVI) or 90-day (Germany) continuous balance maintenance with shortfall computation.
+     - **Sudden Deposit / Funds Dumping Radar:** Detects single deposits exceeding 25% of total balance or balance surges >250% above the 3-month average within 30 days of filing, flagging borrowed/parked funds.
+     - **Legal Name Reconciliation:** Cross-references bank account holder names against verified biometric passport MRZ names to detect spelling variances or third-party funds.
+     - **Financial Health Grade:** Computes objective letter grades (A, B, C, F) with precise shortfall figures.
+  5. **Profile Store Integration (`src/core/vault/profile_store.ts`):**
+     - Pairs nationality and target country/route to execute `findConsularRoute` and `auditFinancialForensics`.
+     - Generates line-by-line `ConsularChecklistItem[]` (passport MRZ, maintenance funds, 28-day rule, funds dumping, name reconciliation, police clearance, Albania lease, degree equivalency, work contracts) with statutory citations and direct rectification links.
+     - Synchronizes checklist failures directly into `gapAlerts`.
+     - Computes `decisionVerdict` ("READY_TO_APPLY", "BORDERLINE_RISK", "HIGH_REFUSAL_PROBABILITY").
+  6. **Interactive Consular Cockpit UI (`src/components/advisor/SovereignAdvisorView.tsx`):**
+     - Added Consular Decision Verdict banner (🟢 High Issuance Probability, 🟡 Borderline Action Needed, 🔴 High Refusal Risk).
+     - Added Deep Financial Forensics Card with currency conversion, required vs detected balance, consecutive holding days status, funds dumping radar, and account name reconciliation.
+     - Added Line-by-Line Consular Requirements & Verification Checklist with green checkmarks, warning badges, statutory citations, and 1-click "Upload & Rectify" action buttons.
+     - Added popular destination quick-select preset chips (UK, Germany, Albania, Canada, US) in the Goal modal.
+  7. **Build Hardening & Typing Fix:**
+     - Extended `FinanceSchema.bankRecords` in `src/types/vault.ts` with optional `accountHolderName`, `accountNumber`, and `items`.
+     - Configured `experimental: { cpus: 1, workerThreads: false }` in `next.config.mjs` to eliminate Windows V8 Zone memory exhaustion during static generation.
+- **Validation:**
+  - `node tests/test_consular_advisor_forensics.mjs`: 6/6 test suites passed (100%).
+  - `node tests/test_profile_experience_and_cv_extraction.mjs`: 5/5 test suites passed (100%).
+  - `node tests/test_profile_and_ai_advisor.mjs`: 5/5 test suites passed (100%).
+  - `node tests/test_unified_vault_and_ingestion.mjs`: 7/7 test suites passed (100%).
+  - `node tests/test_storage_quota_and_skills.mjs`: 8/8 test suites passed (100%).
+  - `node tests/test_google_auth_and_skills.mjs`: 8/8 test suites passed (100%).
+  - `node tests/test_broadcast_notifications.mjs`: 6/6 test suites passed (100%).
+  - `npx tsc --noEmit`: 0 errors.
+  - `npm run build`: 74/74 routes statically and dynamically generated with exit code 0.
+- **Git Commit:** Committed and pushed to `main` and `master` with zero Copilot trailers.

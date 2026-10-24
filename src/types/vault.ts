@@ -64,6 +64,8 @@ export const FinanceSchema = z.object({
   bankRecords: z.array(
     z.object({
       institutionName: z.string(),
+      accountHolderName: z.string().optional(),
+      accountNumber: z.string().optional(),
       currency: z.string().length(3),
       currentLiquidBalance: z.number(),
       averageThreeMonthBalance: z.number(),

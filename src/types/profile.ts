@@ -147,8 +147,13 @@ export const SovereignAdvisorAuditSchema = z.object({
   strengths: z.array(z.string()),
   nextMilestones: z.array(z.string()),
   lastAuditedAt: z.string(),
+  consularRoute: z.any().optional(),
+  financialForensics: z.any().optional(),
+  checklist: z.array(z.any()).optional(),
+  decisionVerdict: z.enum(["READY_TO_APPLY", "BORDERLINE_RISK", "HIGH_REFUSAL_PROBABILITY"]).optional(),
 });
 export type SovereignAdvisorAudit = z.infer<typeof SovereignAdvisorAuditSchema>;
+export type { ConsularChecklistItem, FinancialForensicsReport, ConsularVisaRoute } from "./consular";
 
 // --- API Input Schemas (strict validation for mutating endpoints) ---
 

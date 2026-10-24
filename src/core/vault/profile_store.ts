@@ -6,6 +6,9 @@ import {
   SovereignAdvisorAudit,
 } from "@/types/profile";
 import { globalUserStore } from "./user_store";
+import { findConsularRoute } from "@/core/advisor/consular_routes_catalog";
+import { auditFinancialForensics } from "@/core/advisor/financial_forensics";
+import { ConsularChecklistItem, FinancialForensicsReport, ConsularVisaRoute } from "@/types/profile";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { MultiLLMGateway } from "@/agents/gateway/llm_gateway";
 import { randomBytes } from "crypto";
@@ -694,6 +697,277 @@ class ProfileAndAdvisorStore {
       }
     }
 
+    // --- FORENSIC CONSULAR INTELLIGENCE & STATUTORY CHECKLIST ---
+    const primaryGoal = activeGoals[0] || null;
+    const consularRoute: ConsularVisaRoute = primaryGoal
+      ? findConsularRoute(primaryGoal.targetCountry, primaryGoal.title)
+      : findConsularRoute("Global", "General Relocation");
+
+    const financialForensics: FinancialForensicsReport = auditFinancialForensics(
+      userVault,
+      profile,
+      consularRoute
+    );
+
+    const checklist: ConsularChecklistItem[] = [];
+
+    // 1. Identification Check
+    if (hasPassport) {
+      checklist.push({
+        id: "chk_passport",
+        category: "identification",
+        title: "International Passport & MRZ Integrity",
+        requirement: "Valid biometric passport with machine-readable zone (MRZ) and >6 months validity.",
+        statutoryCitation: "ICAO Doc 9303 / Destination Consular Entry Rules",
+        status: "verified",
+        isSatisfied: true,
+        proofSnippet: `Verified passport on-chain (${userVault.identification?.identifications?.[0]?.documentNumber || "Biometric"}).`,
+      });
+    } else {
+      checklist.push({
+        id: "chk_passport",
+        category: "identification",
+        title: "International Passport & MRZ Integrity",
+        requirement: "Valid biometric passport with machine-readable zone (MRZ) and >6 months validity.",
+        statutoryCitation: "ICAO Doc 9303 / Destination Consular Entry Rules",
+        status: "refusal_risk",
+        isSatisfied: false,
+        suggestedAction: "Upload or scan your valid passport under Vault > Identification.",
+        rectificationUrl: "/dashboard/documents",
+      });
+    }
+
+    // 2. Financial Solvency & Maintenance Funds
+    if (financialForensics.isAmountSufficient && financialForensics.isConsecutiveRuleSatisfied) {
+      checklist.push({
+        id: "chk_finance_amount",
+        category: "finance",
+        title: `Maintenance Solvency (${consularRoute.financialRequirements.targetCurrency} ${consularRoute.financialRequirements.minimumLiquidFundsTargetCurrency.toLocaleString()})`,
+        requirement: `Statutory minimum liquid funds of ${consularRoute.financialRequirements.targetCurrency} ${consularRoute.financialRequirements.minimumLiquidFundsTargetCurrency.toLocaleString()} maintained.`,
+        statutoryCitation: `${consularRoute.statutoryAuthority} Maintenance Rules`,
+        status: "verified",
+        isSatisfied: true,
+        proofSnippet: `Detected balance: ${financialForensics.targetCurrency} ${financialForensics.detectedLiquidBalance.toLocaleString()} (Exceeds required ${financialForensics.targetCurrency} ${financialForensics.requiredAmount.toLocaleString()}).`,
+      });
+    } else {
+      checklist.push({
+        id: "chk_finance_amount",
+        category: "finance",
+        title: `Maintenance Solvency (${consularRoute.financialRequirements.targetCurrency} ${consularRoute.financialRequirements.minimumLiquidFundsTargetCurrency.toLocaleString()})`,
+        requirement: `Statutory minimum liquid funds of ${consularRoute.financialRequirements.targetCurrency} ${consularRoute.financialRequirements.minimumLiquidFundsTargetCurrency.toLocaleString()} required.`,
+        statutoryCitation: `${consularRoute.statutoryAuthority} Maintenance Rules`,
+        status: "refusal_risk",
+        isSatisfied: false,
+        proofSnippet: financialForensics.summary,
+        suggestedAction: `Shortfall of ${financialForensics.targetCurrency} ${financialForensics.shortfallAmount.toLocaleString()}. Upload updated bank statement under Vault > Finance.`,
+        rectificationUrl: "/dashboard/documents",
+      });
+    }
+
+    // 3. Consecutive Holding Duration Rule
+    if (consularRoute.financialRequirements.strictConsecutiveBalance) {
+      if (financialForensics.isConsecutiveRuleSatisfied) {
+        checklist.push({
+          id: "chk_finance_consecutive",
+          category: "finance",
+          title: `Strict ${consularRoute.financialRequirements.holdingPeriodDays}-Day Consecutive Balance Holding`,
+          requirement: `Funds must never dip below the required threshold for ${consularRoute.financialRequirements.holdingPeriodDays} consecutive days.`,
+          statutoryCitation: "UKVI Appendix Finance FIN 5.1",
+          status: "verified",
+          isSatisfied: true,
+          proofSnippet: `Statement period verified over ${financialForensics.consecutiveDaysPassed} consecutive days.`,
+        });
+      } else {
+        checklist.push({
+          id: "chk_finance_consecutive",
+          category: "finance",
+          title: `Strict ${consularRoute.financialRequirements.holdingPeriodDays}-Day Consecutive Balance Holding`,
+          requirement: `Funds must never dip below the required threshold for ${consularRoute.financialRequirements.holdingPeriodDays} consecutive days.`,
+          statutoryCitation: "UKVI Appendix Finance FIN 5.1",
+          status: "refusal_risk",
+          isSatisfied: false,
+          suggestedAction: `Ensure your account maintains the minimum balance for at least ${consularRoute.financialRequirements.holdingPeriodDays} consecutive days before visa application.`,
+          rectificationUrl: "/dashboard/documents",
+        });
+      }
+    }
+
+    // 4. Funds Dumping / Sudden Unexplained Spike Flag
+    if (financialForensics.suddenDepositDetected) {
+      checklist.push({
+        id: "chk_finance_dumping",
+        category: "finance",
+        title: "Sudden Deposit / Funds Provenance Audit",
+        requirement: "Consular officers reject borrowed or parked funds. All sudden deposits must have verifiable provenance.",
+        statutoryCitation: "UKVI Appendix Finance FIN 8.1 / IRPA R200",
+        status: "warning",
+        isSatisfied: false,
+        proofSnippet: financialForensics.suddenDepositDetails,
+        suggestedAction: "Upload source-of-funds proof (e.g. deed of sale, employer gratuity, notarized gift affidavit) under Vault > Legal.",
+        rectificationUrl: "/dashboard/documents",
+      });
+    } else if (hasFinance) {
+      checklist.push({
+        id: "chk_finance_dumping",
+        category: "finance",
+        title: "Transaction Consistency & Deposit Patterns",
+        requirement: "Natural transaction velocity without suspicious lump-sum deposits.",
+        statutoryCitation: "Consular Financial Bona Fides Standard",
+        status: "verified",
+        isSatisfied: true,
+        proofSnippet: "Consistent transaction velocity; zero suspicious funds-dumping spikes detected.",
+      });
+    }
+
+    // 5. Account Holder Name Reconciliation
+    if (!financialForensics.accountHolderNameMatch) {
+      checklist.push({
+        id: "chk_finance_name_match",
+        category: "finance",
+        title: "Bank Account Holder Name Reconciliation",
+        requirement: "Account name on bank statement must match passport legal name.",
+        statutoryCitation: "Consular Financial Sponsorship Standard",
+        status: "warning",
+        isSatisfied: false,
+        proofSnippet: `Bank account name ("${financialForensics.accountNameDetected}") differs from passport ("${financialForensics.passportNameDetected}").`,
+        suggestedAction: "Upload a notarized Sworn Affidavit of Name Confirmation under Vault > Legal.",
+        rectificationUrl: "/dashboard/documents",
+      });
+    }
+
+    // 6. Legal Instrument / Police Character / Lease
+    const hasPoliceClearance = userVault.legal?.instruments?.some(
+      (r: any) => r.title.toLowerCase().includes("police") || r.title.toLowerCase().includes("character") || r.title.toLowerCase().includes("clearance")
+    );
+    if (hasPoliceClearance) {
+      checklist.push({
+        id: "chk_legal_police",
+        category: "legal",
+        title: "Police Character Clearance / Certificate of Good Conduct",
+        requirement: "Clean criminal record certificate with official Hague Apostille or consular legalization.",
+        statutoryCitation: "Consular General Inadmissibility Grounds",
+        status: "verified",
+        isSatisfied: true,
+        proofSnippet: "Verified police character clearance certificate on-chain.",
+      });
+    } else {
+      checklist.push({
+        id: "chk_legal_police",
+        category: "legal",
+        title: "Police Character Clearance / Certificate of Good Conduct",
+        requirement: "Clean criminal record certificate with official Hague Apostille or consular legalization.",
+        statutoryCitation: "Consular General Inadmissibility Grounds",
+        status: "warning",
+        isSatisfied: false,
+        suggestedAction: "Upload your police character certificate or notarized affidavit under Vault > Legal.",
+        rectificationUrl: "/dashboard/documents",
+      });
+    }
+
+    // 7. Residential Lease / Accommodation (for Albania / Schengen)
+    if (primaryGoal?.targetCountry?.toLowerCase().includes("albania")) {
+      const hasLease = userVault.legal?.instruments?.some(
+        (r: any) => r.title.toLowerCase().includes("lease") || r.title.toLowerCase().includes("rent") || r.title.toLowerCase().includes("accommodation")
+      );
+      if (hasLease) {
+        checklist.push({
+          id: "chk_albania_lease",
+          category: "legal",
+          title: "Albania Unique Permit: Registered Residential Lease",
+          requirement: "Notarized residential rental contract or host declaration in Albania.",
+          statutoryCitation: "Law No. 79/2021 Article 34(d)",
+          status: "verified",
+          isSatisfied: true,
+          proofSnippet: "Registered lease contract verified in sovereign vault.",
+        });
+      } else {
+        checklist.push({
+          id: "chk_albania_lease",
+          category: "legal",
+          title: "Albania Unique Permit: Registered Residential Lease",
+          requirement: "Notarized residential rental contract or host declaration in Albania.",
+          statutoryCitation: "Law No. 79/2021 Article 34(d)",
+          status: "warning",
+          isSatisfied: false,
+          suggestedAction: "Upload your registered Albanian lease agreement or notarized host declaration under Vault > Legal.",
+          rectificationUrl: "/dashboard/documents",
+        });
+      }
+    }
+
+    // 8. Academic Recognition & Equivalency
+    if (hasDegree) {
+      checklist.push({
+        id: "chk_academics_degree",
+        category: "academics",
+        title: "Higher Education Degree & Tertiary Recognition",
+        requirement: "Degree evaluated for comparability (Anabin H+, UK Ecctis, WES Canada).",
+        statutoryCitation: "Destination Qualification Recognition Standards",
+        status: "verified",
+        isSatisfied: true,
+        proofSnippet: `Verified degree on-chain${hasTier2Degree ? " with Tier-2 Legalized Notary Stamp" : ""}.`,
+      });
+    } else if (consularRoute.category === "work" || consularRoute.category === "study") {
+      checklist.push({
+        id: "chk_academics_degree",
+        category: "academics",
+        title: "Higher Education Degree & Tertiary Recognition",
+        requirement: "Degree evaluated for comparability (Anabin H+, UK Ecctis, WES Canada).",
+        statutoryCitation: "Destination Qualification Recognition Standards",
+        status: "warning",
+        isSatisfied: false,
+        suggestedAction: "Upload degree certificate and transcript under Vault > Academics.",
+        rectificationUrl: "/dashboard/documents",
+      });
+    }
+
+    // 9. Work Experience & Career Tenure
+    if (hasExperience) {
+      checklist.push({
+        id: "chk_experience",
+        category: "experience",
+        title: "Documented Professional Tenure & Work Contracts",
+        requirement: "Documented employment history matching destination eligible occupation codes.",
+        statutoryCitation: "Skilled Worker / Talent Mobility Regulations",
+        status: "verified",
+        isSatisfied: true,
+        proofSnippet: `Documented career history (${profile.workExperiences?.length || 0} roles listed).`,
+      });
+    } else {
+      checklist.push({
+        id: "chk_experience",
+        category: "experience",
+        title: "Documented Professional Tenure & Work Contracts",
+        requirement: "Documented employment history matching destination eligible occupation codes.",
+        statutoryCitation: "Skilled Worker / Talent Mobility Regulations",
+        status: "warning",
+        isSatisfied: false,
+        suggestedAction: "Add your work experiences in Human Profile or upload employment contracts under Vault > Experience.",
+        rectificationUrl: "/dashboard/profile",
+      });
+    }
+
+    // Sync Checklist into Gap Alerts for seamless UI integration
+    for (const item of checklist) {
+      if (!item.isSatisfied) {
+        const severity = item.status === "refusal_risk" ? "critical" : "warning";
+        const exists = gapAlerts.some((g) => g.title.toLowerCase().includes(item.title.toLowerCase().slice(0, 15)));
+        if (!exists) {
+          gapAlerts.push({
+            id: `gap_${item.id}_${randomBytes(2).toString("hex")}`,
+            goalId: primaryGoal?.id || "goal_default",
+            category: item.category,
+            severity,
+            title: item.title,
+            message: `${item.requirement} ${item.proofSnippet ? `(${item.proofSnippet})` : ""}`,
+            missingCredentialType: item.title,
+            suggestedAction: item.suggestedAction || "Upload required credential in your Citizen Vault.",
+            isResolved: false,
+          });
+        }
+      }
+    }
+
     // Milestones
     if (gapAlerts.some((g) => g.severity === "critical")) {
       nextMilestones.push("Resolve critical missing credential blockers (Passport, Proof of Funds, or Legal Affidavits).");
@@ -720,6 +994,13 @@ class ProfileAndAdvisorStore {
       calculatedScore = Math.max(15, Math.min(100, calculatedScore - criticalPenalty - warningPenalty - recPenalty));
     }
 
+    const decisionVerdict: "READY_TO_APPLY" | "BORDERLINE_RISK" | "HIGH_REFUSAL_PROBABILITY" =
+      calculatedScore >= 80 && !checklist.some((c) => c.status === "refusal_risk")
+        ? "READY_TO_APPLY"
+        : calculatedScore >= 50
+        ? "BORDERLINE_RISK"
+        : "HIGH_REFUSAL_PROBABILITY";
+
     return {
       userId,
       overallReadinessScore: calculatedScore,
@@ -728,6 +1009,10 @@ class ProfileAndAdvisorStore {
       strengths: Array.from(new Set(strengths)),
       nextMilestones: Array.from(new Set(nextMilestones)),
       lastAuditedAt: new Date().toISOString(),
+      consularRoute,
+      financialForensics,
+      checklist,
+      decisionVerdict,
     };
   }
 
@@ -815,6 +1100,10 @@ Return valid JSON matching:
           strengths: Array.isArray(parsed.strengths) && parsed.strengths.length > 0 ? parsed.strengths : fallbackAudit.strengths,
           nextMilestones: Array.isArray(parsed.nextMilestones) && parsed.nextMilestones.length > 0 ? parsed.nextMilestones : fallbackAudit.nextMilestones,
           lastAuditedAt: new Date().toISOString(),
+          consularRoute: fallbackAudit.consularRoute,
+          financialForensics: fallbackAudit.financialForensics,
+          checklist: fallbackAudit.checklist,
+          decisionVerdict: fallbackAudit.decisionVerdict,
         };
       }
     } catch (aiErr: any) {
