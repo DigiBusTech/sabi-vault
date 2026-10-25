@@ -105,7 +105,7 @@ export default function OrganizationLoginPage() {
         return;
       }
 
-      router.replace("/dashboard");
+      router.replace("/dashboard/enterprise");
       router.refresh();
     } catch (authError) {
       setError(authError instanceof Error ? authError.message : "Authentication failed.");

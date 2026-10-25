@@ -64,6 +64,16 @@ function OrganizationSignupForm() {
 
   useEffect(() => {
     let cancelled = false;
+    // Restore any pending organization registration details from sessionStorage
+    try {
+      const savedName = sessionStorage.getItem("sabi_pending_org_name");
+      const savedType = sessionStorage.getItem("sabi_pending_org_type");
+      const savedJurisdiction = sessionStorage.getItem("sabi_pending_org_jurisdiction");
+      if (savedName) setOrgName(savedName);
+      if (savedType) setOrgType(savedType);
+      if (savedJurisdiction) setJurisdiction(savedJurisdiction);
+    } catch {}
+
     createClient()
       .auth.getSession()
       .then(({ data }) => {
@@ -77,6 +87,15 @@ function OrganizationSignupForm() {
     };
   }, []);
 
+  // Sync organization state into sessionStorage for resilience across OAuth
+  useEffect(() => {
+    try {
+      if (orgName) sessionStorage.setItem("sabi_pending_org_name", orgName);
+      if (orgType) sessionStorage.setItem("sabi_pending_org_type", orgType);
+      if (jurisdiction) sessionStorage.setItem("sabi_pending_org_jurisdiction", jurisdiction);
+    } catch {}
+  }, [orgName, orgType, jurisdiction]);
+
   const registerOrganization = async (): Promise<boolean> => {
     const response = await fetch("/api/v1/enterprise/register", {
       method: "POST",
@@ -88,6 +107,11 @@ function OrganizationSignupForm() {
       setError(data.error || "Organization registration failed. Please try again.");
       return false;
     }
+    try {
+      sessionStorage.removeItem("sabi_pending_org_name");
+      sessionStorage.removeItem("sabi_pending_org_type");
+      sessionStorage.removeItem("sabi_pending_org_jurisdiction");
+    } catch {}
     setRegisteredOrg(data.organization);
     setPhase("done");
     return true;
@@ -198,7 +222,7 @@ function OrganizationSignupForm() {
         <button
           type="button"
           onClick={() => {
-            router.replace("/dashboard");
+            router.replace("/dashboard/enterprise");
             router.refresh();
           }}
           className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-full bg-brand-green px-6 py-3 text-sm font-semibold text-white transition-all hover:bg-brand-green-hover active:scale-[0.98]"

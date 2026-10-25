@@ -2897,3 +2897,69 @@
   - `npx tsc --noEmit`: 0 errors.
   - `npm run build`: 74/74 routes statically and dynamically generated with exit code 0.
 - **Git Commit:** Committed and pushed to `main` and `master` with zero Copilot trailers.
+
+---
+
+### Entry #083: Scoped Key Signing Configuration Guidance
+- **Date:** 2026-10-25
+- **User Intent:** Explain how to configure the admin security settings and resolve the citizen scoped-key signing error shown in screenshots.
+- **Findings:**
+  - The admin DEFAULT badge represents the development signing placeholder; production signing deliberately rejects that value.
+  - Admin Master Key is a separate optional break-glass credential, not a prerequisite for citizen scoped-key minting.
+  - The signing helper reads process-local configuration synchronously. The citizen mint route does not explicitly load dashboard configuration, so a dashboard-only secret may remain unavailable on a cold serverless instance.
+- **Guidance:** Generate a private random 32-byte secret locally, save it under Scoped Key Signing Secret, and confirm the dashboard source badge. For reliable operation with the current deployment, configure the identical value as server-only `SABI_API_SIGNING_SECRET` in the hosting production environment and redeploy. Never expose it through `NEXT_PUBLIC_`, source control, or chat. Rotation invalidates existing scoped keys.
+- **Validation:** Inspected the configuration registry/store, admin save modal/API, signing helper, authentication guard, and citizen mint route. No production settings were changed and no live mint was performed. Application code unchanged; documentation-only entry.
+
+
+---
+
+### Entry #084: Enterprise & Agency Architecture: On-Behalf-Of Client Hub, Multi-Benchmark Criteria Studio, Developer API Keys & Dynamic Evidence-Gated Funnel
+- **Date & Timestamp:** 2026-10-25 11:45:00 (Local)
+- **User Prompts:**
+  > "1. Organization dashboard there are a lot of things to fix, how can candidate progress to interview when there are no academic documents in vault score was 0. etc, 
+  > 2. Organization is supposed to set what the screening will be evaluated againts 'evaluated against Global Talent Tech Visa (UK / Canada / Australia)' there was no place for that before query. all the was set but not shown tio select before screen key. it is not working as it is supposed to, 
+  > 3. also the immigration/travel agency registration was done but when logged in what i saw was user account, while the agency account dashbaord is suppose to show where agency can create account unbehalf of user and add all documents and user profile tand set target etc, user can be given access by giving logins by the agency etc.
+  > A lot of things need to be fixed in the features of organizational dashbaord and agency sessions etc, the organizational dashbaords must transcends the HR and recuirter dashbaords features, and solving the problems HR go through during recruitments etc. everything must be dynamic and autopilot/copilot etc."
+  > "1. organization should be able to generate api key to use in thier external web/native applications,
+  > 2. Rubit settings should be dynamically rich where organization can add different benchmarks etc for one rubic settings."
+- **Architectural Analysis & Decisions:**
+  1. **Strict Evidence-Gated Funnel (Fail-Closed Progression):**
+     - Audited screening visualizer in `EnterpriseScreeningView.tsx`. Identified that the 5 funnel stages were statically hardcoded as green checkmarks regardless of candidate score, missing credentials, or ledger tampering.
+     - Re-engineered the funnel into a dynamic evidence evaluator:
+       - **Stage 1 (Hash Ledger):** Passes only if `integrityStatus === "TAMPER_FREE_VERIFIED"`. Fails with red alert badge if tampered or unregistered.
+       - **Stage 2 (Prerequisites):** Validates all mandatory required categories and mandatory benchmarks. Fails if missing required credentials or notarizations.
+       - **Stage 3 (AI Semantic):** Checks composite fit score against the rubric's passing bar (`passingScore`).
+       - **Stage 4 (Org Review):** Shortlisted, Conditional Review, or Disqualified.
+       - **Stage 5 (Interview Dispatch):** Strictly locked if the candidate fails integrity, prerequisites, or the passing score. Interview scheduling buttons are disabled and a red warning banner informs evaluators that interview dispatch is prohibited.
+  2. **Active Evaluation Rubric Selector & Threshold HUD:**
+     - Positioned an active evaluation rubric selector and live threshold HUD directly on `/dashboard/enterprise/screening` above the single/bulk candidate input tabs.
+     - Wired `handleTrackChange` so selecting an institutional track (`IMMIGRATION`, `EDUCATION`, `LABOUR`, `PROCUREMENT`) dynamically filters and selects matching rubrics.
+     - Displays live threshold badges: Passing Score Bar, Auto-Interview Threshold, Min GPA, Liquid Funds, Min Tenure, and Mandatory Tier-2 Notarization Seal.
+  3. **Multi-Benchmark Rich Criteria Engine:**
+     - Expanded `CriteriaProfile` in `criteria_store.ts` with dynamic `BenchmarkItem[]`, supporting metric types (`min_gpa`, `min_funds`, `holding_period_days`, `funds_dumping_limit`, `min_tenure_years`, `required_skill`, `cefr_level`, `tier2_notarized`).
+     - Incorporated statutory citations and failure penalty weights.
+     - Integrated `convertCurrency` from the financial forensics engine for automated multi-currency holding audits.
+     - Added dynamic benchmark table in Criteria Studio (`/dashboard/enterprise/rubrics`) and enhanced the Custom Rubric Modal with passing score and auto-interview threshold controls.
+  4. **Agency Client Hub ("On-Behalf-Of" Dossiers):**
+     - Engineered `agency_client_service.ts` allowing immigration firms and consultancies to manage applicant dossiers inside `/dashboard/enterprise/clients`.
+     - Ingests applicant biographical and travel document metadata, initializes an isolated sovereign vault on regional nodes, updates the client's destination goals, and executes automated consular pre-screen audits.
+     - Implemented secure client handover: generates one-time ownership claim tokens (`claim_<hex>`) and login links for applicants to take ownership of their prepared vault.
+     - Added API endpoints: `/api/v1/enterprise/clients`, `/api/v1/enterprise/clients/[id]/audit`, and `/api/v1/enterprise/clients/[id]/handover`.
+     - Built `AgencyClientManagerView.tsx` with dossier list, pre-screen grade cards, creation modal, and access handover modal.
+  5. **Developer Scoped API Keys Management Engine:**
+     - Engineered `api_key_service.ts` allowing organizations to mint production (`sbo_live_...`) and sandbox (`sbo_test_...`) API keys with granular scopes (`screening:evaluate`, `vault:read_consented`, `clients:dossier_write`, `consular:audit_run`).
+     - Added SHA-256 key hashing, rate limiting, and instant revocation.
+     - Added endpoint `/api/v1/enterprise/api-keys` supporting `GET`, `POST`, and `DELETE`.
+     - Built `DeveloperApiKeysView.tsx` and route `/dashboard/enterprise/api-keys` featuring copy-paste SDK integration snippets for cURL, TypeScript/Next.js, iOS Swift, Android Kotlin, and Python.
+  6. **Auth & Role Redirection Hardening:**
+     - Updated `src/app/login/organization/page.tsx` and `src/app/signup/organization/page.tsx` to redirect to `/dashboard/enterprise` instead of `/dashboard`.
+     - Added `sessionStorage` caching (`sabi_pending_org_name`, `sabi_pending_org_type`) to preserve entered organization details during Google OAuth redirect loops.
+     - Updated `src/lib/dashboard/auth_context.ts` and `src/app/auth/callback/route.ts` to elevate organization owners to `enterprise_admin` and route them cleanly to the enterprise workspace.
+     - Updated `NAV_BY_ROLE.enterprise_admin` in `src/lib/dashboard/nav.ts` with `clients` ("Managed clients") and `api-keys` ("Developer keys").
+- **Validation:**
+  - `node tests/test_enterprise_agency_copilot.mjs`: 6/6 test suites passed (100%).
+  - `node tests/test_consular_advisor_forensics.mjs`: 6/6 test suites passed (100%).
+  - `node tests/test_profile_experience_and_cv_extraction.mjs`: 5/5 test suites passed (100%).
+  - `node tests/test_profile_and_ai_advisor.mjs`: 5/5 test suites passed (100%).
+  - `node tests/test_storage_quota_and_skills.mjs`: 8/8 test suites passed (100%).
+  - `npx tsc --noEmit`: 0 errors.

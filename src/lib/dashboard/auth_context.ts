@@ -22,8 +22,17 @@ export async function getDashboardAuthContext(requiredRole?: UserRole | UserRole
     redirect("/login?terminated=concurrent");
   }
 
+  const roleCookie = cookieStore.get("sabi_user_role")?.value as UserRole | undefined;
+  const orgId = typeof user.app_metadata?.org_id === "string" ? user.app_metadata.org_id : undefined;
+  const organization = orgId
+    ? globalAdminStore.getOrganization(orgId) ?? (await findOrganizationById(orgId))
+    : undefined;
+
   const claimedRole = user.app_metadata?.role as UserRole | undefined;
-  const role: UserRole = claimedRole || "citizen";
+  // If user administers an organization or holds enterprise credentials, resolve as enterprise_admin
+  const role: UserRole =
+    claimedRole ||
+    (orgId ? "enterprise_admin" : roleCookie === "enterprise_admin" ? "enterprise_admin" : "citizen");
 
   if (requiredRole) {
     const allowed = Array.isArray(requiredRole) ? requiredRole : [requiredRole];
@@ -34,11 +43,6 @@ export async function getDashboardAuthContext(requiredRole?: UserRole | UserRole
       redirect("/dashboard");
     }
   }
-
-  const orgId = typeof user.app_metadata?.org_id === "string" ? user.app_metadata.org_id : undefined;
-  const organization = orgId
-    ? globalAdminStore.getOrganization(orgId) ?? (await findOrganizationById(orgId))
-    : undefined;
 
   try {
     await ensureVaultProfile({ id: user.id, email: user.email });

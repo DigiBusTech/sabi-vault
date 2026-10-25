@@ -14,9 +14,11 @@ export const NAV_BY_ROLE: Record<string, ShellNavItem[]> = {
   ],
   enterprise_admin: [
     { id: "overview", label: "Overview", href: "/dashboard/enterprise" },
-    { id: "organization", label: "Organization", href: "/dashboard/enterprise/organization" },
+    { id: "screening", label: "Screening console", href: "/dashboard/enterprise/screening" },
     { id: "rubrics", label: "Criteria studio", href: "/dashboard/enterprise/rubrics" },
-    { id: "screening", label: "Screening", href: "/dashboard/enterprise/screening" },
+    { id: "clients", label: "Managed clients", href: "/dashboard/enterprise/clients" },
+    { id: "api-keys", label: "Developer keys", href: "/dashboard/enterprise/api-keys" },
+    { id: "organization", label: "Organization", href: "/dashboard/enterprise/organization" },
   ],
   govt_auditor: [
     { id: "overview", label: "Overview", href: "/dashboard/government" },

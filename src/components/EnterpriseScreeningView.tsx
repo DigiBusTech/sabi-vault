@@ -27,8 +27,9 @@ import {
   MessageSquare,
   Layers,
   ArrowRight,
+  Lock,
 } from "lucide-react";
-import { CriteriaProfile, CandidateEvaluationResult } from "@/core/enterprise/criteria_store";
+import { CriteriaProfile, CandidateEvaluationResult, BenchmarkItem } from "@/core/enterprise/criteria_store";
 
 function verdictClasses(verdict: string | undefined): string {
   switch (verdict) {
@@ -139,8 +140,19 @@ export function EnterpriseScreeningView({ viewMode = "all" }: EnterpriseScreenin
   const [customMinFunds, setCustomMinFunds] = useState<string>("10000");
   const [customMinExp, setCustomMinExp] = useState<string>("3");
   const [customTier2Required, setCustomTier2Required] = useState<boolean>(true);
+  const [customPassingScore, setCustomPassingScore] = useState<string>("70");
+  const [customAutoInterviewScore, setCustomAutoInterviewScore] = useState<string>("85");
+  const [customBenchmarks, setCustomBenchmarks] = useState<BenchmarkItem[]>([]);
   const [customError, setCustomError] = useState<string | null>(null);
   const [isSavingRubric, setIsSavingRubric] = useState<boolean>(false);
+
+  const handleTrackChange = (trackId: QueryTrackId) => {
+    setSelectedTrack(trackId);
+    const matching = rubrics.find((r) => r.category === trackId);
+    if (matching) {
+      setSelectedRubricId(matching.id);
+    }
+  };
 
   const loadRubrics = async () => {
     try {
@@ -247,7 +259,10 @@ export function EnterpriseScreeningView({ viewMode = "all" }: EnterpriseScreenin
           minLiquidFundsUsd: parseFloat(customMinFunds) || undefined,
           minExperienceYears: parseInt(customMinExp) || undefined,
           mandatoryTier2Notarization: customTier2Required,
+          passingScore: parseFloat(customPassingScore) || 70,
+          autoInterviewScore: parseFloat(customAutoInterviewScore) || 85,
           requiredCategories: ["academics", "finance", "experience"],
+          benchmarks: customBenchmarks,
         }),
       });
 
@@ -408,6 +423,62 @@ export function EnterpriseScreeningView({ viewMode = "all" }: EnterpriseScreenin
               </div>
             )}
           </div>
+
+          {/* Active Rubric Rich Dynamic Benchmarks Table */}
+          {activeRubric && activeRubric.benchmarks && activeRubric.benchmarks.length > 0 && (
+            <div className="mt-6 rounded-xl border border-slate-200 bg-white p-4 space-y-3">
+              <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-center border-b border-slate-100 pb-2.5">
+                <div className="flex items-center gap-2">
+                  <Sliders className="h-4 w-4 text-emerald-600" />
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-800">
+                    Active Multi-Benchmarks & Statutory Thresholds ({activeRubric.benchmarks.length})
+                  </span>
+                </div>
+                <div className="flex items-center gap-3 text-xs">
+                  <span className="text-slate-500">
+                    Passing Bar: <strong className="text-emerald-700">{activeRubric.passingScore || 65}/100</strong>
+                  </span>
+                  <span className="text-slate-500">
+                    Auto-Interview: <strong className="text-indigo-700">{activeRubric.autoInterviewScore ? `${activeRubric.autoInterviewScore}+/100` : "Manual"}</strong>
+                  </span>
+                </div>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="border-b border-slate-100 text-[10px] font-bold uppercase text-slate-400">
+                    <tr>
+                      <th className="pb-2">Benchmark Requirement</th>
+                      <th className="pb-2">Domain</th>
+                      <th className="pb-2">Metric Type</th>
+                      <th className="pb-2">Statutory Target</th>
+                      <th className="pb-2">Importance</th>
+                      <th className="pb-2">Legal Citation</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 text-slate-700">
+                    {activeRubric.benchmarks.map((bm) => (
+                      <tr key={bm.id} className="hover:bg-slate-50/50">
+                        <td className="py-2.5 font-bold text-slate-900">{bm.name}</td>
+                        <td className="py-2.5 capitalize text-slate-600">{bm.category}</td>
+                        <td className="py-2.5 font-mono text-[11px] text-slate-500">{bm.metricType}</td>
+                        <td className="py-2.5 font-bold text-emerald-700">{String(bm.targetValue)} {bm.unit || ""}</td>
+                        <td className="py-2.5">
+                          <span className={`rounded-full px-2 py-0.5 text-[9px] font-extrabold uppercase ${
+                            bm.importance === "mandatory"
+                              ? "bg-rose-100 text-rose-800 ring-1 ring-rose-200"
+                              : "bg-slate-100 text-slate-600"
+                          }`}>
+                            {bm.importance}
+                          </span>
+                        </td>
+                        <td className="py-2.5 text-[11px] text-slate-500 max-w-xs truncate">{bm.statutoryCitation || "Standard Evaluation Policy"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
       </section>
     )}
@@ -436,7 +507,7 @@ export function EnterpriseScreeningView({ viewMode = "all" }: EnterpriseScreenin
                 <button
                   key={track.id}
                   type="button"
-                  onClick={() => setSelectedTrack(track.id)}
+                  onClick={() => handleTrackChange(track.id)}
                   className={`flex flex-col text-left rounded-xl border p-3 transition-all duration-200 ${
                     isSelected
                       ? "border-emerald-500 bg-emerald-50/50 ring-1 ring-emerald-500 shadow-xs"
@@ -460,6 +531,97 @@ export function EnterpriseScreeningView({ viewMode = "all" }: EnterpriseScreenin
               );
             })}
           </div>
+        </div>
+
+        {/* Active Rubric Selector & Criteria HUD in Screening Mode */}
+        <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-xs space-y-4">
+          <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center border-b border-slate-100 pb-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <Sliders className="h-4 w-4 text-emerald-600" />
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                  Target Evaluation Rubric
+                </h4>
+                <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-extrabold text-emerald-700 ring-1 ring-emerald-200">
+                  {activeRubric?.category || selectedTrack}
+                </span>
+              </div>
+              <p className="mt-0.5 text-xs text-slate-500">
+                Candidates screened below are evaluated strictly against this rubric&apos;s benchmarks and passing thresholds.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              {isLoadingRubrics ? (
+                <div className="skeleton h-9 w-48 rounded-xl" />
+              ) : (
+                <select
+                  id="screening-rubric-select"
+                  value={activeRubric?.id || ""}
+                  onChange={(e) => setSelectedRubricId(e.target.value)}
+                  className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-900 outline-none transition-colors focus:border-emerald-500 focus:bg-white focus:ring-2 focus:ring-emerald-100"
+                >
+                  {rubrics.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.name} ({r.category})
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+          </div>
+
+          {activeRubric && (
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="text-xs font-extrabold text-slate-900">
+                  {activeRubric.name}
+                </span>
+                <span className="text-xs italic text-slate-500">
+                  &ldquo;{activeRubric.description}&rdquo;
+                </span>
+              </div>
+
+              {/* Thresholds HUD Cards */}
+              <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6 text-xs">
+                <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-2.5 space-y-0.5">
+                  <span className="block text-[9px] font-bold uppercase tracking-wider text-slate-400">Passing Bar</span>
+                  <span className="block text-xs font-extrabold text-emerald-600">
+                    {activeRubric.passingScore || 65} / 100
+                  </span>
+                </div>
+                <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-2.5 space-y-0.5">
+                  <span className="block text-[9px] font-bold uppercase tracking-wider text-slate-400">Auto-Interview</span>
+                  <span className="block text-xs font-extrabold text-indigo-600">
+                    {activeRubric.autoInterviewScore ? `${activeRubric.autoInterviewScore}+ / 100` : "Manual"}
+                  </span>
+                </div>
+                <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-2.5 space-y-0.5">
+                  <span className="block text-[9px] font-bold uppercase tracking-wider text-slate-400">Min GPA</span>
+                  <span className="block text-xs font-extrabold text-slate-800">
+                    {activeRubric.minGpa ? `${activeRubric.minGpa} / 5.0` : "None"}
+                  </span>
+                </div>
+                <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-2.5 space-y-0.5">
+                  <span className="block text-[9px] font-bold uppercase tracking-wider text-slate-400">Liquid Funds</span>
+                  <span className="block text-xs font-extrabold text-slate-800">
+                    {activeRubric.minLiquidFundsUsd ? `${activeRubric.minLiquidFundsUsd.toLocaleString()}` : "None"}
+                  </span>
+                </div>
+                <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-2.5 space-y-0.5">
+                  <span className="block text-[9px] font-bold uppercase tracking-wider text-slate-400">Min Tenure</span>
+                  <span className="block text-xs font-extrabold text-slate-800">
+                    {activeRubric.minExperienceYears ? `${activeRubric.minExperienceYears}+ yrs` : "None"}
+                  </span>
+                </div>
+                <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-2.5 space-y-0.5">
+                  <span className="block text-[9px] font-bold uppercase tracking-wider text-slate-400">Tier-2 Notary</span>
+                  <span className={`block text-xs font-extrabold ${activeRubric.mandatoryTier2Notarization ? "text-amber-600" : "text-slate-600"}`}>
+                    {activeRubric.mandatoryTier2Notarization ? "Mandatory Seal" : "Optional"}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Mode tabs */}
@@ -693,94 +855,261 @@ export function EnterpriseScreeningView({ viewMode = "all" }: EnterpriseScreenin
                   )}
                 </div>
 
-                {/* Multi-Stage Screening Pipeline Visualizer */}
-                <div className="rounded-xl border border-slate-200 bg-white p-5 space-y-4">
-                  <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
-                    <span className="flex items-center gap-2 text-xs font-bold text-slate-900">
-                      <Layers className="h-4 w-4 text-emerald-600" />
-                      Multi-Stage Evaluation Funnel
+                {/* Benchmark Evaluations (if present) */}
+                {singleResult.benchmarkResults && singleResult.benchmarkResults.length > 0 && (
+                  <div className="space-y-2.5">
+                    <span className="block text-xs font-bold uppercase tracking-wider text-slate-500">
+                      Multi-Benchmark Statutory Audits ({singleResult.benchmarkResults.length})
                     </span>
-                    <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-[10px] font-bold text-emerald-800 ring-1 ring-emerald-200">
-                      Stage 4: Advance to Interview
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-5 text-xs">
-                    <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-2.5 space-y-1">
-                      <div className="flex items-center justify-between text-emerald-700 font-bold">
-                        <span>1. Hash Ledger</span>
-                        <Check className="h-3 w-3" />
-                      </div>
-                      <p className="text-[10px] text-slate-600">Base Sepolia L2 on-chain proof</p>
-                    </div>
-
-                    <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-2.5 space-y-1">
-                      <div className="flex items-center justify-between text-emerald-700 font-bold">
-                        <span>2. Prerequisites</span>
-                        <Check className="h-3 w-3" />
-                      </div>
-                      <p className="text-[10px] text-slate-600">Thresholds & seals verified</p>
-                    </div>
-
-                    <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-2.5 space-y-1">
-                      <div className="flex items-center justify-between text-emerald-700 font-bold">
-                        <span>3. AI Semantic</span>
-                        <Check className="h-3 w-3" />
-                      </div>
-                      <p className="text-[10px] text-slate-600">Zero-hallucination RAG audit</p>
-                    </div>
-
-                    <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-2.5 space-y-1">
-                      <div className="flex items-center justify-between text-emerald-700 font-bold">
-                        <span>4. Org Review</span>
-                        <Check className="h-3 w-3" />
-                      </div>
-                      <p className="text-[10px] text-slate-600">Candidate shortlisted</p>
-                    </div>
-
-                    <div className="rounded-lg border border-emerald-300 bg-emerald-100/60 p-2.5 space-y-1 ring-1 ring-emerald-400">
-                      <div className="flex items-center justify-between text-emerald-800 font-extrabold">
-                        <span>5. Interview</span>
-                        <Sparkles className="h-3 w-3 text-emerald-700" />
-                      </div>
-                      <p className="text-[10px] text-emerald-800 font-medium">Ready for interview</p>
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                      {singleResult.benchmarkResults.map((bm, idx) => (
+                        <div
+                          key={idx}
+                          className={`flex items-start justify-between gap-2 rounded-xl border p-3 text-xs ${
+                            bm.passed
+                              ? "border-emerald-200 bg-emerald-50/50 text-slate-800"
+                              : bm.importance === "mandatory"
+                              ? "border-rose-200 bg-rose-50/50 text-rose-900"
+                              : "border-amber-200 bg-amber-50/50 text-amber-900"
+                          }`}
+                        >
+                          <div className="space-y-0.5">
+                            <div className="flex items-center gap-1.5 font-bold">
+                              {bm.passed ? (
+                                <Check className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                              ) : (
+                                <X className="h-3.5 w-3.5 text-rose-600 shrink-0" />
+                              )}
+                              <span>{bm.name}</span>
+                            </div>
+                            <p className="text-[11px] text-slate-600">{bm.message}</p>
+                          </div>
+                          <span
+                            className={`shrink-0 rounded px-1.5 py-0.5 text-[9px] font-extrabold uppercase ${
+                              bm.importance === "mandatory"
+                                ? "bg-rose-100 text-rose-800"
+                                : "bg-slate-200 text-slate-700"
+                            }`}
+                          >
+                            {bm.importance}
+                          </span>
+                        </div>
+                      ))}
                     </div>
                   </div>
+                )}
 
-                  {/* Interview Dispatch Actions */}
-                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3">
-                    <span className="block text-xs font-bold text-slate-800">
-                      Proceed to Final Interview Stage:
-                    </span>
+                {/* Dynamic Evidence-Gated Screening Funnel Visualizer */}
+                {(() => {
+                  const isIntegrityPassed = singleResult.integrityStatus === "TAMPER_FREE_VERIFIED";
+                  const isTampered = singleResult.integrityStatus === "TAMPER_DETECTED" || singleResult.integrityStatus === "KEY_INVALID" || singleResult.integrityStatus === "VAULT_NOT_FOUND";
 
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const generated = `https://meet.google.com/sabi-eval-${Math.random().toString(36).substring(2, 7)}`;
-                          setInterviewLink(generated);
-                          setShowDirectInterviewModal(true);
-                        }}
-                        className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-slate-900 py-2.5 px-4 text-xs font-bold text-white shadow-xs hover:bg-slate-800 transition-all active:scale-95"
-                      >
-                        <Video className="h-4 w-4" />
-                        Schedule Org Direct Interview (Meet / Zoom / On-site)
-                      </button>
+                  const missingRequiredCategories = (activeRubric?.requiredCategories || []).filter(
+                    (cat) => !singleResult.verifiedCategories?.includes(cat)
+                  );
 
-                      <button
-                        type="button"
-                        onClick={() => setShowSabiInterviewerModal(true)}
-                        className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-emerald-300 bg-emerald-50 py-2.5 px-4 text-xs font-bold text-emerald-800 hover:bg-emerald-100 transition-all active:scale-95"
-                      >
-                        <Bot className="h-4 w-4 text-emerald-600" />
-                        <span>🤖 Sabi Interviewer</span>
-                        <span className="rounded bg-emerald-200/70 px-1.5 py-0.5 text-[9px] font-extrabold text-emerald-900">
-                          Coming Soon
+                  const failedMandatoryBenchmarks = (singleResult.benchmarkResults || []).filter(
+                    (b) => b.importance === "mandatory" && !b.passed
+                  );
+
+                  const isPrereqsPassed = missingRequiredCategories.length === 0 && failedMandatoryBenchmarks.length === 0;
+
+                  const passingScore = activeRubric?.passingScore || 65;
+                  const isScorePassed = singleResult.compositeScore >= passingScore;
+
+                  const isOrgReviewPassed = singleResult.verdict === "QUALIFIED";
+                  const isOrgReviewMarginal = singleResult.verdict === "CONDITIONALLY_QUALIFIED";
+                  const isDisqualified = singleResult.verdict === "REJECTED" || !isScorePassed || isTampered || !isPrereqsPassed;
+
+                  const isInterviewEligible = !isDisqualified && isIntegrityPassed && isPrereqsPassed && isScorePassed && singleResult.verdict !== "REJECTED";
+
+                  return (
+                    <div className="rounded-xl border border-slate-200 bg-white p-5 space-y-4">
+                      <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+                        <span className="flex items-center gap-2 text-xs font-bold text-slate-900">
+                          <Layers className="h-4 w-4 text-emerald-600" />
+                          Multi-Stage Evidence-Gated Evaluation Funnel
                         </span>
-                      </button>
+                        <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
+                          isInterviewEligible
+                            ? "bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200"
+                            : "bg-rose-50 text-rose-800 ring-1 ring-rose-200"
+                        }`}>
+                          {isInterviewEligible ? "Stage 5: Advance to Interview" : "Stage 5: Interview Dispatch Locked"}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-5 text-xs">
+                        {/* Stage 1: Hash Ledger */}
+                        <div className={`rounded-lg border p-2.5 space-y-1 ${
+                          isIntegrityPassed
+                            ? "border-emerald-200 bg-emerald-50/50 text-emerald-700"
+                            : "border-rose-300 bg-rose-50 text-rose-700 ring-1 ring-rose-400"
+                        }`}>
+                          <div className="flex items-center justify-between font-bold">
+                            <span>1. Hash Ledger</span>
+                            {isIntegrityPassed ? <Check className="h-3 w-3" /> : <AlertTriangle className="h-3 w-3 text-rose-600" />}
+                          </div>
+                          <p className="text-[10px] text-slate-600">
+                            {isIntegrityPassed ? "Base Sepolia on-chain proof" : `Alert: ${singleResult.integrityStatus}`}
+                          </p>
+                        </div>
+
+                        {/* Stage 2: Prerequisites */}
+                        <div className={`rounded-lg border p-2.5 space-y-1 ${
+                          isPrereqsPassed
+                            ? "border-emerald-200 bg-emerald-50/50 text-emerald-700"
+                            : "border-rose-300 bg-rose-50 text-rose-700 ring-1 ring-rose-400"
+                        }`}>
+                          <div className="flex items-center justify-between font-bold">
+                            <span>2. Prerequisites</span>
+                            {isPrereqsPassed ? <Check className="h-3 w-3" /> : <X className="h-3 w-3 text-rose-600" />}
+                          </div>
+                          <p className="text-[10px] text-slate-600 truncate">
+                            {isPrereqsPassed
+                              ? "Thresholds & seals verified"
+                              : missingRequiredCategories.length > 0
+                              ? `Missing: ${missingRequiredCategories.join(", ")}`
+                              : "Mandatory benchmark failed"}
+                          </p>
+                        </div>
+
+                        {/* Stage 3: AI Semantic */}
+                        <div className={`rounded-lg border p-2.5 space-y-1 ${
+                          isScorePassed
+                            ? "border-emerald-200 bg-emerald-50/50 text-emerald-700"
+                            : "border-rose-300 bg-rose-50 text-rose-700 ring-1 ring-rose-400"
+                        }`}>
+                          <div className="flex items-center justify-between font-bold">
+                            <span>3. AI Semantic</span>
+                            {isScorePassed ? <Check className="h-3 w-3" /> : <X className="h-3 w-3 text-rose-600" />}
+                          </div>
+                          <p className="text-[10px] text-slate-600">
+                            {isScorePassed ? `Score ${singleResult.compositeScore} >= ${passingScore}` : `Score ${singleResult.compositeScore} < ${passingScore}`}
+                          </p>
+                        </div>
+
+                        {/* Stage 4: Org Review */}
+                        <div className={`rounded-lg border p-2.5 space-y-1 ${
+                          isOrgReviewPassed
+                            ? "border-emerald-200 bg-emerald-50/50 text-emerald-700"
+                            : isOrgReviewMarginal
+                            ? "border-amber-200 bg-amber-50 text-amber-700 ring-1 ring-amber-300"
+                            : "border-rose-300 bg-rose-50 text-rose-700 ring-1 ring-rose-400"
+                        }`}>
+                          <div className="flex items-center justify-between font-bold">
+                            <span>4. Org Review</span>
+                            {isOrgReviewPassed ? (
+                              <Check className="h-3 w-3" />
+                            ) : isOrgReviewMarginal ? (
+                              <AlertTriangle className="h-3 w-3 text-amber-600" />
+                            ) : (
+                              <X className="h-3 w-3 text-rose-600" />
+                            )}
+                          </div>
+                          <p className="text-[10px] text-slate-600">
+                            {isOrgReviewPassed ? "Shortlisted" : isOrgReviewMarginal ? "Manual review" : "Disqualified"}
+                          </p>
+                        </div>
+
+                        {/* Stage 5: Interview Dispatch */}
+                        <div className={`rounded-lg border p-2.5 space-y-1 ${
+                          isInterviewEligible
+                            ? "border-emerald-300 bg-emerald-100/60 text-emerald-800 ring-1 ring-emerald-400"
+                            : "border-slate-200 bg-slate-100/80 text-slate-400"
+                        }`}>
+                          <div className="flex items-center justify-between font-extrabold">
+                            <span>5. Interview</span>
+                            {isInterviewEligible ? (
+                              <Sparkles className="h-3 w-3 text-emerald-700" />
+                            ) : (
+                              <Lock className="h-3 w-3 text-slate-400" />
+                            )}
+                          </div>
+                          <p className={`text-[10px] font-medium ${isInterviewEligible ? "text-emerald-800" : "text-slate-500"}`}>
+                            {isInterviewEligible ? "Ready for interview" : "Locked (Disqualified)"}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Interview Dispatch Actions with Strict Evidence Gating */}
+                      {isInterviewEligible ? (
+                        <div className="rounded-xl border border-emerald-200 bg-emerald-50/40 p-4 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className="block text-xs font-bold text-slate-800">
+                              Candidate Qualified — Dispatch Final Interview:
+                            </span>
+                            <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-extrabold text-emerald-800">
+                              Passed all prerequisite gates
+                            </span>
+                          </div>
+
+                          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const generated = `https://meet.google.com/sabi-eval-${Math.random().toString(36).substring(2, 7)}`;
+                                setInterviewLink(generated);
+                                setShowDirectInterviewModal(true);
+                              }}
+                              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-slate-900 py-2.5 px-4 text-xs font-bold text-white shadow-xs hover:bg-slate-800 transition-all active:scale-95"
+                            >
+                              <Video className="h-4 w-4" />
+                              Schedule Org Direct Interview (Meet / Zoom / On-site)
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => setShowSabiInterviewerModal(true)}
+                              className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-emerald-300 bg-white py-2.5 px-4 text-xs font-bold text-emerald-800 hover:bg-emerald-50 transition-all active:scale-95"
+                            >
+                              <Bot className="h-4 w-4 text-emerald-600" />
+                              <span>🤖 Sabi Interviewer</span>
+                              <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[9px] font-extrabold text-emerald-900">
+                                Autonomous AI
+                              </span>
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="rounded-xl border border-rose-200 bg-rose-50/60 p-4 space-y-3">
+                          <div className="flex items-start gap-2.5">
+                            <AlertTriangle className="h-4 w-4 shrink-0 text-rose-600 mt-0.5" />
+                            <div>
+                              <h5 className="text-xs font-bold text-rose-900">
+                                Interview Dispatch Locked — Candidate Disqualified
+                              </h5>
+                              <p className="mt-0.5 text-[11px] text-rose-700 leading-relaxed">
+                                This candidate failed critical evidence verification gates (Composite Score: {singleResult.compositeScore}/100 vs Passing Bar: {passingScore}/100
+                                {missingRequiredCategories.length > 0 && `, Missing mandatory records: ${missingRequiredCategories.join(", ")}`}
+                                {isTampered && `, Ledger Status: ${singleResult.integrityStatus}`}). Interview scheduling is strictly locked to prevent unverified candidate progression.
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex flex-col gap-3 sm:flex-row sm:items-center opacity-40">
+                            <button
+                              type="button"
+                              disabled
+                              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-slate-300 py-2.5 px-4 text-xs font-bold text-slate-500 cursor-not-allowed"
+                            >
+                              <Lock className="h-3.5 w-3.5" />
+                              Schedule Org Direct Interview (Locked)
+                            </button>
+                            <button
+                              type="button"
+                              disabled
+                              className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-100 py-2.5 px-4 text-xs font-bold text-slate-400 cursor-not-allowed"
+                            >
+                              <Lock className="h-3.5 w-3.5" />
+                              🤖 Sabi Interviewer (Locked)
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                </div>
+                  );
+                })()}
               </div>
             )}
 
@@ -1021,6 +1350,37 @@ export function EnterpriseScreeningView({ viewMode = "all" }: EnterpriseScreenin
                     type="number"
                     value={customMinExp}
                     onChange={(e) => setCustomMinExp(e.target.value)}
+                    className="w-full rounded-lg border border-slate-200 bg-white p-2.5 text-slate-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 text-xs">
+                <div>
+                  <label htmlFor="rubric-pass-score" className="mb-1.5 block font-semibold text-slate-700">
+                    Passing Bar (0-100)
+                  </label>
+                  <input
+                    id="rubric-pass-score"
+                    type="number"
+                    min="1"
+                    max="100"
+                    value={customPassingScore}
+                    onChange={(e) => setCustomPassingScore(e.target.value)}
+                    className="w-full rounded-lg border border-slate-200 bg-white p-2.5 text-slate-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="rubric-auto-interview" className="mb-1.5 block font-semibold text-slate-700">
+                    Auto-Interview Threshold (0-100)
+                  </label>
+                  <input
+                    id="rubric-auto-interview"
+                    type="number"
+                    min="1"
+                    max="100"
+                    value={customAutoInterviewScore}
+                    onChange={(e) => setCustomAutoInterviewScore(e.target.value)}
                     className="w-full rounded-lg border border-slate-200 bg-white p-2.5 text-slate-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
                   />
                 </div>

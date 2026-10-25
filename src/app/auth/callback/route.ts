@@ -81,20 +81,29 @@ export async function GET(request: NextRequest) {
     });
   }
 
+  // Determine target role from state if available
+  let targetRole: "citizen" | "enterprise_admin" = "citizen";
+  if (state) {
+    try {
+      const decoded = JSON.parse(Buffer.from(state, "base64url").toString("utf8"));
+      if (decoded.role === "enterprise_admin" || decoded.role === "citizen") {
+        targetRole = decoded.role;
+      }
+    } catch {}
+  }
+
+  // If role is enterprise_admin and destination is generic dashboard, route to enterprise workspace
+  let finalDestination = safePath;
+  if (targetRole === "enterprise_admin" && finalDestination === "/dashboard") {
+    finalDestination = "/dashboard/enterprise";
+  }
+
   // 1. Handle mock development Google fast-auth simulation
   if (code === "mock_google_oauth_code") {
-    let targetRole = "citizen";
-    if (state) {
-      try {
-        const decoded = JSON.parse(Buffer.from(state, "base64url").toString("utf8"));
-        if (decoded.role) targetRole = decoded.role;
-      } catch {}
-    }
-
     const devUserId = "usr_chinwe_okafor_7721";
     globalUserStore.getVault(devUserId);
 
-    const response = NextResponse.redirect(new URL(safePath, canonicalOrigin));
+    const response = NextResponse.redirect(new URL(finalDestination, canonicalOrigin));
     response.cookies.set("sb_auth_token", "mock_google_session_token", {
       path: "/",
       domain: cookieDomain,
@@ -112,17 +121,6 @@ export async function GET(request: NextRequest) {
     return response;
   }
 
-  // Determine target role from state if available
-  let targetRole: "citizen" | "enterprise_admin" = "citizen";
-  if (state) {
-    try {
-      const decoded = JSON.parse(Buffer.from(state, "base64url").toString("utf8"));
-      if (decoded.role === "enterprise_admin" || decoded.role === "citizen") {
-        targetRole = decoded.role;
-      }
-    } catch {}
-  }
-
   let lastExchangeError: string | null = null;
 
   // 2. Try Supabase Session Exchange (with modern getAll/setAll cookie binding)
@@ -131,7 +129,7 @@ export async function GET(request: NextRequest) {
 
   if (supabaseUrl && supabaseAnonKey) {
     try {
-      const response = NextResponse.redirect(new URL(safePath, canonicalOrigin));
+      const response = NextResponse.redirect(new URL(finalDestination, canonicalOrigin));
       const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
         cookieOptions: {
           domain: cookieDomain,

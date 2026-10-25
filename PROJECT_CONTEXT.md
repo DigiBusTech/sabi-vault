@@ -1,4 +1,4 @@
-> **Status:** Pre-production; Virtual Consular Immigration Officer, Financial Forensics (28-day holding, sudden deposit dumping radar, name reconciliation) & Admissibility Checklist active (Entry #082), Sovereign Target Advisor Goals CRUD, Dynamic Readiness Radar, LinkedIn Work Experience & 1-Click Multimodal CV/LinkedIn Ingestion active (Entry #080), Vision AI Ingestion Hardening, Google Drive Auto-Refresh & Accurate Database Stats active (Entry #079), Logo Design skill integrated & content-pinned (Entry #078), Unified Document Intake, Google Drive Auto-Upload & Supabase Vault Records Persistence active (Entry #077), Live Multi-Tenant Notification Broadcast System active (Entry #072), Google OAuth code interception & homepage fast-redirect active via Edge middleware and client listener (Entry #073), Bot defense & Google verification hardened (Entry #067), Tiered Storage Quota System active (FREE: 25MB, PRO: 100MB, ENTERPRISE: 500MB, SOVEREIGN: 2048MB custom). All Next.js routes compiled cleanly, 0 errors (100% Passed Test Suites). Dev server: http://localhost:3000.
+> **Status:** Pre-production; Agency Client Hub ("On-Behalf-Of" Dossiers), Multi-Benchmark Criteria Engine, Developer API Keys & Dynamic Evidence-Gated Screening Funnel active (Entry #084), Virtual Consular Immigration Officer, Financial Forensics (28-day holding, sudden deposit dumping radar, name reconciliation) & Admissibility Checklist active (Entry #082), Sovereign Target Advisor Goals CRUD, Dynamic Readiness Radar, LinkedIn Work Experience & 1-Click Multimodal CV/LinkedIn Ingestion active (Entry #080), Vision AI Ingestion Hardening, Google Drive Auto-Refresh & Accurate Database Stats active (Entry #079), Logo Design skill integrated & content-pinned (Entry #078), Unified Document Intake, Google Drive Auto-Upload & Supabase Vault Records Persistence active (Entry #077), Live Multi-Tenant Notification Broadcast System active (Entry #072), Tiered Storage Quota System active (FREE: 25MB, PRO: 100MB, ENTERPRISE: 500MB, SOVEREIGN: 2048MB custom). All Next.js routes compiled cleanly, 0 errors (100% Passed Test Suites). Dev server: http://localhost:3000.
 
 > **Rule:** This file MUST be read at the beginning of any session by any AI agent, developer, or IDE before inspecting or modifying code. It MUST be updated during every commit or major milestone.
 
@@ -68,13 +68,16 @@ Every citizen vault organizes extracted structured data into 9 schema-validated 
   - **Query Limits:** Single-use or rate-limited.
   - **Recipient Binding:** Optional restriction to designated organization IDs.
 
-### E. Multi-Agent & Multi-LLM Enterprise Screening Engine (B2B)
-Evaluators (recruiters, visa officers, admissions deans) upload requirement criteria documents. SabiProfile executes a multi-stage verification pipeline:
+### E. Multi-Agent & Multi-LLM Enterprise Screening Engine (B2B) & Agency Hub
+Evaluators (recruiters, visa officers, admissions deans, immigration firms) evaluate candidates and manage applicant dossiers with full mathematical and sovereign grounding:
 1. **Integrity Agent:** Computes live SHA-256 hashes of fetched structured candidate data and cross-checks them against the blockchain ledger.
-2. **Criteria Ingestion Agent:** Deconstructs unstructured requirement docs into a strict scoring matrix (minimum GPA, valid liquid balance, specific certifications, verified tenure).
-3. **Strict RAG Evaluator Agent:** Evaluates candidate JSON strictly against the rubric with zero hallucination guarantee.
-4. **Fraud & Anomaly Detection Agent:** Flags timeline inconsistencies, altered metadata, or mismatching credential issuers.
+2. **Criteria Ingestion Agent:** Deconstructs requirement criteria into dynamic benchmarks (GPA, liquid maintenance funds, 28-day holding periods, tenure years, CEFR languages, Tier-2 notary seals) with statutory citations and auto-interview score gates.
+3. **Strict RAG Evaluator Agent:** Evaluates candidate JSON strictly against the active rubric with zero hallucination guarantee. Missing data fails the benchmark; it is never guessed.
+4. **Fraud & Anomaly Detection Agent:** Flags timeline inconsistencies, funds dumping surges, altered metadata, or mismatching credential issuers.
 5. **Multi-LLM Failover Gateway:** Enterprise router maintaining 3–4 redundant model backends (Google Gemini, OpenAI, Anthropic, open-source fallback) with automatic failover, latency tracking, and zero downtime.
+6. **Dynamic Evidence-Gated Screening Funnel:** 5-stage evaluation funnel enforcing strict fail-closed progression (Stage 1: Hash Ledger, Stage 2: Prerequisites, Stage 3: AI Semantic, Stage 4: Org Review, Stage 5: Interview Dispatch). Stage 5 strictly locks and blocks scheduling if the candidate is rejected, below the passing threshold, or fails integrity checks.
+7. **Agency Client Hub ("On-Behalf-Of" Dossiers):** Dedicated client manager for immigration and talent agencies inside `/dashboard/enterprise/clients` enabling creation of applicant dossiers, pre-screening against destination rules, and dispatch of secure ownership claim tokens.
+8. **Developer Scoped API Keys:** Production and sandbox API key management (`sbo_live_...`, `sbo_test_...`) with rotation, revocation, and copy-paste code snippets for cURL, Swift (iOS), Kotlin (Android), and Python.
 
 ---
 

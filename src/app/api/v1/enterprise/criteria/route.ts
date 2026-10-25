@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { globalCriteriaStore, CriteriaProfile } from "@/core/enterprise/criteria_store";
+import { globalCriteriaStore, CriteriaProfile, BenchmarkItem } from "@/core/enterprise/criteria_store";
 import { randomBytes } from "crypto";
 import { authorizeRoles } from "@/lib/auth/auth_guard";
 
@@ -29,12 +29,15 @@ export async function POST(req: NextRequest) {
       name,
       category = "CUSTOM",
       description,
+      passingScore = 70,
+      autoInterviewScore = 85,
       minGpa,
       minLiquidFundsUsd,
       minExperienceYears,
       requiredCategories = ["academics", "experience"],
       mandatoryTier2Notarization = false,
       weights = {},
+      benchmarks = [],
     } = body;
 
     if (!name || !description) {
@@ -47,6 +50,8 @@ export async function POST(req: NextRequest) {
       name,
       category,
       description,
+      passingScore: Number(passingScore) || 70,
+      autoInterviewScore: Number(autoInterviewScore) || 85,
       minGpa: minGpa ? Number(minGpa) : undefined,
       minLiquidFundsUsd: minLiquidFundsUsd ? Number(minLiquidFundsUsd) : undefined,
       minExperienceYears: minExperienceYears ? Number(minExperienceYears) : undefined,
@@ -58,7 +63,22 @@ export async function POST(req: NextRequest) {
         experience: weights.experience ? Number(weights.experience) : 25,
         certifications: weights.certifications ? Number(weights.certifications) : 15,
         achievements: weights.achievements ? Number(weights.achievements) : 10,
+        legal: weights.legal ? Number(weights.legal) : 0,
       },
+      benchmarks: Array.isArray(benchmarks)
+        ? benchmarks.map((b: any) => ({
+            id: b.id || `bm_${randomBytes(3).toString("hex")}`,
+            name: b.name || "Benchmark Requirement",
+            category: b.category || "general",
+            importance: b.importance || "mandatory",
+            metricType: b.metricType || "min_value",
+            targetValue: b.targetValue,
+            unit: b.unit || "",
+            failurePenalty: Number(b.failurePenalty) || 20,
+            statutoryCitation: b.statutoryCitation || "",
+            description: b.description || "",
+          }))
+        : [],
       createdAt: new Date().toISOString(),
     };
 
@@ -72,5 +92,3 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
-
-
