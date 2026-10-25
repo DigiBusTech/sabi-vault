@@ -2,6 +2,9 @@
 
 import React, { useState, useEffect } from "react";
 import {
+  Trash2,
+  Info,
+  HelpCircle,
   Cpu,
   Shield,
   Coins,
@@ -85,6 +88,324 @@ const AGENT_STAGES = [
 
 export type EnterpriseViewMode = "all" | "overview" | "rubrics" | "screening";
 
+export interface SectorPreset {
+  id: string;
+  label: string;
+  icon: string;
+  name: string;
+  category: "IMMIGRATION" | "LABOUR" | "EDUCATION" | "CUSTOM" | "FINANCE" | "HEALTHCARE" | "LEGAL";
+  description: string;
+  minGpa: string;
+  minFunds: string;
+  minExp: string;
+  tier2Required: boolean;
+  passingScore: string;
+  autoInterviewScore: string;
+  benchmarks: BenchmarkItem[];
+}
+
+export const SECTOR_PRESETS: SectorPreset[] = [
+  {
+    id: "immigration",
+    label: "Immigration & Visas",
+    icon: "🌍",
+    name: "Global Talent Tech Visa (UK / Canada / Australia)",
+    category: "IMMIGRATION",
+    description: "Strict sovereign immigration screening for exceptional tech talent and high-skilled migrants.",
+    minGpa: "3.5",
+    minFunds: "12000",
+    minExp: "3",
+    tier2Required: true,
+    passingScore: "75",
+    autoInterviewScore: "88",
+    benchmarks: [
+      {
+        id: "bm_imm_funds",
+        name: "Sovereign Settlement Maintenance Funds",
+        category: "finance",
+        importance: "mandatory",
+        metricType: "min_funds",
+        targetValue: 12000,
+        unit: "USD",
+        failurePenalty: 35,
+        statutoryCitation: "UKVI Appendix Finance FIN 6.1 / IRCC R200",
+        description: "Candidate must possess liquid unencumbered proof of funds held continuously.",
+      },
+      {
+        id: "bm_imm_holding",
+        name: "28-Day Consecutive Holding Window",
+        category: "finance",
+        importance: "mandatory",
+        metricType: "holding_period_days",
+        targetValue: 28,
+        unit: "Days",
+        failurePenalty: 30,
+        statutoryCitation: "UKVI Appendix Finance Strict Consecutive Balance Rule",
+        description: "Balance must not drop below statutory minimum for even one single day.",
+      },
+      {
+        id: "bm_imm_tenure",
+        name: "Documented Tech Career Tenure",
+        category: "experience",
+        importance: "mandatory",
+        metricType: "min_tenure_years",
+        targetValue: 3,
+        unit: "Years",
+        failurePenalty: 25,
+        statutoryCitation: "SOC 2020 High-Skilled Tech Occupations",
+        description: "Verified professional employment matching eligible technology roles.",
+      },
+      {
+        id: "bm_imm_tier2",
+        name: "Institutional Attestation (Tier-2 Notarized)",
+        category: "academics",
+        importance: "mandatory",
+        metricType: "tier2_notarized",
+        targetValue: "TIER_2",
+        failurePenalty: 25,
+        statutoryCitation: "Hague Apostille / Consular Legalization Standards",
+        description: "Degree certificate and transcript must bear institutional digital attestation.",
+      },
+    ],
+  },
+  {
+    id: "tech",
+    label: "Software & Cloud",
+    icon: "💻",
+    name: "Staff Distributed Systems & Security Architect",
+    category: "LABOUR",
+    description: "Enterprise engineering audit for high-volume financial settlement and sovereign systems.",
+    minGpa: "3.0",
+    minFunds: "0",
+    minExp: "5",
+    tier2Required: false,
+    passingScore: "70",
+    autoInterviewScore: "85",
+    benchmarks: [
+      {
+        id: "bm_tech_tenure",
+        name: "Senior Architectural Tenure",
+        category: "experience",
+        importance: "mandatory",
+        metricType: "min_tenure_years",
+        targetValue: 5,
+        unit: "Years",
+        failurePenalty: 35,
+        statutoryCitation: "Senior Staff Engineering Level Framework",
+        description: "Documented practice building and maintaining production distributed backends.",
+      },
+      {
+        id: "bm_tech_ts",
+        name: "TypeScript / Node.js Mastery",
+        category: "experience",
+        importance: "mandatory",
+        metricType: "required_skill",
+        targetValue: "TypeScript",
+        failurePenalty: 20,
+        description: "Core fluency in type-safe asynchronous microservices.",
+      },
+      {
+        id: "bm_tech_sec",
+        name: "Security & Cryptographic Attestation",
+        category: "certifications",
+        importance: "preferred",
+        metricType: "tier2_notarized",
+        targetValue: "TIER_1",
+        failurePenalty: 15,
+        description: "Documented credentials in information security or cloud architecture.",
+      },
+    ],
+  },
+  {
+    id: "fintech",
+    label: "Banking & FinTech",
+    icon: "💳",
+    name: "Banking & FinTech Compliance Director",
+    category: "CUSTOM",
+    description: "Stringent regulatory AML/KYC audit for compliance officers in Tier-1 banking, clearinghouses, and licensed fintechs.",
+    minGpa: "3.2",
+    minFunds: "5000",
+    minExp: "5",
+    tier2Required: true,
+    passingScore: "75",
+    autoInterviewScore: "88",
+    benchmarks: [
+      {
+        id: "bm_fin_tenure",
+        name: "5+ Years Regulatory Compliance Practice",
+        category: "experience",
+        importance: "mandatory",
+        metricType: "min_tenure_years",
+        targetValue: 5,
+        unit: "Years",
+        failurePenalty: 35,
+        statutoryCitation: "FINRA Rule 3110 / FCA Senior Managers Regime",
+        description: "Documented track record in risk management, capital adequacy, or regulatory audits.",
+      },
+      {
+        id: "bm_fin_tier2",
+        name: "Tier-2 Notarized Law/Finance Degree",
+        category: "academics",
+        importance: "mandatory",
+        metricType: "tier2_notarized",
+        targetValue: "TIER_2",
+        failurePenalty: 30,
+        statutoryCitation: "Hague Legalization / Verified Academic Transcript",
+        description: "Institutional verification of accredited finance, economics, or jurisprudence degree.",
+      },
+      {
+        id: "bm_fin_clean_legal",
+        name: "Sovereign Regulatory & Police Clearance",
+        category: "legal",
+        importance: "mandatory",
+        metricType: "police_clearance",
+        targetValue: "CLEAN",
+        failurePenalty: 40,
+        statutoryCitation: "FATF Recommendation 28 Fit and Proper Person Test",
+        description: "Candidate must have zero criminal sanctions or regulatory enforcement reprimands.",
+      },
+    ],
+  },
+  {
+    id: "education",
+    label: "Admissions & Fellowships",
+    icon: "🎓",
+    name: "Postgraduate STEM & Sovereign Scholarship",
+    category: "EDUCATION",
+    description: "Rigorous academic admissions and scholarship vetting requiring verified first-class standing.",
+    minGpa: "4.5",
+    minFunds: "8000",
+    minExp: "1",
+    tier2Required: true,
+    passingScore: "80",
+    autoInterviewScore: "90",
+    benchmarks: [
+      {
+        id: "bm_edu_gpa",
+        name: "First Class Academic Standing (GPA 4.5/5.0)",
+        category: "academics",
+        importance: "mandatory",
+        metricType: "min_gpa",
+        targetValue: 4.5,
+        failurePenalty: 40,
+        statutoryCitation: "Postgraduate Academic Merit Standards",
+        description: "Cumulative GPA must meet or exceed first-class division cutoff.",
+      },
+      {
+        id: "bm_edu_tier2",
+        name: "Transcript Hague Apostille / WES Legalization",
+        category: "academics",
+        importance: "mandatory",
+        metricType: "tier2_notarized",
+        targetValue: "TIER_2",
+        failurePenalty: 30,
+        statutoryCitation: "Credential Evaluation Board Legalization Standards",
+        description: "Verified institutional transcript bearing university digital notary seal.",
+      },
+    ],
+  },
+  {
+    id: "legal",
+    label: "Legal & Procurement",
+    icon: "⚖️",
+    name: "Corporate Legal Counsel & Procurement Auditor",
+    category: "CUSTOM",
+    description: "Legal integrity vetting for corporate counsel, commercial contract negotiators, and public procurement integrity officers.",
+    minGpa: "3.5",
+    minFunds: "0",
+    minExp: "4",
+    tier2Required: true,
+    passingScore: "75",
+    autoInterviewScore: "85",
+    benchmarks: [
+      {
+        id: "bm_leg_apostille",
+        name: "Apostilled Jurisprudence Degree",
+        category: "academics",
+        importance: "mandatory",
+        metricType: "tier2_notarized",
+        targetValue: "TIER_2",
+        failurePenalty: 35,
+        statutoryCitation: "Bar Association / SRA Admitted Attorney Standard",
+        description: "Verified law degree and official qualifying law transcript.",
+      },
+      {
+        id: "bm_leg_tenure",
+        name: "4+ Years Commercial Contract Tenure",
+        category: "experience",
+        importance: "mandatory",
+        metricType: "min_tenure_years",
+        targetValue: 4,
+        unit: "Years",
+        failurePenalty: 25,
+        statutoryCitation: "Corporate Governance & Commercial Practice Matrix",
+        description: "Active practice in cross-border procurement, IP, or enterprise compliance.",
+      },
+      {
+        id: "bm_leg_clearance",
+        name: "Bar Good Standing & Clean Disciplinary Ledger",
+        category: "legal",
+        importance: "mandatory",
+        metricType: "police_clearance",
+        targetValue: "CLEAN",
+        failurePenalty: 35,
+        statutoryCitation: "Solicitors Disciplinary Tribunal / State Bar Ledger",
+        description: "Zero pending sanctions or disbarment proceedings.",
+      },
+    ],
+  },
+  {
+    id: "healthcare",
+    label: "Healthcare & Medicine",
+    icon: "🏥",
+    name: "Clinical Specialist & Medical Practitioner",
+    category: "CUSTOM",
+    description: "Hospital credentialing and medical council vetting requiring authenticated degrees, clinical residency, and clean standing.",
+    minGpa: "3.5",
+    minFunds: "0",
+    minExp: "3",
+    tier2Required: true,
+    passingScore: "80",
+    autoInterviewScore: "90",
+    benchmarks: [
+      {
+        id: "bm_hc_degree",
+        name: "Accredited Medical Degree (Tier-2 Notarized)",
+        category: "academics",
+        importance: "mandatory",
+        metricType: "tier2_notarized",
+        targetValue: "TIER_2",
+        failurePenalty: 40,
+        statutoryCitation: "ECFMG / GMC Registered Medical Qualification",
+        description: "Primary medical qualification verified via institutional notary seal.",
+      },
+      {
+        id: "bm_hc_tenure",
+        name: "Documented Clinical Residency Tenure",
+        category: "experience",
+        importance: "mandatory",
+        metricType: "min_tenure_years",
+        targetValue: 3,
+        unit: "Years",
+        failurePenalty: 30,
+        statutoryCitation: "ACGME / NHS Clinical Training Benchmarks",
+        description: "Completed supervised post-graduate clinical rotations.",
+      },
+      {
+        id: "bm_hc_clearance",
+        name: "Vulnerable Patient & Police Attestation",
+        category: "legal",
+        importance: "mandatory",
+        metricType: "police_clearance",
+        targetValue: "CLEAN",
+        failurePenalty: 45,
+        statutoryCitation: "DBS Enhanced Check / Healthcare Worker Safeguarding",
+        description: "Clean safeguarding check with no fitness-to-practise restrictions.",
+      },
+    ],
+  },
+];
+
 interface EnterpriseScreeningViewProps {
   viewMode?: EnterpriseViewMode;
 }
@@ -135,7 +456,7 @@ export function EnterpriseScreeningView({ viewMode = "all" }: EnterpriseScreenin
   const [showCustomModal, setShowCustomModal] = useState<boolean>(false);
   const [customName, setCustomName] = useState<string>("");
   const [customDescription, setCustomDescription] = useState<string>("");
-  const [customCategory, setCustomCategory] = useState<"IMMIGRATION" | "LABOUR" | "EDUCATION" | "CUSTOM">("LABOUR");
+  const [customCategory, setCustomCategory] = useState<"IMMIGRATION" | "LABOUR" | "EDUCATION" | "CUSTOM" | "FINANCE" | "HEALTHCARE" | "LEGAL">("LABOUR");
   const [customMinGpa, setCustomMinGpa] = useState<string>("3.5");
   const [customMinFunds, setCustomMinFunds] = useState<string>("10000");
   const [customMinExp, setCustomMinExp] = useState<string>("3");
@@ -145,6 +466,47 @@ export function EnterpriseScreeningView({ viewMode = "all" }: EnterpriseScreenin
   const [customBenchmarks, setCustomBenchmarks] = useState<BenchmarkItem[]>([]);
   const [customError, setCustomError] = useState<string | null>(null);
   const [isSavingRubric, setIsSavingRubric] = useState<boolean>(false);
+
+    const handleApplyPreset = (preset: SectorPreset) => {
+    setCustomName(preset.name);
+    setCustomCategory(preset.category);
+    setCustomDescription(preset.description);
+    setCustomMinGpa(preset.minGpa);
+    setCustomMinFunds(preset.minFunds);
+    setCustomMinExp(preset.minExp);
+    setCustomTier2Required(preset.tier2Required);
+    setCustomPassingScore(preset.passingScore);
+    setCustomAutoInterviewScore(preset.autoInterviewScore);
+    setCustomBenchmarks(JSON.parse(JSON.stringify(preset.benchmarks)));
+  };
+
+  const handleAddBenchmark = () => {
+    const newBm: BenchmarkItem = {
+      id: `bm_custom_${Date.now()}`,
+      name: "New Benchmark Requirement",
+      category: "experience",
+      importance: "mandatory",
+      metricType: "min_tenure_years",
+      targetValue: "3",
+      unit: "Years",
+      failurePenalty: 25,
+      statutoryCitation: "Institutional Policy",
+      description: "Custom evaluation threshold",
+    };
+    setCustomBenchmarks((prev) => [...prev, newBm]);
+  };
+
+  const handleUpdateBenchmark = (index: number, field: keyof BenchmarkItem, value: any) => {
+    setCustomBenchmarks((prev) => {
+      const copy = [...prev];
+      copy[index] = { ...copy[index], [field]: value };
+      return copy;
+    });
+  };
+
+  const handleRemoveBenchmark = (index: number) => {
+    setCustomBenchmarks((prev) => prev.filter((_, i) => i !== index));
+  };
 
   const handleTrackChange = (trackId: QueryTrackId) => {
     setSelectedTrack(trackId);
@@ -1235,11 +1597,11 @@ export function EnterpriseScreeningView({ viewMode = "all" }: EnterpriseScreenin
       </section>
     )}
 
-      {/* ---- New rubric modal ---- */}
+      {/* ---- Rich Multi-Sector Grounding Rubric Modal ---- */}
       {showCustomModal && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-3 sm:p-4">
           <div
-            className="absolute inset-0 bg-slate-900/50 backdrop-blur-[2px]"
+            className="absolute inset-0 bg-slate-900/60 backdrop-blur-xs"
             onClick={() => setShowCustomModal(false)}
             aria-hidden="true"
           />
@@ -1247,7 +1609,7 @@ export function EnterpriseScreeningView({ viewMode = "all" }: EnterpriseScreenin
             role="dialog"
             aria-modal="true"
             aria-label="Create custom rubric"
-            className="relative w-full max-w-lg space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl"
+            className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto space-y-5 rounded-2xl border border-slate-200 bg-white p-5 sm:p-7 shadow-2xl"
             style={{ animation: "dashCardIn 0.3s cubic-bezier(0.16,1,0.3,1) both" }}
           >
             <button
@@ -1256,68 +1618,97 @@ export function EnterpriseScreeningView({ viewMode = "all" }: EnterpriseScreenin
               aria-label="Close"
               className="absolute right-4 top-4 rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
             >
-              <X className="h-4 w-4" />
+              <X className="h-5 w-5" />
             </button>
 
-            <div className="flex items-center gap-2.5">
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
-                <FileText className="h-4 w-4" />
+            <div className="flex items-center gap-3">
+              <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 ring-1 ring-emerald-200/60">
+                <Sliders className="h-5 w-5" />
               </span>
               <div>
-                <h3 className="font-heading text-base font-bold text-slate-900">Create grounding rubric</h3>
-                <p className="text-xs text-slate-500">Candidates are scored strictly against these rules</p>
+                <h3 className="font-heading text-lg font-bold text-slate-900">Criteria Studio & Multi-Sector Rubric Builder</h3>
+                <p className="text-xs text-slate-500">Configure sovereign screening criteria, statutory thresholds, and multi-benchmark rules.</p>
               </div>
             </div>
 
-            <div className="space-y-3 text-xs">
-              <div>
-                <label htmlFor="rubric-name" className="mb-1.5 block font-semibold text-slate-700">
-                  Rubric name
-                </label>
-                <input
-                  id="rubric-name"
-                  type="text"
-                  value={customName}
-                  onChange={(e) => setCustomName(e.target.value)}
-                  placeholder="e.g. Senior Smart Contract Auditor"
-                  className="w-full rounded-lg border border-slate-200 bg-white p-2.5 text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
-                />
+            {/* 1-Click Multi-Sector Presets Bar */}
+            <div className="space-y-2 rounded-xl border border-slate-200/80 bg-slate-50/70 p-3.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
+                  <Sparkles className="h-3.5 w-3.5 text-emerald-600" /> 1-Click Sector Presets (Auto-fills Criteria & Benchmarks)
+                </span>
+                <span className="text-[10px] text-slate-400">Click a sector to load proven benchmarks</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+                {SECTOR_PRESETS.map((preset) => (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    onClick={() => handleApplyPreset(preset)}
+                    className="flex flex-col items-center justify-center gap-1 rounded-xl border border-slate-200 bg-white p-2.5 text-center text-xs font-semibold text-slate-700 shadow-2xs transition-all hover:border-emerald-400 hover:bg-emerald-50/60 hover:text-emerald-900 active:scale-95"
+                  >
+                    <span className="text-xl">{preset.icon}</span>
+                    <span className="text-[11px] font-bold leading-tight">{preset.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-4 text-xs">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <div className="sm:col-span-2">
+                  <label htmlFor="rubric-name" className="mb-1 block font-semibold text-slate-700">
+                    Rubric Title & Track Name *
+                  </label>
+                  <input
+                    id="rubric-name"
+                    type="text"
+                    value={customName}
+                    onChange={(e) => setCustomName(e.target.value)}
+                    placeholder="e.g. Senior Smart Contract Auditor or UK Tech Global Talent"
+                    className="w-full rounded-lg border border-slate-200 bg-white p-2.5 text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="rubric-category" className="mb-1 block font-semibold text-slate-700">
+                    Screening Sector Vertical
+                  </label>
+                  <select
+                    id="rubric-category"
+                    value={customCategory}
+                    onChange={(e: any) => setCustomCategory(e.target.value)}
+                    className="w-full rounded-lg border border-slate-200 bg-white p-2.5 text-slate-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                  >
+                    <option value="IMMIGRATION">🌍 Immigration & Visas</option>
+                    <option value="LABOUR">💻 Labour & Tech Hiring</option>
+                    <option value="FINANCE">💳 Banking & FinTech</option>
+                    <option value="EDUCATION">🎓 Education & Admissions</option>
+                    <option value="LEGAL">⚖️ Legal & Procurement</option>
+                    <option value="HEALTHCARE">🏥 Healthcare & Medicine</option>
+                    <option value="CUSTOM">🏢 Custom Organization</option>
+                  </select>
+                </div>
               </div>
 
               <div>
-                <label htmlFor="rubric-category" className="mb-1.5 block font-semibold text-slate-700">
-                  Domain category
-                </label>
-                <select
-                  id="rubric-category"
-                  value={customCategory}
-                  onChange={(e: any) => setCustomCategory(e.target.value)}
-                  className="w-full rounded-lg border border-slate-200 bg-white p-2.5 text-slate-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
-                >
-                  <option value="LABOUR">Labour and enterprise hiring</option>
-                  <option value="IMMIGRATION">Immigration and visa processing</option>
-                  <option value="EDUCATION">Education and university admissions</option>
-                  <option value="CUSTOM">Custom organization rubric</option>
-                </select>
-              </div>
-
-              <div>
-                <label htmlFor="rubric-desc" className="mb-1.5 block font-semibold text-slate-700">
-                  Grounding description
+                <label htmlFor="rubric-desc" className="mb-1 block font-semibold text-slate-700">
+                  Statutory Purpose & Evaluator Directive *
                 </label>
                 <textarea
                   id="rubric-desc"
                   value={customDescription}
                   onChange={(e) => setCustomDescription(e.target.value)}
-                  placeholder="Strict qualification requirements for applicants..."
+                  placeholder="Strict qualification rules, statutory references, and criteria the AI Evaluator must enforce..."
                   rows={2}
                   className="w-full resize-none rounded-lg border border-slate-200 bg-white p-2.5 text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
                 />
               </div>
 
-              <div className="grid grid-cols-3 gap-2">
+              {/* Thresholds Row */}
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
                 <div>
-                  <label htmlFor="rubric-gpa" className="mb-1.5 block font-semibold text-slate-700">
+                  <label htmlFor="rubric-gpa" className="mb-1 block font-semibold text-slate-700">
                     Min GPA
                   </label>
                   <input
@@ -1326,38 +1717,35 @@ export function EnterpriseScreeningView({ viewMode = "all" }: EnterpriseScreenin
                     step="0.1"
                     value={customMinGpa}
                     onChange={(e) => setCustomMinGpa(e.target.value)}
-                    className="w-full rounded-lg border border-slate-200 bg-white p-2.5 text-slate-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                    className="w-full rounded-lg border border-slate-200 bg-white p-2 text-slate-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
                   />
                 </div>
                 <div>
-                  <label htmlFor="rubric-funds" className="mb-1.5 block font-semibold text-slate-700">
-                    Min funds ($)
+                  <label htmlFor="rubric-funds" className="mb-1 block font-semibold text-slate-700">
+                    Min Funds ($)
                   </label>
                   <input
                     id="rubric-funds"
                     type="number"
                     value={customMinFunds}
                     onChange={(e) => setCustomMinFunds(e.target.value)}
-                    className="w-full rounded-lg border border-slate-200 bg-white p-2.5 text-slate-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                    className="w-full rounded-lg border border-slate-200 bg-white p-2 text-slate-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
                   />
                 </div>
                 <div>
-                  <label htmlFor="rubric-exp" className="mb-1.5 block font-semibold text-slate-700">
-                    Min years
+                  <label htmlFor="rubric-exp" className="mb-1 block font-semibold text-slate-700">
+                    Min Years Exp
                   </label>
                   <input
                     id="rubric-exp"
                     type="number"
                     value={customMinExp}
                     onChange={(e) => setCustomMinExp(e.target.value)}
-                    className="w-full rounded-lg border border-slate-200 bg-white p-2.5 text-slate-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                    className="w-full rounded-lg border border-slate-200 bg-white p-2 text-slate-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
                   />
                 </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 text-xs">
                 <div>
-                  <label htmlFor="rubric-pass-score" className="mb-1.5 block font-semibold text-slate-700">
+                  <label htmlFor="rubric-pass-score" className="mb-1 block font-semibold text-slate-700">
                     Passing Bar (0-100)
                   </label>
                   <input
@@ -1367,12 +1755,12 @@ export function EnterpriseScreeningView({ viewMode = "all" }: EnterpriseScreenin
                     max="100"
                     value={customPassingScore}
                     onChange={(e) => setCustomPassingScore(e.target.value)}
-                    className="w-full rounded-lg border border-slate-200 bg-white p-2.5 text-slate-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                    className="w-full rounded-lg border border-slate-200 bg-white p-2 text-slate-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
                   />
                 </div>
                 <div>
-                  <label htmlFor="rubric-auto-interview" className="mb-1.5 block font-semibold text-slate-700">
-                    Auto-Interview Threshold (0-100)
+                  <label htmlFor="rubric-auto-interview" className="mb-1 block font-semibold text-slate-700">
+                    Auto-Interview
                   </label>
                   <input
                     id="rubric-auto-interview"
@@ -1381,7 +1769,7 @@ export function EnterpriseScreeningView({ viewMode = "all" }: EnterpriseScreenin
                     max="100"
                     value={customAutoInterviewScore}
                     onChange={(e) => setCustomAutoInterviewScore(e.target.value)}
-                    className="w-full rounded-lg border border-slate-200 bg-white p-2.5 text-slate-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                    className="w-full rounded-lg border border-slate-200 bg-white p-2 text-slate-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
                   />
                 </div>
               </div>
@@ -1394,9 +1782,188 @@ export function EnterpriseScreeningView({ viewMode = "all" }: EnterpriseScreenin
                   onChange={(e) => setCustomTier2Required(e.target.checked)}
                   className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
                 />
-                <label htmlFor="tier2check" className="font-medium text-slate-700">
-                  Mandatory Tier-2 institutional notarization
+                <label htmlFor="tier2check" className="font-semibold text-slate-700">
+                  Mandatory Tier-2 institutional notarization (requires Hague Apostille or verifiable notary stamp)
                 </label>
+              </div>
+
+              {/* Interactive Multi-Benchmark Builder */}
+              <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/50 p-4">
+                <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-center border-b border-slate-200 pb-2.5">
+                  <div>
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
+                      <Sliders className="h-4 w-4 text-emerald-600" /> Interactive Dynamic Benchmarks ({customBenchmarks.length})
+                    </span>
+                    <p className="text-[11px] text-slate-500">Fine-tune individual metric targets, importance gates, and statutory penalties.</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleAddBenchmark}
+                    className="flex items-center gap-1 self-start rounded-lg bg-emerald-600 px-2.5 py-1.5 text-[11px] font-bold text-white shadow-2xs hover:bg-emerald-700"
+                  >
+                    <Plus className="h-3.5 w-3.5" /> Add Benchmark Row
+                  </button>
+                </div>
+
+                {customBenchmarks.length === 0 ? (
+                  <div className="rounded-lg border border-dashed border-slate-300 p-4 text-center text-slate-400">
+                    <p>No benchmarks configured. Click a sector preset above or click &ldquo;Add Benchmark Row&rdquo;.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {customBenchmarks.map((bm, idx) => (
+                      <div
+                        key={bm.id || idx}
+                        className="rounded-xl border border-slate-200 bg-white p-3 shadow-2xs space-y-2.5"
+                      >
+                        <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-2">
+                          <span className="text-[11px] font-extrabold uppercase text-emerald-700">
+                            Rule #{idx + 1}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveBenchmark(idx)}
+                            className="rounded p-1 text-slate-400 hover:bg-rose-50 hover:text-rose-600"
+                            title="Remove benchmark"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-12 text-xs">
+                          <div className="sm:col-span-4">
+                            <label className="mb-0.5 block text-[10px] font-bold uppercase text-slate-500">
+                              Requirement Name
+                            </label>
+                            <input
+                              type="text"
+                              value={bm.name}
+                              onChange={(e) => handleUpdateBenchmark(idx, "name", e.target.value)}
+                              placeholder="e.g. 28-Day Holding Period"
+                              className="w-full rounded border border-slate-200 p-1.5 text-xs text-slate-900"
+                            />
+                          </div>
+
+                          <div className="sm:col-span-3">
+                            <label className="mb-0.5 block text-[10px] font-bold uppercase text-slate-500">
+                              Category Domain
+                            </label>
+                            <select
+                              value={bm.category}
+                              onChange={(e) => handleUpdateBenchmark(idx, "category", e.target.value)}
+                              className="w-full rounded border border-slate-200 p-1.5 text-xs text-slate-900"
+                            >
+                              <option value="finance">Finance</option>
+                              <option value="experience">Experience</option>
+                              <option value="academics">Academics</option>
+                              <option value="legal">Legal & Background</option>
+                              <option value="certifications">Certifications</option>
+                              <option value="language">Language</option>
+                            </select>
+                          </div>
+
+                          <div className="sm:col-span-3">
+                            <label className="mb-0.5 block text-[10px] font-bold uppercase text-slate-500">
+                              Metric Evaluator Type
+                            </label>
+                            <select
+                              value={bm.metricType}
+                              onChange={(e) => handleUpdateBenchmark(idx, "metricType", e.target.value)}
+                              className="w-full rounded border border-slate-200 p-1.5 text-xs text-slate-900"
+                            >
+                              <option value="min_funds">min_funds (Liquid Balance)</option>
+                              <option value="holding_period_days">holding_period_days (Seasoning)</option>
+                              <option value="funds_dumping_limit">funds_dumping_limit (Max Deposit)</option>
+                              <option value="min_gpa">min_gpa (Academic Cutoff)</option>
+                              <option value="min_tenure_years">min_tenure_years (Work History)</option>
+                              <option value="required_skill">required_skill (Technical Fluency)</option>
+                              <option value="cefr_level">cefr_level (Language Standard)</option>
+                              <option value="tier2_notarized">tier2_notarized (Apostille Seal)</option>
+                              <option value="police_clearance">police_clearance (Clean Record)</option>
+                            </select>
+                          </div>
+
+                          <div className="sm:col-span-2">
+                            <label className="mb-0.5 block text-[10px] font-bold uppercase text-slate-500">
+                              Importance
+                            </label>
+                            <select
+                              value={bm.importance}
+                              onChange={(e) => handleUpdateBenchmark(idx, "importance", e.target.value)}
+                              className="w-full rounded border border-slate-200 p-1.5 text-xs font-bold text-slate-900"
+                            >
+                              <option value="mandatory">Mandatory (Hard Gate)</option>
+                              <option value="preferred">Preferred</option>
+                              <option value="optional">Optional</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-12 text-xs">
+                          <div className="sm:col-span-3">
+                            <label className="mb-0.5 block text-[10px] font-bold uppercase text-slate-500">
+                              Target Value
+                            </label>
+                            <input
+                              type="text"
+                              value={String(bm.targetValue)}
+                              onChange={(e) => handleUpdateBenchmark(idx, "targetValue", e.target.value)}
+                              placeholder="e.g. 12000 or TIER_2"
+                              className="w-full rounded border border-slate-200 p-1.5 text-xs text-slate-900"
+                            />
+                          </div>
+
+                          <div className="sm:col-span-2">
+                            <label className="mb-0.5 block text-[10px] font-bold uppercase text-slate-500">
+                              Unit
+                            </label>
+                            <input
+                              type="text"
+                              value={bm.unit || ""}
+                              onChange={(e) => handleUpdateBenchmark(idx, "unit", e.target.value)}
+                              placeholder="USD, Days, Yrs"
+                              className="w-full rounded border border-slate-200 p-1.5 text-xs text-slate-900"
+                            />
+                          </div>
+
+                          <div className="sm:col-span-2">
+                            <label className="mb-0.5 block text-[10px] font-bold uppercase text-slate-500">
+                              Penalty Pts
+                            </label>
+                            <input
+                              type="number"
+                              value={bm.failurePenalty}
+                              onChange={(e) => handleUpdateBenchmark(idx, "failurePenalty", Number(e.target.value))}
+                              placeholder="25"
+                              className="w-full rounded border border-slate-200 p-1.5 text-xs text-slate-900"
+                            />
+                          </div>
+
+                          <div className="sm:col-span-5">
+                            <label className="mb-0.5 block text-[10px] font-bold uppercase text-slate-500">
+                              Statutory Citation / Law Rule
+                            </label>
+                            <input
+                              type="text"
+                              value={bm.statutoryCitation || ""}
+                              onChange={(e) => handleUpdateBenchmark(idx, "statutoryCitation", e.target.value)}
+                              placeholder="e.g. UKVI FIN 6.1 or FINRA 3110"
+                              className="w-full rounded border border-slate-200 p-1.5 text-xs text-slate-900"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Informational Guidance Notice */}
+              <div className="rounded-xl border border-indigo-100 bg-indigo-50/70 p-3 text-[11px] leading-relaxed text-indigo-900 flex items-start gap-2.5">
+                <Info className="h-4 w-4 shrink-0 text-indigo-600 mt-0.5" />
+                <div>
+                  <strong>Evaluation Assurance:</strong> The Evaluator strictly audits candidate Human Profile claims against on-chain cryptographic hashes. Benchmarks marked <strong>Mandatory</strong> act as fail-closed gates. Unproven credentials are transparently flagged as <code>⚠️ Unattested Profile Claim</code> without falsely triggering cryptographic tamper alarms.
+                </div>
               </div>
 
               {customError && (
@@ -1408,18 +1975,20 @@ export function EnterpriseScreeningView({ viewMode = "all" }: EnterpriseScreenin
 
             <div className="flex items-center justify-end gap-2 border-t border-slate-100 pt-4">
               <button
+                type="button"
                 onClick={() => setShowCustomModal(false)}
                 className="rounded-xl px-4 py-2 text-xs font-semibold text-slate-500 transition-colors hover:text-slate-900"
               >
                 Cancel
               </button>
               <button
+                type="button"
                 onClick={handleCreateCustomRubric}
                 disabled={!customName || !customDescription || isSavingRubric}
-                className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white transition-all duration-200 hover:bg-emerald-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-5 py-2.5 text-xs font-bold text-white transition-all duration-200 hover:bg-emerald-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isSavingRubric && <RefreshCw className="h-3.5 w-3.5 animate-spin" />}
-                Save rubric
+                Save & Deploy Rubric
               </button>
             </div>
           </div>

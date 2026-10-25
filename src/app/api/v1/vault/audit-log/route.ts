@@ -15,8 +15,8 @@ export async function GET(req: NextRequest) {
   // Super admin can inspect all logs; citizen sees only their own vault's logs
   const auditLogs =
     auth.user.role === "super_admin"
-      ? globalUserStore.getAuditLogs()
-      : globalUserStore.getAuditLogs(auth.user.userId);
+      ? await globalUserStore.getAuditLogsAsync()
+      : await globalUserStore.getAuditLogsAsync(auth.user.userId);
 
   return NextResponse.json({
     success: true,
@@ -24,5 +24,3 @@ export async function GET(req: NextRequest) {
     auditLogs,
   });
 }
-
-

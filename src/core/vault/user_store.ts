@@ -26,6 +26,11 @@ export interface TransparencyAuditLog {
   integrityVerified: boolean;
   onChainTx: string;
   status: "VERIFIED_ACCESSED" | "TAMPER_DETECTED" | "BLOCKED";
+  targetVaultId?: string;
+  keyId?: string;
+  screeningVertical?: string;
+  compositeScore?: number;
+  verdict?: string;
 }
 
 class UserVaultMasterStore {
@@ -548,6 +553,57 @@ class UserVaultMasterStore {
       });
   }
 
+  public async listKeysAsync(userId?: string): Promise<ScopedKeyRecord[]> {
+    const memKeys = this.listKeys(userId);
+    try {
+      const admin = createAdminSupabaseClient();
+      let query = admin.from("scoped_api_keys").select("*");
+      if (userId) query = query.eq("vault_id", userId);
+      const { data, error } = await query.order("created_at", { ascending: false });
+
+      if (!error && data && data.length > 0) {
+        const now = Math.floor(Date.now() / 1000);
+        for (const row of data) {
+          const issuedAt = Math.floor(new Date(row.created_at).getTime() / 1000);
+          const expiresAt = Math.floor(new Date(row.expires_at).getTime() / 1000);
+          const remaining = Math.max(0, (row.max_queries || 1) - (row.query_count || 0));
+          let status: ScopedKeyRecord["status"] = "ACTIVE";
+          if (row.is_revoked) status = "REVOKED";
+          else if (expiresAt < now || remaining <= 0) status = "EXPIRED";
+
+          const existingMem = this.keys.get(row.key_id);
+          const rawKey = existingMem?.rawKey || generateScopedApiKey({
+            keyId: row.key_id,
+            vaultId: row.vault_id,
+            allowedScopes: (row.allowed_scopes || ["portfolio"]) as VaultCategory[],
+            issuedAt,
+            expiresAt,
+            maxQueries: row.max_queries || 5,
+            sovereignNode: "ng-west-africa",
+          });
+
+          const rec: ScopedKeyRecord & { vaultId?: string } = {
+            keyId: row.key_id,
+            rawKey,
+            allowedScopes: (row.allowed_scopes || ["portfolio"]) as VaultCategory[],
+            issuedAt,
+            expiresAt,
+            maxQueries: row.max_queries || 5,
+            remainingQueries: remaining,
+            status,
+            label: row.label || `Scoped Key (${(row.allowed_scopes || []).join(", ")})`,
+            vaultId: row.vault_id,
+          };
+          this.keys.set(row.key_id, rec);
+        }
+        return this.listKeys(userId);
+      }
+    } catch (err: any) {
+      console.warn("[UserVaultMasterStore] listKeysAsync notice:", err.message);
+    }
+    return memKeys;
+  }
+
   public mintKey(params: {
     allowedScopes: VaultCategory[];
     ttlDays: number;
@@ -587,6 +643,38 @@ class UserVaultMasterStore {
     return record;
   }
 
+  public async mintKeyAsync(params: {
+    allowedScopes: VaultCategory[];
+    ttlDays: number;
+    maxQueries: number;
+    label?: string;
+    userId?: string;
+  }): Promise<ScopedKeyRecord> {
+    const record = this.mintKey(params);
+    const targetUserId = params.userId || "usr_chinwe_okafor_7721";
+    try {
+      const admin = createAdminSupabaseClient();
+      await this.ensureVaultProfileInDb(targetUserId);
+      await admin.from("scoped_api_keys").upsert(
+        {
+          key_id: record.keyId,
+          vault_id: targetUserId,
+          allowed_scopes: params.allowedScopes,
+          expires_at: new Date(record.expiresAt * 1000).toISOString(),
+          max_queries: params.maxQueries,
+          query_count: 0,
+          is_revoked: false,
+          label: record.label,
+          created_at: new Date(record.issuedAt * 1000).toISOString(),
+        },
+        { onConflict: "key_id" }
+      );
+    } catch (err: any) {
+      console.warn("[UserVaultMasterStore] mintKeyAsync notice:", err.message);
+    }
+    return record;
+  }
+
   public getKeyOwner(keyId: string): string | undefined {
     return this.keys.get(keyId)?.vaultId;
   }
@@ -597,6 +685,19 @@ class UserVaultMasterStore {
     key.status = "REVOKED";
     this.keys.set(keyId, key);
     return true;
+  }
+
+  public async revokeKeyAsync(keyId: string, ownerUserId?: string): Promise<boolean> {
+    const revoked = this.revokeKey(keyId, ownerUserId);
+    try {
+      const admin = createAdminSupabaseClient();
+      let query = admin.from("scoped_api_keys").update({ is_revoked: true }).eq("key_id", keyId);
+      if (ownerUserId) query = query.eq("vault_id", ownerUserId);
+      await query;
+    } catch (err: any) {
+      console.warn("[UserVaultMasterStore] revokeKeyAsync notice:", err.message);
+    }
+    return revoked;
   }
 
   public recordKeyUsage(keyId: string): void {
@@ -610,11 +711,67 @@ class UserVaultMasterStore {
     }
   }
 
+  public async recordKeyUsageAsync(keyId: string): Promise<void> {
+    this.recordKeyUsage(keyId);
+    try {
+      const admin = createAdminSupabaseClient();
+      const { data } = await admin
+        .from("scoped_api_keys")
+        .select("query_count, max_queries")
+        .eq("key_id", keyId)
+        .maybeSingle();
+
+      if (data) {
+        const nextCount = (data.query_count || 0) + 1;
+        await admin
+          .from("scoped_api_keys")
+          .update({
+            query_count: nextCount,
+          })
+          .eq("key_id", keyId);
+      }
+    } catch (err: any) {
+      console.warn("[UserVaultMasterStore] recordKeyUsageAsync notice:", err.message);
+    }
+  }
+
   // --- PRIVACY AUDIT LEDGER ---
   public getAuditLogs(userId?: string): TransparencyAuditLog[] {
     return this.auditLogs
       .filter((l) => !userId || l.targetVaultId === userId)
       .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  }
+
+  public async getAuditLogsAsync(userId?: string): Promise<TransparencyAuditLog[]> {
+    const memLogs = this.getAuditLogs(userId);
+    try {
+      const admin = createAdminSupabaseClient();
+      let query = admin.from("enterprise_query_audits").select("*");
+      if (userId) query = query.eq("target_vault_id", userId);
+      const { data, error } = await query.order("created_at", { ascending: false });
+
+      if (!error && data && data.length > 0) {
+        const dbLogs: TransparencyAuditLog[] = data.map((r: any) => ({
+          id: r.query_id || r.id,
+          timestamp: r.created_at,
+          requestingOrg: r.requesting_organization || "Enterprise Verifier",
+          orgType: "ENTERPRISE",
+          accessedScopes: (r.accessed_scopes || []) as VaultCategory[],
+          purpose: `Institutional Evaluation (${r.screening_vertical || "screening"})`,
+          integrityVerified: Boolean(r.tamper_check_passed),
+          onChainTx: "0x" + (r.query_id || "").replace(/[^0-9a-f]/gi, "").padEnd(64, "0").substring(0, 64),
+          status: r.tamper_check_passed ? "VERIFIED_ACCESSED" : "TAMPER_DETECTED",
+          targetVaultId: r.target_vault_id,
+        }));
+        const existingIds = new Set(dbLogs.map((l) => l.id));
+        const merged = [...dbLogs, ...memLogs.filter((l) => !existingIds.has(l.id))];
+        merged.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+        return merged;
+      }
+    } catch (err: any) {
+      console.warn("[UserVaultMasterStore] getAuditLogsAsync notice:", err.message);
+    }
+    return memLogs;
   }
 
   public recordAuditEntry(
@@ -628,6 +785,39 @@ class UserVaultMasterStore {
     };
     this.auditLogs.unshift(newEntry);
     return newEntry;
+  }
+
+  public async recordAuditEntryAsync(
+    entry: Omit<TransparencyAuditLog, "id" | "timestamp"> & {
+      targetVaultId?: string;
+      keyId?: string;
+      screeningVertical?: string;
+      compositeScore?: number;
+      verdict?: string;
+    }
+  ): Promise<TransparencyAuditLog> {
+    const record = this.recordAuditEntry(entry);
+    try {
+      const admin = createAdminSupabaseClient();
+      await admin.from("enterprise_query_audits").insert({
+        query_id: record.id,
+        key_id: entry.keyId || null,
+        target_vault_id: record.targetVaultId || entry.targetVaultId || "usr_chinwe_okafor_7721",
+        requesting_organization: entry.requestingOrg || "Enterprise Verifier",
+        screening_vertical: entry.screeningVertical || "enterprise",
+        accessed_scopes: entry.accessedScopes || [],
+        tamper_check_passed: entry.integrityVerified,
+        composite_score: entry.compositeScore || 0,
+        verdict: entry.verdict || "UNKNOWN",
+        query_fee_usd: 1.00,
+        platform_split_usd: 0.60,
+        sovereign_host_split_usd: 0.40,
+        created_at: record.timestamp,
+      });
+    } catch (err: any) {
+      console.warn("[UserVaultMasterStore] recordAuditEntryAsync notice:", err.message);
+    }
+    return record;
   }
 
 

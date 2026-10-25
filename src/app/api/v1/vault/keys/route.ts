@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: auth.error || "Authentication required" }, { status: auth.status });
   }
 
-  const keys = globalUserStore.listKeys(auth.user.userId);
+  const keys = await globalUserStore.listKeysAsync(auth.user.userId);
   return NextResponse.json({
     success: true,
     totalKeys: keys.length,
@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const mintedKey = globalUserStore.mintKey({
+    const mintedKey = await globalUserStore.mintKeyAsync({
       allowedScopes: allowedScopes as VaultCategory[],
       ttlDays: Number(ttlDays),
       maxQueries: Number(maxQueries),
@@ -50,6 +50,3 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
-
-
-

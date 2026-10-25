@@ -18,12 +18,8 @@ export async function POST(req: NextRequest) {
     }
 
     const keyOwner = globalUserStore.getKeyOwner(keyId);
-    if (!keyOwner) {
-      return NextResponse.json({ error: "Key not found." }, { status: 404 });
-    }
-
-    const ownerUserId = auth.user.role === "super_admin" ? keyOwner : auth.user.userId;
-    const success = globalUserStore.revokeKey(keyId, ownerUserId);
+    const ownerUserId = auth.user.role === "super_admin" ? (keyOwner || auth.user.userId) : auth.user.userId;
+    const success = await globalUserStore.revokeKeyAsync(keyId, ownerUserId);
     if (!success) {
       return NextResponse.json({ error: "Key not found." }, { status: 404 });
     }
@@ -41,4 +37,3 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
-

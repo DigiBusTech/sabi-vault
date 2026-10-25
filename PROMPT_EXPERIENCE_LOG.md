@@ -2963,3 +2963,50 @@
   - `node tests/test_profile_and_ai_advisor.mjs`: 5/5 test suites passed (100%).
   - `node tests/test_storage_quota_and_skills.mjs`: 8/8 test suites passed (100%).
   - `npx tsc --noEmit`: 0 errors.
+
+---
+
+### Entry #085: Candidate Profile Claim-vs-Attestation Matrix, False-Tamper Eradication, Persistent Scoped Keys & Criteria Studio Multi-Sector Builder
+- **Date & Timestamp:** 2026-10-25 14:45:00 (Local)
+- **User Prompt / Intent:**
+  > "1. i see what looks like an error in organization screening it seems the agent does not read the user profile and experience so it can state it, then if the said qualifications in profile is not available in hashed vault then it will now cleary detaily state the result of the analysis,
+  > 2. the result it clearly stated tampared but i do not see how any required documents that was uploaded was tampered compared to the hashed, i uploaded 2-3 documents in user account i used to test and i have not made any changes to those documents in any way. or upload another one to replace the first hashed which is not diffeerent from what was previously uploaded,
+  > 3. I noticed that after generating the keys in user account the key will disappear when it is queried once and even queries were not logged in user audit trail etc. which is not supposed to be so, user is supposed to decide what happens to each key created.
+  > 4. I do not understand how dynamically the rubic studio works, cause creating new rubics the fields are not clear, how benchmarks are entered and aligned aree not clear as well, also i feel the entry fields for dynamic settings in this org is still limited to certain niche or sectors.
+  > Finally cleary audit this to fix and make sure everything works correctly give me detailed message of your expansion plan and understanding the best things to do, with implementation plan."
+- **Root Cause Analysis:**
+  1. **Profile Ingestion Disconnect:** `evaluateCandidate` in `criteria_store.ts` only examined vault documents and never hydrated `UserHumanProfile` claims (`workExperiences`, `skills`, `languages`). When candidates had un-uploaded credentials declared in their profile, evaluators saw generic "Missing required category" errors rather than explicit claim-vs-evidence audits.
+  2. **False-Positive Tamper Alerts:** In `criteria_store.ts` (lines 346–360), any consented category that was unpopulated returned `{ integrityStatus: "TAMPER_DETECTED" }`. Furthermore, `integrity_agent.ts` checked `(allowSimulation || !isSimulated)`, which rejected simulation-fallback checks on Base Sepolia in production environments without RPC private keys.
+  3. **Ephemeral In-Memory Storage Disappearing:** `globalUserStore.mintKey` and `recordAuditEntry` stored scoped keys and privacy access logs in in-memory JavaScript Maps. When serverless lambda instances recycled or during redeployments, keys and audit trails vanished.
+  4. **Criteria Studio UX & Vertical Limitations:** Criteria Studio modal was restricted to generic numerical inputs without vertical guidance or pre-configured sector benchmarks for Finance, Legal, or Healthcare.
+- **Actions Taken:**
+  1. **Integrity Agent Hardening (`src/agents/integrity_agent.ts`):**
+     - Decoupled mathematical hash verification from production simulation rejection: clean simulation-verified testnet transactions now verify cleanly.
+     - Added item-level document hash extraction (`item.hashRef` or `item.sha256Hash`) matching against on-chain transaction logs.
+  2. **Candidate Profile Claim-vs-Attestation Matrix (`src/core/enterprise/criteria_store.ts`):**
+     - Hydrated candidate profile via `profileAndAdvisorStore.getProfile(payload.vaultId)`.
+     - Cross-references declared profile credentials with sovereign vault documents.
+     - Transparently outputs `⚠️ Unattested Employment Claim: Candidate declares "<title> at <company>" (~<N> yrs in profile), but no verified contract or letter exists in vault.`
+     - Confirms attested credentials with `✓ Attested Work Experience` and `✓ Attested Academic Degree`.
+     - Discovered unpopulated categories are marked as missing data (`continue`), completely eliminating false `TAMPER_DETECTED` verdicts.
+     - Automatically indexes candidate profile technical skills matrix and language proficiencies into verbatim citations.
+  3. **Supabase Persistence for Scoped Keys & Privacy Audit Logs (`src/core/vault/user_store.ts`):**
+     - Implemented `mintKeyAsync`, `listKeysAsync`, `revokeKeyAsync`, and `recordKeyUsageAsync` backed by `scoped_api_keys`.
+     - Implemented `recordAuditEntryAsync` and `getAuditLogsAsync` backed by `enterprise_query_audits`.
+     - Updated routes `/api/v1/vault/keys`, `/api/v1/vault/keys/revoke`, and `/api/v1/vault/audit-log` to call async persistence methods.
+  4. **Multi-Sector Criteria Engine & Dynamic Benchmarks (`criteria_store.ts`):**
+     - Added support for 6 sovereign sectors: `IMMIGRATION`, `LABOUR`, `EDUCATION`, `FINANCE`, `LEGAL`, and `HEALTHCARE`.
+     - Added built-in sector rubrics: `rubric_fintech_compliance_aml`, `rubric_healthcare_clinical_fellow`, `rubric_legal_counsel_procurement`.
+     - Expanded dynamic benchmark evaluator to support `required_skill`, `funds_dumping_limit`, `police_clearance`, `min_funds`, `holding_period_days`, `min_tenure_years`, and `tier2_notarized`.
+  5. **Rich Multi-Sector Criteria Studio UI (`src/components/EnterpriseScreeningView.tsx`):**
+     - Added 1-Click Sector Presets bar across all 6 industry verticals (Immigration & Visas, Software & Cloud, Banking & FinTech, Admissions & Fellowships, Legal & Procurement, Healthcare & Medicine).
+     - Built an interactive Dynamic Multi-Benchmark Builder allowing evaluators to dynamically add, edit, configure, and delete statutory benchmark rules with Metric Type selectors, target values, units, penalty points, and statutory legal citations.
+     - Added comprehensive guidance tooltips detailing mandatory fail-closed rules and unproven claim warnings.
+- **Validation:**
+  - `npx tsx tests/test_profile_attestation_and_persistence.mjs`: 6/6 tests passed (100%).
+  - `node tests/test_enterprise_agency_copilot.mjs`: 6/6 test suites passed (100%).
+  - `node tests/test_consular_advisor_forensics.mjs`: 6/6 test suites passed (100%).
+  - `node tests/test_profile_experience_and_cv_extraction.mjs`: 5/5 test suites passed (100%).
+  - `node tests/test_storage_quota_and_skills.mjs`: 8/8 test suites passed (100%).
+  - `npx tsc --noEmit`: 0 errors.
+  - `npm run build`: 78/78 static and dynamic routes compiled cleanly.
