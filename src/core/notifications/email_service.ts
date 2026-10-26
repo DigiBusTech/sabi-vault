@@ -122,3 +122,4 @@ class TransactionalEmailService {
 }
 
 export const globalEmailService = new TransactionalEmailService();
+

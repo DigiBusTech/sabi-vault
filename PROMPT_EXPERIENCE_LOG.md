@@ -3066,3 +3066,29 @@
   - `node tests/test_storage_quota_and_skills.mjs`: 8/8 test suites passed (100%).
   - `npx tsc --noEmit`: 0 errors.
   - `npm run build`: 85/85 static and dynamic routes compiled cleanly.
+
+---
+
+### Entry #087: Image Editing Claude Skill Integration & Provenance Content-Pinning
+- **Date & Timestamp:** 2026-10-26 21:30:00 (Local)
+- **User Prompt / Intent:**
+  > "add this image editing skills 'https://github.com/jlouage/Image-Editing-Claude-Skill/tree/main/.claude'"
+- **Actions Taken:**
+  1. **Skill Discovery & File Extraction:**
+     - Fetched the GitHub tree for repository `jlouage/Image-Editing-Claude-Skill`.
+     - Downloaded full source files from the upstream repository:
+       - `SKILL.md` (10,084 bytes): Full skill documentation, CLI location, argument hints, transforms, filters, adjustments, format conversion, EXIF handling, and batch operations.
+       - `README.md` (9,567 bytes): Comprehensive documentation, features, interactive flow, and options reference.
+       - `scripts/image_edit.py` (40,036 bytes): Complete CLI image manipulation tool written in Python with PEP 723 inline dependency metadata (`pillow`, `pillow-heif`, `numpy`) and JSON structured stdout output.
+  2. **Multi-Environment Placement:**
+     - Installed into `.claude/skills/image-editing/` for native Claude Code and Agent IDE workflows.
+     - Installed into `.agents/skills/image-editing/` for universal agent skill discovery and compatibility.
+  3. **Integrity & Content-Pinning (`skills-lock.json`):**
+     - Computed SHA-256 hash of installed `SKILL.md`: `8dcc70477d971a4aac0fbb68d08a5f4f1af2751f3ebcce9d221cd0ea52f3da19`.
+     - Pinned `image-editing` entry in `skills-lock.json` with source URL, repository path, and cryptographic checksum.
+  4. **Regression Verification:**
+     - Updated `tests/test_storage_quota_and_skills.mjs` to assert `image-editing` lock pinning and cryptographic hash match.
+- **Validation:**
+  - `node tests/test_storage_quota_and_skills.mjs`: 8/8 test suites passed (100%), including `image-editing` hash verification.
+  - `npx tsx tests/test_talent_crm_rbac_email_discovery.mjs`: 5/5 test suites passed (100%).
+  - `npx tsc --noEmit`: 0 errors.

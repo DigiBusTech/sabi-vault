@@ -364,6 +364,12 @@
             "sourceType": "github",
             "skillPath": "skills/logo-design/SKILL.md",
             "computedHash": "e78ba6a5cf33757f2fdadd0426fa6c235c607b8c9dbbb9123fe5395651d97d4b"
+        },
+        "image-editing": {
+            "source": "jlouage/Image-Editing-Claude-Skill",
+            "sourceType": "github",
+            "skillPath": ".claude/skills/image-editing/SKILL.md",
+            "computedHash": "8dcc70477d971a4aac0fbb68d08a5f4f1af2751f3ebcce9d221cd0ea52f3da19"
         }
     }
 }

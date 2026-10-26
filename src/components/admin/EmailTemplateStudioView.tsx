@@ -523,3 +523,4 @@ export function EmailTemplateStudioView() {
     </div>
   );
 }
+

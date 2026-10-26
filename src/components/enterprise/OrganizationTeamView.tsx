@@ -556,3 +556,4 @@ export function OrganizationTeamView({ initialOrgId = "org_covenant_gate" }: Org
     </div>
   );
 }
+

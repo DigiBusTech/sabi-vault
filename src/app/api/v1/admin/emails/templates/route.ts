@@ -83,3 +83,4 @@ export async function DELETE(req: NextRequest) {
   const ok = await globalEmailTemplateStore.deleteTemplate(templateId);
   return NextResponse.json({ success: ok });
 }
+

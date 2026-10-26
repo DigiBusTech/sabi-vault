@@ -827,3 +827,4 @@ export function TalentPoolCRMView({ initialOrgId = "org_covenant_gate" }: Talent
     </div>
   );
 }
+

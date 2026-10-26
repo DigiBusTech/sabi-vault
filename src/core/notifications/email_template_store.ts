@@ -226,3 +226,4 @@ class EmailTemplateMasterStore {
 }
 
 export const globalEmailTemplateStore = new EmailTemplateMasterStore();
+
