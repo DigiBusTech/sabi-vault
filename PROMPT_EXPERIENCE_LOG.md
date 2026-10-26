@@ -3010,3 +3010,59 @@
   - `node tests/test_storage_quota_and_skills.mjs`: 8/8 test suites passed (100%).
   - `npx tsc --noEmit`: 0 errors.
   - `npm run build`: 78/78 static and dynamic routes compiled cleanly.
+
+---
+
+### Entry #086: Enterprise Applicant Talent Pool & Candidate CRM, Multi-Sector Organization RBAC, Transactional Email Template Studio & The "Right Applicant" Discovery Engine
+- **Date & Timestamp:** 2026-10-26 13:20:00 (Local)
+- **User Prompt / Intent:**
+  > "1. The organization dashboard Managed clients is ok, but another thing that i wanted is having where applicants queried by the organization can be managed for further recruit, also to manaually view applicants profile incase need be to view one by one Pagenated and search by name, location etc filter, every queried applicants eaither single querry or bulk querry will be save in theorganization that queried, so they can use it to make data inform decisions etc, 'Advanced Applicant Talent Pool & CRM'
+  > 2. Organization should be able to create logins for team members with roles so multiple person can work on the organizational dashbaords, Team for organization. 'Organization Role-Based Access Control (RBAC)'
+  > 3. Email system that auto sends email to users and organizations based on activities from their dashbaords, updates from admin etc, a dynamic email system with template management in super admin dashbaord. 'Event-Driven Dynamic Email & Notification System'
+  > 4. 'How do you know the right applicant' i need a system process, and cleary detailed feature that can find a way to solve this problem most employers face this problems cause they can screen only credentials etc and the right people for the position might not be shortlisted further etc, so i really want to now how this can be solved. 'The Right Applicant Discovery Engine (The Core Challenge)'
+  > 5. Remember this is not for job recruitment only, immigration, studies, etc. based on our system. Remember the user vault for cryptographic hashed documents with its tiers etc, which is part of analysis/selection process. Is user profile part of these?"
+- **Architectural Solution & Principles:**
+  - **Tri-Sector Invariant:** Built unified CRM pipelines, RBAC roles, notification templates, and discovery probes across Sovereign Immigration, Academic Admissions, and High-Skilled Labour.
+  - **Vault Ground Truth & Tier Separation:** Ground truth relies strictly on the candidate's User Profile claims cross-verified against Cryptographic Vault Hashes (Tier 1: Standard Hashed vs Tier 2: Authenticated / Legalized).
+  - **The Right Applicant Problem Solved:** Flat keyword ATS screening is replaced with the 4-Pillar Multi-Agent Holistic Match Index (HMI) that uncovers 💎 *Hidden Gems* (high execution velocity despite non-traditional pedigree) and flags ⚠️ *Pedigree Inflation* (high formal claims with zero verified artifacts).
+- **Actions Taken:**
+  1. **Enterprise Applicant Talent Pool & Candidate CRM (`/dashboard/enterprise/talent-pool`):**
+     - Built `EnterpriseTalentPoolService` (`src/core/enterprise/talent_pool_service.ts`) with automatic ingestion on evaluation, sector-specific pipeline stages (Immigration: `DOSSIER_INGESTED` -> `ADMISSIBILITY_REVIEW` -> `CONSULAR_INTERVIEW` -> `VISA_GRANTED`; Education: `APPLICATION_LOGGED` -> `TRANSCRIPT_ATTESTATION` -> `ACADEMIC_BOARD_REVIEW` -> `ADMITTED_SCHOLARSHIP`; Labour: `QUERIED` -> `UNDER_REVIEW` -> `SHORTLISTED` -> `INTERVIEW_SCHEDULED` -> `HIRED`), evaluator scorecards, tags, and multi-facet filtering.
+     - Wired automatic ingestion hook into `criteria_store.ts` (`evaluateCandidate` captures applicant with full profile snapshot, vault ledger, and calculated HMI).
+     - Built API route `src/app/api/v1/enterprise/talent-pool/route.ts` (`GET`, `PATCH`).
+     - Built interactive UI `src/components/enterprise/TalentPoolCRMView.tsx` with slide-over dossier drawer (Vault Cryptographic Audit, Human Profile Timeline, Discovery Engine HMI, and Evaluator Notes).
+     - Built page `src/app/dashboard/enterprise/talent-pool/page.tsx`.
+  2. **Multi-Sector Organization RBAC & Team Management (`/dashboard/enterprise/team`):**
+     - Built `OrganizationTeamService` (`src/core/enterprise/team_service.ts`) with 5-tier role hierarchy: `ORG_OWNER`, `ORG_ADMIN`, `CASE_OFFICER_RECRUITER`, `INTERVIEWER_EVALUATOR`, and `COMPLIANCE_AUDITOR` with sector-specific terminology.
+     - Built permission matrix `ROLE_PERMISSIONS` and server-side verification `hasPermission()`.
+     - Built invitation tokens (`tok_invite_...`), activation links, and member status lifecycle (`INVITED`, `ACTIVE`, `SUSPENDED`).
+     - Built API route `src/app/api/v1/enterprise/team/route.ts` (`GET`, `POST`, `PATCH`, `DELETE`).
+     - Built interactive UI `src/components/enterprise/OrganizationTeamView.tsx` with seat allocations, role selector, invitation modal, and direct activation link generator.
+     - Built page `src/app/dashboard/enterprise/team/page.tsx`.
+  3. **Event-Driven Transactional Email & Super Admin Template Studio (`/dashboard/admin/emails`):**
+     - Built `EmailTemplateMasterStore` (`src/core/notifications/email_template_store.ts`) pre-seeded with 5 core templates (`tpl_talent_query_notice`, `tpl_interview_invite`, `tpl_imm_funds_deficit`, `tpl_acad_apostille_deficit`, `tpl_tamper_critical`).
+     - Built `TransactionalEmailService` (`src/core/notifications/email_service.ts`) supporting variable interpolation (`{{recipient_name}}`, `{{organization_name}}`, etc.), Resend, SMTP, and Sovereign Mock fallback with dispatch telemetry logging.
+     - Built API endpoints `src/app/api/v1/admin/emails/templates/route.ts` and `src/app/api/v1/admin/emails/test-send/route.ts`.
+     - Built interactive UI `src/components/admin/EmailTemplateStudioView.tsx` with live HTML preview sandbox, live test-send simulator, and dispatch telemetry logs.
+     - Built page `src/app/dashboard/admin/emails/page.tsx`.
+  4. **The "Right Applicant" Discovery Engine (`src/agents/discovery_engine.ts`):**
+     - Evaluates candidates across 4 Triangulated Vectors:
+       1. Foundational Integrity Score (Cryptographic on-chain provenance & Tier-2 apostille compliance)
+       2. Practical Execution Index (Real tools, quantified scale impact e.g. TPS/throughput, repository metrics)
+       3. Learning Velocity Index (Progressive career velocity & multilingual adaptability)
+       4. Situational Fit Score (Applied judgment & anomaly absence)
+     - Synthesizes the Universal **Holistic Match Index (HMI)** (0-100).
+     - Identifies **💎 Hidden Gems** (non-elite pedigree + high practical velocity + clean cryptographic provenance).
+     - Triggers **⚠️ Pedigree Inflation Warnings** (elite academic claim + zero practical artifacts or sudden funds dumping).
+     - Dynamically synthesizes 3 sector-grounded interview probes targeting applicant risks.
+  5. **Navigation & Infrastructure:**
+     - Updated `src/lib/dashboard/nav.ts` to surface `talent-pool` and `team` in enterprise navigation and `emails` in super admin navigation.
+- **Validation:**
+  - `npx tsx tests/test_talent_crm_rbac_email_discovery.mjs`: 5/5 test suites passed (100%).
+  - `npx tsx tests/test_profile_attestation_and_persistence.mjs`: 6/6 test suites passed (100%).
+  - `node tests/test_enterprise_agency_copilot.mjs`: 6/6 test suites passed (100%).
+  - `node tests/test_consular_advisor_forensics.mjs`: 6/6 test suites passed (100%).
+  - `node tests/test_profile_experience_and_cv_extraction.mjs`: 5/5 test suites passed (100%).
+  - `node tests/test_storage_quota_and_skills.mjs`: 8/8 test suites passed (100%).
+  - `npx tsc --noEmit`: 0 errors.
+  - `npm run build`: 85/85 static and dynamic routes compiled cleanly.

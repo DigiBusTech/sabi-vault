@@ -4,6 +4,7 @@ import { globalUserStore } from "@/core/vault/user_store";
 import { IntegrityAgent } from "@/agents/integrity_agent";
 import { convertCurrency } from "@/core/advisor/financial_forensics";
 import { profileAndAdvisorStore } from "@/core/vault/profile_store";
+import { globalTalentPoolService } from "./talent_pool_service";
 
 export type BenchmarkImportance = "mandatory" | "preferred" | "optional";
 
@@ -794,7 +795,7 @@ class EnterpriseCriteriaMasterStore {
       verdict,
     });
 
-    return {
+    const finalResult: CandidateEvaluationResult = {
       candidateId: payload.vaultId,
       keyId: payload.keyId,
       sovereignNode: payload.sovereignNode,
@@ -809,6 +810,22 @@ class EnterpriseCriteriaMasterStore {
       anomaliesDetected: anomalies,
       evaluatedAt: new Date().toISOString(),
     };
+
+    // Auto-capture evaluated candidate into organization's Talent Pool CRM
+    try {
+      await globalTalentPoolService.captureEvaluatedApplicant({
+        orgId: requestingOrg === "Enterprise Evaluator" ? "org_covenant_gate" : requestingOrg,
+        keyId: payload.keyId,
+        rubric,
+        evalResult: finalResult,
+        candidateProfile,
+        vault,
+      });
+    } catch (captureErr: any) {
+      console.warn("[EnterpriseCriteriaStore] captureEvaluatedApplicant notice:", captureErr.message);
+    }
+
+    return finalResult;
   }
 
   // --- BATCH SCREENING RUNNER ---
