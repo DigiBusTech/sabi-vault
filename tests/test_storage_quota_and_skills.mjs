@@ -131,6 +131,10 @@ assert(lock.skills["prompt-enhancer"], "skills-lock.json must pin prompt-enhance
 assert(lock.skills["api-skills"], "skills-lock.json must pin api-skills");
 assert(lock.skills["logo-design"], "skills-lock.json must pin logo-design");
 assert(lock.skills["image-editing"], "skills-lock.json must pin image-editing");
+assert(lock.skills["pitch-deck-creator"], "skills-lock.json must pin pitch-deck-creator");
+assert(lock.skills["presentation-pitch-deck"], "skills-lock.json must pin presentation-pitch-deck");
+assert(lock.skills["prd-development"], "skills-lock.json must pin prd-development from PM skills");
+assert(lock.skills["roadmap-planning"], "skills-lock.json must pin roadmap-planning from PM skills");
 const crypto = await import("crypto");
 const peHash = crypto.createHash("sha256").update(fs.readFileSync(promptEnhancerPath)).digest("hex");
 const apiHash = crypto.createHash("sha256").update(fs.readFileSync(apiSkillsPath)).digest("hex");
@@ -142,6 +146,15 @@ assert.strictEqual(lock.skills["logo-design"].computedHash, logoHash, "logo-desi
 const imgSkillPath = path.join(process.cwd(), ".agents", "skills", "image-editing", "SKILL.md");
 const imgHash = crypto.createHash("sha256").update(fs.readFileSync(imgSkillPath)).digest("hex");
 assert.strictEqual(lock.skills["image-editing"].computedHash, imgHash, "image-editing lock hash must match installed file");
+const pdcSkillPath = path.join(process.cwd(), ".agents", "skills", "pitch-deck-creator", "SKILL.md");
+const pdcHash = crypto.createHash("sha256").update(fs.readFileSync(pdcSkillPath)).digest("hex");
+assert.strictEqual(lock.skills["pitch-deck-creator"].computedHash, pdcHash, "pitch-deck-creator lock hash must match installed file");
+const ppdSkillPath = path.join(process.cwd(), ".agents", "skills", "presentation-pitch-deck", "SKILL.md");
+const ppdHash = crypto.createHash("sha256").update(fs.readFileSync(ppdSkillPath)).digest("hex");
+assert.strictEqual(lock.skills["presentation-pitch-deck"].computedHash, ppdHash, "presentation-pitch-deck lock hash must match installed file");
+const prdSkillPath = path.join(process.cwd(), ".agents", "skills", "prd-development", "SKILL.md");
+const prdHash = crypto.createHash("sha256").update(fs.readFileSync(prdSkillPath)).digest("hex");
+assert.strictEqual(lock.skills["prd-development"].computedHash, prdHash, "prd-development lock hash must match installed file");
 console.log("  ✓ Third-party skills content-pinned in skills-lock.json (hashes verified against installed files).");
 
 console.log("\n=======================================================");

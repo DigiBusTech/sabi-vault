@@ -3092,3 +3092,30 @@
   - `node tests/test_storage_quota_and_skills.mjs`: 8/8 test suites passed (100%), including `image-editing` hash verification.
   - `npx tsx tests/test_talent_crm_rbac_email_discovery.mjs`: 5/5 test suites passed (100%).
   - `npx tsc --noEmit`: 0 errors.
+
+---
+
+### Entry #088: Pitch Deck Creator, Presentation Pitch Deck & 77 Product Manager Skills Integration & Provenance Content-Pinning
+- **Date & Timestamp:** 2026-10-27 12:35:00 (Local)
+- **User Prompt / Intent:**
+  > "add this skill to this project 'https://github.com/lionelsimai/claude-skills-collection/blob/main/skills/pitch-deck-creator/SKILL.md' and 'https://github.com/aaronvanston/skills-presentations/blob/main/skills/presentation-pitch-deck/SKILL.md' 'https://github.com/deanpeters/Product-Manager-Skills'"
+- **Actions Taken:**
+  1. **Pitch Deck Creator Skill Integration:**
+     - Cloned upstream `SKILL.md` from `lionelsimai/claude-skills-collection/skills/pitch-deck-creator/SKILL.md`.
+     - Installed into `.claude/skills/pitch-deck-creator/` and `.agents/skills/pitch-deck-creator/`.
+     - Provides structured pitch deck workflows for investor raises, sales pitches, and internal strategy with slide archetypes, content guidelines, and speaker notes.
+  2. **Presentation Pitch Deck Skill Integration:**
+     - Cloned upstream `SKILL.md` from `aaronvanston/skills-presentations/skills/presentation-pitch-deck/SKILL.md`.
+     - Installed into `.claude/skills/presentation-pitch-deck/` and `.agents/skills/presentation-pitch-deck/`.
+     - Formats standalone investor decks designed to pass asynchronous AI screening without a presenter, following Sequoia and YC frameworks with traction-first slide architecture.
+  3. **Product Manager Skills Collection (77 Skills):**
+     - Cloned and extracted all 77 specialized skills from `deanpeters/Product-Manager-Skills/skills/` with their respective `SKILL.md`, `template.md`, and `examples/` submodules.
+     - Installed across both `.claude/skills/` and `.agents/skills/` (e.g. `prd-development`, `roadmap-planning`, `jobs-to-be-done`, `opportunity-solution-tree`, `saas-economics-efficiency-metrics`, `saas-revenue-growth-metrics`, `tam-sam-som-calculator`, `competitive-analysis-process`, etc.).
+  4. **Cryptographic Content-Pinning (`skills-lock.json`):**
+     - Registered all 79 new skills into `skills-lock.json` with their exact repository sources, skill paths, and computed SHA-256 hashes.
+  5. **Regression Verification:**
+     - Updated `tests/test_storage_quota_and_skills.mjs` with assertions for `pitch-deck-creator`, `presentation-pitch-deck`, `prd-development`, and `roadmap-planning` pinning and checksum equality.
+- **Validation:**
+  - `node tests/test_storage_quota_and_skills.mjs`: 8/8 test suites passed (100%), including new pitch deck and PM skills cryptographic lock verifications.
+  - `npx tsx tests/test_talent_crm_rbac_email_discovery.mjs`: 5/5 test suites passed (100%).
+  - `npx tsc --noEmit`: 0 errors.
