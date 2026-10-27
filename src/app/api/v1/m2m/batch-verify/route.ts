@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authenticateM2M } from "@/lib/auth/auth_guard";
-import { verifyScopedApiKey, filterVaultByScope, recordKeyExecution } from "@/core/crypto/scoped_key";
+import { verifyScopedApiKeyAsync, filterVaultByScope, recordKeyExecution } from "@/core/crypto/scoped_key";
 import { IntegrityAgent } from "@/agents/integrity_agent";
-import { StrictRAGEvaluationAgent } from "@/agents/evaluation_agent";
 import { CriteriaAgent } from "@/agents/criteria_agent";
+import { StrictRAGEvaluationAgent } from "@/agents/evaluation_agent";
 import { MultiLLMGateway } from "@/agents/gateway/llm_gateway";
 import { globalUserStore } from "@/core/vault/user_store";
 import { globalAdminStore } from "@/core/admin/admin_store";
@@ -11,7 +11,8 @@ import { globalAdminStore } from "@/core/admin/admin_store";
 /**
  * POST /api/v1/m2m/batch-verify
  *
- * Parallel screening queue for batches of candidate keys against job criteria.
+ * High-Throughput Batch Screening for enterprise recruiters and embassies.
+ * Processes an array of candidate scoped API keys against a single rubric.
  */
 export async function POST(req: NextRequest) {
   try {
@@ -21,19 +22,20 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { candidateKeys, jobCriteriaText, vertical = "labour" } = body;
+    const { candidateKeys, vertical = "labour", criteriaRequirements } = body;
 
     if (!candidateKeys || !Array.isArray(candidateKeys) || candidateKeys.length === 0) {
       return NextResponse.json(
-        { error: "candidateKeys array is required and must contain at least 1 key." },
+        { error: "candidateKeys array with at least one key is required" },
         { status: 400 }
       );
     }
 
+    // Ingest Rubric
     const gateway = new MultiLLMGateway();
     const criteriaAgent = new CriteriaAgent(gateway);
     const rubric = await criteriaAgent.parseRequirements(
-      jobCriteriaText || "Standard requirements: Relevant engineering degree, solid experience, verified credentials.",
+      criteriaRequirements || "Standard requirements: Relevant bachelor degree and clean financial record.",
       vertical
     );
 
@@ -42,7 +44,7 @@ export async function POST(req: NextRequest) {
     const batchResults = [];
 
     for (const key of candidateKeys) {
-      const verification = verifyScopedApiKey(key, undefined, orgAuth.org.id);
+      const verification = await verifyScopedApiKeyAsync(key, undefined, orgAuth.org.id);
       if (!verification.isValid || !verification.payload) {
         batchResults.push({
           candidateKey: key.substring(0, 16) + "...",
@@ -53,7 +55,7 @@ export async function POST(req: NextRequest) {
       }
 
       const { vaultId, allowedScopes } = verification.payload;
-      const candidateVault = globalUserStore.findVault(vaultId);
+      const candidateVault = (await globalUserStore.findVaultAsync(vaultId)) || globalUserStore.findVault(vaultId);
       if (!candidateVault) {
         batchResults.push({
           candidateId: vaultId,
@@ -85,6 +87,19 @@ export async function POST(req: NextRequest) {
       }
 
       if (!tamperFree) {
+        await globalUserStore.recordAuditEntryAsync({
+          keyId: verification.payload.keyId,
+          requestingOrg: orgAuth.org.name,
+          orgType: orgAuth.org.type,
+          accessedScopes: allowedScopes,
+          purpose: `M2M Batch Verification: ${rubric.title} (TAMPER DETECTED)`,
+          integrityVerified: false,
+          onChainTx: "",
+          status: "TAMPER_DETECTED",
+          targetVaultId: vaultId,
+          screeningVertical: (rubric.vertical || "labour").toLowerCase(),
+        });
+
         batchResults.push({
           candidateId: vaultId,
           status: "TAMPER_DETECTED",
@@ -96,11 +111,27 @@ export async function POST(req: NextRequest) {
 
       // Record quota usage
       recordKeyExecution(verification.payload.keyId);
-      globalUserStore.recordKeyUsage(verification.payload.keyId);
+      await globalUserStore.recordKeyUsageAsync(verification.payload.keyId);
       globalAdminStore.recordQueryExecuted(1.0);
 
       // Evaluate
       const dossier = await evalAgent.evaluateCandidate(scopedData, rubric);
+
+      await globalUserStore.recordAuditEntryAsync({
+        keyId: verification.payload.keyId,
+        requestingOrg: orgAuth.org.name,
+        orgType: orgAuth.org.type,
+        accessedScopes: allowedScopes,
+        purpose: `M2M Batch Verification: ${rubric.title}`,
+        integrityVerified: true,
+        onChainTx: "",
+        status: "VERIFIED_ACCESSED",
+        targetVaultId: vaultId,
+        screeningVertical: (rubric.vertical || "labour").toLowerCase(),
+        compositeScore: dossier.totalCompositeScore,
+        verdict: dossier.verdict,
+      });
+
       batchResults.push({
         candidateId: vaultId,
         status: "VERIFIED_EVALUATED",

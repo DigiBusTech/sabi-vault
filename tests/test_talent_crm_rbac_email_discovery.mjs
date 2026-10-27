@@ -515,8 +515,62 @@ async function runTestSuite() {
   assert.strictEqual(evalResult.onChainTx.length, 66, "On-chain tx digest must be a 64-char hex string prefixed with 0x");
   console.log(`✓ On-Chain evaluation digest mathematically formatted: ${evalResult.onChainTx}`);
 
+  // -------------------------------------------------------------
+  // TEST 10: PERSISTENT SCOPED KEY SIGNING & AUDIT LEDGER INGESTION
+  // -------------------------------------------------------------
+  console.log("\n[Test 10] Testing Cold-Start Scoped Key Minting & Audit Ledger Ingestion...");
+
+  const coldUserId = `usr_test_cold_${Date.now()}`;
+
+  // Mint a key for the cold user
+  const coldKey = await globalUserStore.mintKeyAsync({
+    userId: coldUserId,
+    allowedScopes: ["experience", "academics"],
+    ttlDays: 7,
+    maxQueries: 5,
+    label: "Cold Worker Test Key",
+  });
+
+  assert(coldKey && coldKey.rawKey, "Cold worker key must be minted with a valid raw key");
+  assert(!coldKey.rawKey.includes("undefined"), "Key must not contain undefined");
+  console.log(`✓ Minted cold key for ${coldUserId}: ${coldKey.keyId}`);
+
+  // Verify listKeysAsync preserves rawKey and record without disappearing
+  const listedKeys = await globalUserStore.listKeysAsync(coldUserId);
+  assert(listedKeys.length > 0, "Keys must not disappear for user");
+  const retrievedColdKey = listedKeys.find((k) => k.keyId === coldKey.keyId);
+  assert(retrievedColdKey, "Minted key must be present in listKeysAsync");
+  assert.strictEqual(retrievedColdKey.rawKey, coldKey.rawKey, "rawKey must be preserved across reads");
+  console.log(`✓ Scoped key persisted permanently without disappearing!`);
+
+  // Record an audit entry for this user across a custom vertical (e.g. finance/custom)
+  const auditRecord = await globalUserStore.recordAuditEntryAsync({
+    keyId: coldKey.keyId,
+    requestingOrg: "Global Sovereign Bank PLC",
+    orgType: "ENTERPRISE",
+    accessedScopes: ["experience", "academics"],
+    purpose: "Institutional Credit & Experience Verification",
+    integrityVerified: true,
+    onChainTx: "0x" + "a".repeat(64),
+    status: "VERIFIED_ACCESSED",
+    targetVaultId: coldUserId,
+    screeningVertical: "custom_credit_check",
+    compositeScore: 92,
+    verdict: "ACCEPTED",
+  });
+
+  assert(auditRecord && auditRecord.id, "Audit record must be successfully generated");
+  console.log(`✓ Recorded audit entry: ${auditRecord.id}`);
+
+  // Verify getAuditLogsAsync retrieves the logged event by userId
+  const coldAuditLogs = await globalUserStore.getAuditLogsAsync(coldUserId);
+  assert(coldAuditLogs.length > 0, "Audit logs must not be empty after query");
+  const foundLog = coldAuditLogs.find((l) => l.id === auditRecord.id);
+  assert(foundLog, "Specific query audit log must appear in privacy transparency ledger");
+  console.log(`✓ Privacy transparency audit ledger verified: Query by ${foundLog.requestingOrg} successfully logged!`);
+
   console.log("\n=========================================================================");
-  console.log("🎉 ALL 9 TEST SUITES PASSED! TALENT CRM, RBAC, EMAIL & DISCOVERY VERIFIED!");
+  console.log("🎉 ALL 10 TEST SUITES PASSED! TALENT CRM, RBAC, EMAIL, DISCOVERY & KEYS VERIFIED!");
   console.log("=========================================================================");
 }
 

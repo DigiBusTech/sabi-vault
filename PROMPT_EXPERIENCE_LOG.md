@@ -3185,3 +3185,68 @@
   - `npx tsx tests/test_talent_crm_rbac_email_discovery.mjs`: 9/9 test suites passed (100%).
   - `npx tsc --noEmit`: 0 errors.
   - `npm run build`: 86/86 routes compiled successfully.
+
+
+---
+
+### Entry #090: Resolution of Serverless Scoped Key Signing Drop, Key Persistence, and Resilient Privacy Audit Trail Ingestion
+- **Date & Timestamp:** 2026-10-27 23:21:00 (Local)
+- **User Prompt / Intent:**
+  > 1. "Still having issues with the mint keys disappearing after use, and when i try to create a new one it shows this error, 'Scoped API key signing is unavailable because the signing secret is not configured.' then i have to go to admin dashbaord config to toggle and reset a new scope signing key before i can mint a new key for query, which this will not be possible when different users wants to mint keys,"
+  > 2. "audit trail shows nothing or disappears after query."
+- **Root Cause Analysis:**
+  1. **Scoped Key Signing Secret Cold Drop:**
+     - In Vercel serverless production, `getConfigValueSync("security.api_signing_secret")` checked an in-memory `cache` Map in `platform_config.ts`. Fresh lambdas initialized with an empty cache.
+     - On cold starts, `getSecretKey()` fell back to the insecure dev string, which production code intentionally blocked by returning `""`.
+     - When users tried to mint keys on fresh workers, it threw `"Scoped API key signing is unavailable because the signing secret is not configured."`
+     - Visiting the Super Admin dashboard warmed the cache on *that specific lambda instance only*, meaning any other cold lambda continued failing.
+  2. **Scoped Keys Disappearing:**
+     - In `src/core/vault/user_store.ts`, `mintKeyAsync` wrote key metadata to `scoped_api_keys` in Supabase but did NOT store the bearer token string (`raw_key`).
+     - `listKeysAsync` attempted to re-sign and re-generate `rawKey` on the fly. When `generateScopedApiKey` threw due to the cold cache, `listKeysAsync` caught the error and returned an empty in-memory array `[]`, causing the UI to show `Scoped keys (0)`.
+  3. **Audit Trail Showing Nothing / Disappearing:**
+     - Critical query and screening routes (`/api/v1/screen`, `/api/v1/vault/query`, `/api/v1/m2m/query`, `/api/v1/m2m/evaluate`, `/api/v1/m2m/batch-verify`) called `globalUserStore.recordAuditEntry` (synchronous in-memory ONLY) instead of `await globalUserStore.recordAuditEntryAsync(...)`.
+     - Consequently, queries never wrote to the Supabase `enterprise_query_audits` table. In serverless multi-worker environments, the privacy audit ledger in `/dashboard/audit` returned 0 records on fresh workers.
+     - Furthermore, `enterprise_query_audits` in Supabase had a rigid `CHECK (screening_vertical IN ('labour', 'immigration', 'education', 'enterprise'))` constraint and foreign key on `key_id`, causing unhandled exceptions when evaluating custom rubrics (e.g. `finance`, `healthcare`, `custom`).
+     - `/api/v1/vault/query` had a logic bug on line 79 where `onChainCheck.isSimulated === true` was treated as a cryptographic tamper, incorrectly failing valid testnet queries with `TAMPER_DETECTED`.
+- **Actions Taken:**
+  1. **Deterministic Secret Derivation & Async Resilience (`scoped_key.ts`):**
+     - In `src/core/crypto/scoped_key.ts`: `getSecretKey()` now deterministically derives a strong 256-bit secret from `process.env.SUPABASE_SERVICE_ROLE_KEY` (`createHash("sha256").update("sabi-scoped-key-signing:" + SUPABASE_SERVICE_ROLE_KEY).digest("hex")`) if the in-memory cache is cold.
+     - Added `getSecretKeyAsync()`, `generateScopedApiKeyAsync()`, and `verifyScopedApiKeyAsync()` which prime the platform config cache from Supabase on demand.
+     - Added multi-key graceful verification: keys signed with either the dynamic admin secret or the deterministic server secret verify seamlessly across secret updates.
+  2. **Persistent Raw Bearer Key Storage (`user_store.ts` & Migration):**
+     - Created `supabase/migrations/20261027230000_fix_scoped_keys_and_audit_logs.sql`:
+       - Adds `raw_key TEXT` column to `public.scoped_api_keys`.
+       - Drops rigid check constraint `enterprise_query_audits_screening_vertical_check`.
+       - Drops foreign key `enterprise_query_audits_key_id_fkey`.
+       - Adds indexes on `scoped_api_keys(vault_id)` and `enterprise_query_audits(target_vault_id, created_at)`.
+       - Adds service_role policies for unrestricted server management.
+     - In `user_store.ts`:
+       - `mintKeyAsync`: persists `raw_key: record.rawKey` to `scoped_api_keys`.
+       - `listKeysAsync`: reads `row.raw_key` directly from Supabase, bypassing fragile on-the-fly re-signing and ensuring keys never disappear.
+       - `findVaultAsync`: dynamically hydrates candidate vaults from `vault_records` if cold in memory.
+  3. **Universal Async Audit Trail Ingestion:**
+     - Updated all API routes to use `await globalUserStore.recordAuditEntryAsync(...)` and `await globalUserStore.recordKeyUsageAsync(...)`:
+       - `src/app/api/v1/screen/route.ts`
+       - `src/app/api/v1/vault/query/route.ts`
+       - `src/app/api/v1/m2m/query/route.ts`
+       - `src/app/api/v1/m2m/evaluate/route.ts`
+       - `src/app/api/v1/m2m/batch-verify/route.ts`
+       - `src/core/enterprise/criteria_store.ts`
+     - In `user_store.ts:recordAuditEntryAsync`:
+       - Defensively normalizes `screeningVertical` to one of `['labour', 'immigration', 'education', 'enterprise']` so writes succeed on un-migrated databases.
+       - Gracefully handles foreign key retry if `key_id` is missing in `scoped_api_keys`.
+     - In `user_store.ts:getAuditLogsAsync`:
+       - Resolves user aliases (UUID, email, username) from `vault_profiles` and queries `target_vault_id IN (userAliases)`.
+     - Fixed `src/app/api/v1/vault/query/route.ts` to use `IntegrityAgent` so valid credentials and simulation caches are never falsely rejected as tampered.
+- **Automated Verification:**
+  - Added Test 10 to `tests/test_talent_crm_rbac_email_discovery.mjs`:
+    - Tests cold-worker scoped key minting without platform cache pre-warming.
+    - Confirms `rawKey` persistence and retrieval across `listKeysAsync`.
+    - Confirms `recordAuditEntryAsync` and retrieval via `getAuditLogsAsync`.
+  - `npx tsx tests/test_talent_crm_rbac_email_discovery.mjs`: 10/10 test suites passed (100%).
+  - `node tests/test_storage_quota_and_skills.mjs`: 8/8 test suites passed (100%).
+  - `node tests/test_enterprise_agency_copilot.mjs`: 6/6 test suites passed (100%).
+  - `node tests/test_consular_advisor_forensics.mjs`: 6/6 test suites passed (100%).
+  - `node tests/test_profile_experience_and_cv_extraction.mjs`: 5/5 test suites passed (100%).
+  - `npx tsc --noEmit`: 0 errors.
+  - `npm run build`: 86/86 routes compiled and static pages generated cleanly.

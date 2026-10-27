@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyScopedApiKey, filterVaultByScope, recordKeyExecution } from "@/core/crypto/scoped_key";
+import { verifyScopedApiKeyAsync, filterVaultByScope, recordKeyExecution } from "@/core/crypto/scoped_key";
 import { SovereignNodeRouter } from "@/core/sovereign/node_router";
-import { BlockchainLedgerClient } from "@/core/blockchain/ledger_client";
-import { computeSha256 } from "@/core/crypto/hasher";
+import { IntegrityAgent } from "@/agents/integrity_agent";
 import { globalUserStore } from "@/core/vault/user_store";
 import { authenticateM2M } from "@/lib/auth/auth_guard";
 
@@ -28,7 +27,7 @@ export async function POST(req: NextRequest) {
     }
 
     // 1. Verify Cryptographic API Key
-    const verification = verifyScopedApiKey(apiKey, undefined, orgAuth.org.id);
+    const verification = await verifyScopedApiKeyAsync(apiKey, undefined, orgAuth.org.id);
     if (!verification.isValid || !verification.payload) {
       return NextResponse.json(
         {
@@ -42,7 +41,7 @@ export async function POST(req: NextRequest) {
     const { vaultId, allowedScopes, sovereignNode, expiresAt, maxQueries } = verification.payload;
 
     // 2. Fetch Structured Data from Sovereign Node Storage
-    const rawVault = globalUserStore.findVault(vaultId);
+    const rawVault = (await globalUserStore.findVaultAsync(vaultId)) || globalUserStore.findVault(vaultId);
     if (!rawVault) {
       return NextResponse.json(
         { error: `Vault '${vaultId}' not found on sovereign node '${sovereignNode}'` },
@@ -60,28 +59,32 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 4. Verify Document Hashes Against Blockchain Ledger
-    const ledgerClient = new BlockchainLedgerClient();
+    // 4. Verify Document Hashes Against Blockchain Ledger via IntegrityAgent
+    const integrityAgent = new IntegrityAgent();
     const verificationResults: Record<string, any> = {};
     let allTamperFree = scopesToVerify.length > 0;
 
     for (const scope of allowedScopes) {
       if ((scopedVault as any)[scope]) {
-        const currentDataHash = computeSha256((scopedVault as any)[scope]);
-        const onChainCheck = await ledgerClient.verifyHash(vaultId, scope, currentDataHash);
+        const check = await integrityAgent.verifyCategoryIntegrity(
+          vaultId,
+          scope,
+          (scopedVault as any)[scope]
+        );
         verificationResults[scope] = {
-          sha256Hash: currentDataHash,
-          onChainVerified: onChainCheck.isMatch && onChainCheck.isSimulated !== true,
-          tier: onChainCheck.tier,
-          ledgerTimestamp: onChainCheck.timestamp,
-          isSimulated: onChainCheck.isSimulated === true,
+          sha256Hash: check.onChainHash,
+          onChainVerified: check.isTamperFree,
+          tier: check.verificationTier,
+          ledgerTimestamp: check.timestamp,
+          isSimulated: check.isSimulated,
         };
-        if (!onChainCheck.isMatch || onChainCheck.isSimulated === true) allTamperFree = false;
+        if (!check.isTamperFree) allTamperFree = false;
       }
     }
 
     if (!allTamperFree) {
-      globalUserStore.recordAuditEntry({
+      await globalUserStore.recordAuditEntryAsync({
+        keyId: verification.payload.keyId,
         requestingOrg: orgAuth.org.name,
         orgType: "ENTERPRISE",
         accessedScopes: allowedScopes,
@@ -104,9 +107,10 @@ export async function POST(req: NextRequest) {
 
     // 5. Record Quota Usage and Citizen Audit Log
     recordKeyExecution(verification.payload.keyId);
-    globalUserStore.recordKeyUsage(verification.payload.keyId);
+    await globalUserStore.recordKeyUsageAsync(verification.payload.keyId);
 
-    globalUserStore.recordAuditEntry({
+    await globalUserStore.recordAuditEntryAsync({
+      keyId: verification.payload.keyId,
       requestingOrg: orgAuth.org.name,
       orgType: "ENTERPRISE",
       accessedScopes: allowedScopes,

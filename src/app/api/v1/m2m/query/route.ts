@@ -1,15 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { globalAdminStore } from "@/core/admin/admin_store";
-import { verifyScopedApiKey, filterVaultByScope, recordKeyExecution } from "@/core/crypto/scoped_key";
+import { verifyScopedApiKeyAsync, filterVaultByScope, recordKeyExecution } from "@/core/crypto/scoped_key";
 import { BlockchainLedgerClient } from "@/core/blockchain/ledger_client";
 import { SovereignNodeRouter } from "@/core/sovereign/node_router";
 import { computeSha256 } from "@/core/crypto/hasher";
 import { globalUserStore } from "@/core/vault/user_store";
 import { authenticateM2M } from "@/lib/auth/auth_guard";
-
-
-
-
 
 /**
  * POST /api/v1/m2m/query
@@ -38,7 +34,7 @@ export async function POST(req: NextRequest) {
     }
 
     const candidateApiKey = authHeader.substring(7).trim();
-    const keyVerification = verifyScopedApiKey(candidateApiKey, undefined, org.id);
+    const keyVerification = await verifyScopedApiKeyAsync(candidateApiKey, undefined, org.id);
     if (!keyVerification.isValid || !keyVerification.payload) {
       return NextResponse.json(
         { error: "Candidate API Key invalid, revoked, or expired", details: keyVerification.error },
@@ -58,7 +54,7 @@ export async function POST(req: NextRequest) {
     }
 
     // 4. Resolve candidate data and redact un-permitted categories
-    const candidateData = globalUserStore.findVault(vaultId);
+    const candidateData = (await globalUserStore.findVaultAsync(vaultId)) || globalUserStore.findVault(vaultId);
     if (!candidateData) {
       return NextResponse.json({ error: "Candidate vault was not found." }, { status: 404 });
     }
@@ -95,10 +91,10 @@ export async function POST(req: NextRequest) {
       }
     }
 
-
     // Fail closed if any hash does not match immutable ledger
     if (!allTamperFree) {
-      globalUserStore.recordAuditEntry({
+      await globalUserStore.recordAuditEntryAsync({
+        keyId: keyVerification.payload.keyId,
         requestingOrg: org.name,
         orgType: org.type,
         accessedScopes: allowedScopes,
@@ -124,14 +120,15 @@ export async function POST(req: NextRequest) {
 
     // 6. Record Key Usage (atomic quota decrement)
     recordKeyExecution(keyVerification.payload.keyId);
-    globalUserStore.recordKeyUsage(keyVerification.payload.keyId);
+    await globalUserStore.recordKeyUsageAsync(keyVerification.payload.keyId);
 
     // 7. Record Micro-Transaction Telemetry & Revenue Split
     globalAdminStore.recordQueryExecuted(1.0);
     const nodeConfig = SovereignNodeRouter.resolveSovereignNode(candidateData.residenceCountry || "NG");
 
     // 8. Record Citizen Transparency Audit Log
-    globalUserStore.recordAuditEntry({
+    await globalUserStore.recordAuditEntryAsync({
+      keyId: keyVerification.payload.keyId,
       requestingOrg: org.name,
       orgType: org.type,
       accessedScopes: allowedScopes,
@@ -151,30 +148,30 @@ export async function POST(req: NextRequest) {
         type: org.type,
       },
       sovereignNode: {
-        id: nodeConfig.nodeId,
-        region: nodeConfig.regionName,
+        nodeId: nodeConfig.nodeId,
         jurisdiction: nodeConfig.jurisdiction,
-        complianceFramework: nodeConfig.complianceFramework,
+        regionName: nodeConfig.regionName,
+        framework: nodeConfig.complianceFramework,
       },
       allowedScopes,
       verifiedData: scopedData,
       blockchainProof: {
+        tamperStatus: "TAMPER_FREE_VERIFIED",
         network: "Base Sepolia L2",
-        tamperStatus: "ALL_HASHES_MATCH_LEDGER",
         verifications: verificationResults,
       },
-      microTransactionReceipt: {
-        feeUsd: 1.0,
-        platformSplitUsd: 0.6,
-        sovereignHostSplitUsd: 0.4,
-        payoutAddress: nodeConfig.payoutAddress,
-        contract: "SabiRevenueSplitter.sol (Base Sepolia)",
+      govTechMicroTransaction: {
+        totalFeeUSD: 1.0,
+        platformTreasurySplitUSD: 0.6,
+        sovereignHostSplitUSD: 0.4,
+        sovereignHostPayoutWallet: nodeConfig.payoutAddress,
+        contract: "SabiRevenueSplitter.sol",
       },
-      timestamp: new Date().toISOString(),
+      queriedAt: new Date().toISOString(),
     });
   } catch (err: any) {
     return NextResponse.json(
-      { error: "M2M query processing failed", details: err.message },
+      { error: "M2M Query pipeline error", details: err.message },
       { status: 500 }
     );
   }

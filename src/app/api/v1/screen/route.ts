@@ -4,14 +4,10 @@ import { IntegrityAgent } from "@/agents/integrity_agent";
 import { CriteriaAgent } from "@/agents/criteria_agent";
 import { StrictRAGEvaluationAgent } from "@/agents/evaluation_agent";
 import { FraudDetectionAgent } from "@/agents/fraud_detection_agent";
-import { verifyScopedApiKey, filterVaultByScope, recordKeyExecution } from "@/core/crypto/scoped_key";
+import { verifyScopedApiKeyAsync, filterVaultByScope, recordKeyExecution } from "@/core/crypto/scoped_key";
 import { SovereignNodeRouter } from "@/core/sovereign/node_router";
 import { globalUserStore } from "@/core/vault/user_store";
 import { authenticateM2M } from "@/lib/auth/auth_guard";
-
-
-
-
 
 /**
  * POST /api/v1/screen
@@ -39,7 +35,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Step 1: Validate Scoped Key & Redact Non-Permitted Scopes
-    const keyVerification = verifyScopedApiKey(apiKey, undefined, orgAuth.org.id);
+    const keyVerification = await verifyScopedApiKeyAsync(apiKey, undefined, orgAuth.org.id);
     if (!keyVerification.isValid || !keyVerification.payload) {
       return NextResponse.json(
         { error: "Invalid or expired candidate API key", details: keyVerification.error },
@@ -48,7 +44,7 @@ export async function POST(req: NextRequest) {
     }
 
     const { vaultId, allowedScopes } = keyVerification.payload;
-    const candidateVault = globalUserStore.findVault(vaultId);
+    const candidateVault = (await globalUserStore.findVaultAsync(vaultId)) || globalUserStore.findVault(vaultId);
     if (!candidateVault) {
       return NextResponse.json({ error: "Candidate vault was not found." }, { status: 404 });
     }
@@ -79,7 +75,8 @@ export async function POST(req: NextRequest) {
     }
 
     if (!allTamperFree) {
-      globalUserStore.recordAuditEntry({
+      await globalUserStore.recordAuditEntryAsync({
+        keyId: keyVerification.payload.keyId,
         requestingOrg: requestingOrg || "Enterprise Screener Portal",
         orgType: "ENTERPRISE",
         accessedScopes: allowedScopes,
@@ -88,6 +85,7 @@ export async function POST(req: NextRequest) {
         onChainTx: "",
         status: "TAMPER_DETECTED",
         targetVaultId: vaultId,
+        screeningVertical: (vertical || "labour").toLowerCase(),
       });
 
       return NextResponse.json(
@@ -102,7 +100,7 @@ export async function POST(req: NextRequest) {
 
     // Record Key Usage Quota
     recordKeyExecution(keyVerification.payload.keyId);
-    globalUserStore.recordKeyUsage(keyVerification.payload.keyId);
+    await globalUserStore.recordKeyUsageAsync(keyVerification.payload.keyId);
 
     // Step 3: Agent 2 - Criteria Ingestion Agent
     const gateway = new MultiLLMGateway();
@@ -127,9 +125,9 @@ export async function POST(req: NextRequest) {
     // Step 6: 60/40 Micro-Transaction Accounting
     const sovereignNode = SovereignNodeRouter.resolveSovereignNode(candidateVault.residenceCountry || "NG");
 
-
     // Step 7: Record Citizen Privacy Transparency Log
-    globalUserStore.recordAuditEntry({
+    await globalUserStore.recordAuditEntryAsync({
+      keyId: keyVerification.payload.keyId,
       requestingOrg: requestingOrg || "Enterprise Screener Portal",
       orgType: "ENTERPRISE",
       accessedScopes: allowedScopes,
@@ -138,6 +136,9 @@ export async function POST(req: NextRequest) {
       onChainTx: "",
       status: "VERIFIED_ACCESSED",
       targetVaultId: vaultId,
+      screeningVertical: selectedVertical.toLowerCase(),
+      compositeScore: evaluationDossier.totalCompositeScore,
+      verdict: evaluationDossier.verdict,
     });
 
     return NextResponse.json({

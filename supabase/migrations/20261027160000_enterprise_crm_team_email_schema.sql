@@ -124,3 +124,4 @@ BEGIN
         CREATE POLICY service_role_all_dispatch_logs ON public.email_dispatch_logs FOR ALL TO service_role USING (true) WITH CHECK (true);
     END IF;
 END $$;
+

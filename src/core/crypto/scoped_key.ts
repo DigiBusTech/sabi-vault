@@ -1,6 +1,6 @@
-import { createHmac, timingSafeEqual } from "crypto";
+import { createHmac, createHash, timingSafeEqual } from "crypto";
 import { VaultCategory, FullUserVault } from "@/types/vault";
-import { getConfigValueSync } from "@/core/config/platform_config";
+import { getConfigValueSync, getConfigValue } from "@/core/config/platform_config";
 
 export interface ScopedApiKeyPayload {
   keyId: string;
@@ -23,18 +23,49 @@ export interface VerificationResult {
 const REVOKED_KEY_IDS = new Set<string>();
 const KEY_USAGE_TRACKER = new Map<string, number>();
 
-function getSecretKey(): string {
-  // Dynamic platform config (dashboard-managed) with legacy env fallback.
+export function getSecretKey(): string {
+  // 1. Dynamic platform config (dashboard-managed via Super Admin dashboard)
   const configured = getConfigValueSync("security.api_signing_secret");
   const isInsecureDefault = configured === "sabi_profile_dev_insecure_secret_key_32bytes_min!";
-  if (process.env.NODE_ENV === "production") {
-    if (!configured || isInsecureDefault) {
-      console.error("[SECURITY] Scoped key signing secret must be configured in production (Super Admin dashboard).");
-      return "";
-    }
+  if (configured && !isInsecureDefault) {
     return configured;
   }
-  return configured || "sabi_profile_dev_insecure_secret_key_32bytes_min!";
+
+  // 2. Explicit environment variable override
+  if (process.env.SABI_API_SIGNING_SECRET) {
+    return process.env.SABI_API_SIGNING_SECRET;
+  }
+
+  // 3. Resilient Serverless Derivation:
+  // In serverless production (e.g. Vercel), cold lambda instances start with empty in-memory caches.
+  // Deriving a cryptographic 256-bit signing key from SUPABASE_SERVICE_ROLE_KEY guarantees:
+  // - High-entropy cryptographic security (never the dev default)
+  // - 100% availability across all lambdas without requiring manual dashboard toggling
+  // - Never throws "Scoped API key signing is unavailable"
+  if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return createHash("sha256")
+      .update(`sabi-scoped-key-signing:${process.env.SUPABASE_SERVICE_ROLE_KEY}`)
+      .digest("hex");
+  }
+
+  if (process.env.NODE_ENV === "production") {
+    console.error("[SECURITY] Scoped key signing secret must be configured in production (Super Admin dashboard or SUPABASE_SERVICE_ROLE_KEY).");
+    return "";
+  }
+  return "sabi_profile_dev_insecure_secret_key_32bytes_min!";
+}
+
+export async function getSecretKeyAsync(): Promise<string> {
+  try {
+    const configured = await getConfigValue("security.api_signing_secret");
+    const isInsecureDefault = configured === "sabi_profile_dev_insecure_secret_key_32bytes_min!";
+    if (configured && !isInsecureDefault) {
+      return configured;
+    }
+  } catch {
+    // Non-fatal: fallback to synchronous resolution
+  }
+  return getSecretKey();
 }
 
 export function revokeKeyId(keyId: string): boolean {
@@ -71,6 +102,14 @@ export function generateScopedApiKey(
   return `sbk_live_v1_${base64UrlPayload}.${hmac.digest("hex")}`;
 }
 
+export async function generateScopedApiKeyAsync(
+  payload: Omit<ScopedApiKeyPayload, "queryCount">,
+  secretKey?: string
+): Promise<string> {
+  const secret = secretKey || await getSecretKeyAsync();
+  return generateScopedApiKey(payload, secret);
+}
+
 export function verifyScopedApiKey(
   rawKey: string,
   secretKey: string = getSecretKey(),
@@ -96,7 +135,25 @@ export function verifyScopedApiKey(
   const bufExpected = Buffer.from(expectedSignature, "hex");
   const bufProvided = Buffer.from(providedSignature, "hex");
 
-  if (bufExpected.length !== bufProvided.length || !timingSafeEqual(bufExpected, bufProvided)) {
+  let isMatch = (bufExpected.length === bufProvided.length && timingSafeEqual(bufExpected, bufProvided));
+
+  // Multi-Key Graceful Verification:
+  // If the key was signed with the server-derived secret (or dashboard secret), check alternative valid secret
+  if (!isMatch && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    const derivedKey = createHash("sha256")
+      .update(`sabi-scoped-key-signing:${process.env.SUPABASE_SERVICE_ROLE_KEY}`)
+      .digest("hex");
+    if (derivedKey !== secretKey) {
+      const altHmac = createHmac("sha256", derivedKey);
+      altHmac.update(`sbk_live_v1.${base64UrlPayload}`);
+      const altExpected = Buffer.from(altHmac.digest("hex"), "hex");
+      if (altExpected.length === bufProvided.length && timingSafeEqual(altExpected, bufProvided)) {
+        isMatch = true;
+      }
+    }
+  }
+
+  if (!isMatch) {
     return { isValid: false, error: "Cryptographic signature validation failed (Tampered Key)" };
   }
 
@@ -133,6 +190,15 @@ export function verifyScopedApiKey(
   }
 }
 
+export async function verifyScopedApiKeyAsync(
+  rawKey: string,
+  secretKey?: string,
+  expectedRecipientOrg?: string
+): Promise<VerificationResult> {
+  const secret = secretKey || await getSecretKeyAsync();
+  return verifyScopedApiKey(rawKey, secret, expectedRecipientOrg);
+}
+
 export function filterVaultByScope(
   vault: FullUserVault,
   allowedScopes: VaultCategory[]
@@ -154,4 +220,3 @@ export function filterVaultByScope(
 
   return filtered;
 }
-

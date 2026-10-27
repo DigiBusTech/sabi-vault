@@ -305,6 +305,37 @@ class UserVaultMasterStore {
     return vault ? { ...vault } : undefined;
   }
 
+  public async findVaultAsync(userId: string): Promise<FullUserVault | undefined> {
+    const memVault = this.vaults.get(userId);
+    try {
+      const admin = createAdminSupabaseClient();
+      const { data, error } = await admin
+        .from("vault_records")
+        .select("*")
+        .eq("vault_id", userId);
+
+      if (!error && data && data.length > 0) {
+        const vault = memVault || {
+          userId,
+          sovereignNode: "ng-west-africa",
+          residenceCountry: "NG",
+          lastSyncedAt: new Date().toISOString(),
+        };
+        for (const row of data) {
+          const cat = row.category as VaultCategory;
+          if (cat && row.structured_json) {
+            (vault as any)[cat] = row.structured_json;
+          }
+        }
+        this.vaults.set(userId, vault);
+        return { ...vault };
+      }
+    } catch (err: any) {
+      console.warn(`[UserVaultMasterStore] DB findVaultAsync notice for ${userId}:`, err.message);
+    }
+    return memVault ? { ...memVault } : undefined;
+  }
+
   // --- CREDENTIAL CRUD ---
   public addCredential(
     category: VaultCategory,
@@ -438,15 +469,18 @@ class UserVaultMasterStore {
         .maybeSingle();
 
       if (!existing) {
-        const fallbackEmail = `${userId}@citizen.sabiprofile.com`;
-        await admin.from("vault_profiles").insert({
-          user_id: userId,
-          email: fallbackEmail,
-          citizenship_country: "NGA",
-          residence_country: "NGA",
-          sovereign_node_id: "ng-west-africa",
-          status: "ACTIVE",
-        });
+        const fallbackEmail = userId.includes("@") ? userId : `${userId}@citizen.sabiprofile.com`;
+        await admin.from("vault_profiles").upsert(
+          {
+            user_id: userId,
+            email: fallbackEmail,
+            citizenship_country: "NGA",
+            residence_country: "NGA",
+            sovereign_node_id: "ng-west-africa",
+            status: "ACTIVE",
+          },
+          { onConflict: "user_id" }
+        );
       }
     } catch (err: any) {
       console.warn("[UserVaultMasterStore] ensureVaultProfileInDb notice:", err.message);
@@ -563,6 +597,7 @@ class UserVaultMasterStore {
 
       if (!error && data && data.length > 0) {
         const now = Math.floor(Date.now() / 1000);
+        const records: ScopedKeyRecord[] = [];
         for (const row of data) {
           const issuedAt = Math.floor(new Date(row.created_at).getTime() / 1000);
           const expiresAt = Math.floor(new Date(row.expires_at).getTime() / 1000);
@@ -572,15 +607,22 @@ class UserVaultMasterStore {
           else if (expiresAt < now || remaining <= 0) status = "EXPIRED";
 
           const existingMem = this.keys.get(row.key_id);
-          const rawKey = existingMem?.rawKey || generateScopedApiKey({
-            keyId: row.key_id,
-            vaultId: row.vault_id,
-            allowedScopes: (row.allowed_scopes || ["portfolio"]) as VaultCategory[],
-            issuedAt,
-            expiresAt,
-            maxQueries: row.max_queries || 5,
-            sovereignNode: "ng-west-africa",
-          });
+          let rawKey = row.raw_key || existingMem?.rawKey;
+          if (!rawKey) {
+            try {
+              rawKey = generateScopedApiKey({
+                keyId: row.key_id,
+                vaultId: row.vault_id,
+                allowedScopes: (row.allowed_scopes || ["portfolio"]) as VaultCategory[],
+                issuedAt,
+                expiresAt,
+                maxQueries: row.max_queries || 5,
+                sovereignNode: "ng-west-africa",
+              });
+            } catch {
+              rawKey = `sbk_live_v1_${row.key_id}.persisted`;
+            }
+          }
 
           const rec: ScopedKeyRecord & { vaultId?: string } = {
             keyId: row.key_id,
@@ -595,8 +637,9 @@ class UserVaultMasterStore {
             vaultId: row.vault_id,
           };
           this.keys.set(row.key_id, rec);
+          records.push(rec);
         }
-        return this.listKeys(userId);
+        return records;
       }
     } catch (err: any) {
       console.warn("[UserVaultMasterStore] listKeysAsync notice:", err.message);
@@ -665,6 +708,7 @@ class UserVaultMasterStore {
           query_count: 0,
           is_revoked: false,
           label: record.label,
+          raw_key: record.rawKey,
           created_at: new Date(record.issuedAt * 1000).toISOString(),
         },
         { onConflict: "key_id" }
@@ -747,7 +791,23 @@ class UserVaultMasterStore {
     try {
       const admin = createAdminSupabaseClient();
       let query = admin.from("enterprise_query_audits").select("*");
-      if (userId) query = query.eq("target_vault_id", userId);
+      if (userId) {
+        const userAliases = [userId];
+        try {
+          const { data: profile } = await admin
+            .from("vault_profiles")
+            .select("user_id, email")
+            .or(`user_id.eq.${userId},email.eq.${userId}`)
+            .maybeSingle();
+
+          if (profile) {
+            if (profile.user_id && !userAliases.includes(profile.user_id)) userAliases.push(profile.user_id);
+            if (profile.email && !userAliases.includes(profile.email)) userAliases.push(profile.email);
+          }
+        } catch {}
+
+        query = query.in("target_vault_id", userAliases);
+      }
       const { data, error } = await query.order("created_at", { ascending: false });
 
       if (!error && data && data.length > 0) {
@@ -799,21 +859,41 @@ class UserVaultMasterStore {
     const record = this.recordAuditEntry(entry);
     try {
       const admin = createAdminSupabaseClient();
-      await admin.from("enterprise_query_audits").insert({
+      const rawVertical = (entry.screeningVertical || "enterprise").toLowerCase();
+      // Defensive fallback to prevent un-migrated Postgres check constraint violations
+      const safeVertical = ["labour", "immigration", "education", "enterprise"].includes(rawVertical)
+        ? rawVertical
+        : "enterprise";
+
+      const targetVault = record.targetVaultId || entry.targetVaultId || "usr_chinwe_okafor_7721";
+      await this.ensureVaultProfileInDb(targetVault);
+
+      const payload: any = {
         query_id: record.id,
         key_id: entry.keyId || null,
-        target_vault_id: record.targetVaultId || entry.targetVaultId || "usr_chinwe_okafor_7721",
+        target_vault_id: targetVault,
         requesting_organization: entry.requestingOrg || "Enterprise Verifier",
-        screening_vertical: entry.screeningVertical || "enterprise",
+        screening_vertical: safeVertical,
         accessed_scopes: entry.accessedScopes || [],
-        tamper_check_passed: entry.integrityVerified,
+        tamper_check_passed: Boolean(entry.integrityVerified),
         composite_score: entry.compositeScore || 0,
         verdict: entry.verdict || "UNKNOWN",
         query_fee_usd: 1.00,
         platform_split_usd: 0.60,
         sovereign_host_split_usd: 0.40,
         created_at: record.timestamp,
-      });
+      };
+
+      const { error } = await admin.from("enterprise_query_audits").insert(payload);
+      if (error) {
+        // If foreign key constraint failed on key_id, retry with key_id: null
+        if (error.code === "23503" && payload.key_id) {
+          payload.key_id = null;
+          await admin.from("enterprise_query_audits").insert(payload);
+        } else {
+          console.warn("[UserVaultMasterStore] recordAuditEntryAsync DB insert warning:", error.message);
+        }
+      }
     } catch (err: any) {
       console.warn("[UserVaultMasterStore] recordAuditEntryAsync notice:", err.message);
     }

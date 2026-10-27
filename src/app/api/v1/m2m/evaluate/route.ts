@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authenticateM2M } from "@/lib/auth/auth_guard";
-import { verifyScopedApiKey, filterVaultByScope, recordKeyExecution } from "@/core/crypto/scoped_key";
+import { verifyScopedApiKeyAsync, filterVaultByScope, recordKeyExecution } from "@/core/crypto/scoped_key";
 import { IntegrityAgent } from "@/agents/integrity_agent";
 import { StrictRAGEvaluationAgent } from "@/agents/evaluation_agent";
 import { FraudDetectionAgent } from "@/agents/fraud_detection_agent";
@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
     }
 
     // 1. Verify candidate scoped key
-    const keyVerification = verifyScopedApiKey(candidateApiKey, undefined, orgAuth.org.id);
+    const keyVerification = await verifyScopedApiKeyAsync(candidateApiKey, undefined, orgAuth.org.id);
     if (!keyVerification.isValid || !keyVerification.payload) {
       return NextResponse.json(
         { error: "Candidate API Key invalid, revoked, or expired", details: keyVerification.error },
@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
     }
 
     const { vaultId, allowedScopes } = keyVerification.payload;
-    const candidateVault = globalUserStore.findVault(vaultId);
+    const candidateVault = (await globalUserStore.findVaultAsync(vaultId)) || globalUserStore.findVault(vaultId);
     if (!candidateVault) {
       return NextResponse.json({ error: "Candidate vault was not found." }, { status: 404 });
     }
@@ -80,6 +80,19 @@ export async function POST(req: NextRequest) {
     }
 
     if (!allTamperFree) {
+      await globalUserStore.recordAuditEntryAsync({
+        keyId: keyVerification.payload.keyId,
+        requestingOrg: orgAuth.org.name,
+        orgType: orgAuth.org.type,
+        accessedScopes: allowedScopes,
+        purpose: `M2M Custom Evaluation: ${customRubric.title || vertical} (TAMPER DETECTED)`,
+        integrityVerified: false,
+        onChainTx: "",
+        status: "TAMPER_DETECTED",
+        targetVaultId: vaultId,
+        screeningVertical: (vertical || "labour").toLowerCase(),
+      });
+
       return NextResponse.json(
         {
           status: "REJECTED_TAMPER_DETECTED",
@@ -92,7 +105,7 @@ export async function POST(req: NextRequest) {
 
     // 3. Record Key Usage (atomic quota decrement)
     recordKeyExecution(keyVerification.payload.keyId);
-    globalUserStore.recordKeyUsage(keyVerification.payload.keyId);
+    await globalUserStore.recordKeyUsageAsync(keyVerification.payload.keyId);
     globalAdminStore.recordQueryExecuted(1.0);
 
     // 4. Strict RAG Evaluation
@@ -114,7 +127,6 @@ export async function POST(req: NextRequest) {
       },
     };
 
-
     const evaluationDossier = await evalAgent.evaluateCandidate(scopedCandidateData, standardRubric);
 
     // 5. Fraud Detection Agent
@@ -122,7 +134,8 @@ export async function POST(req: NextRequest) {
     const fraudAudit = fraudAgent.auditCandidateVault(scopedCandidateData, vertical === "immigration");
 
     // 6. Citizen Audit Log
-    globalUserStore.recordAuditEntry({
+    await globalUserStore.recordAuditEntryAsync({
+      keyId: keyVerification.payload.keyId,
       requestingOrg: orgAuth.org.name,
       orgType: orgAuth.org.type,
       accessedScopes: allowedScopes,
@@ -131,6 +144,9 @@ export async function POST(req: NextRequest) {
       onChainTx: "",
       status: "VERIFIED_ACCESSED",
       targetVaultId: vaultId,
+      screeningVertical: (vertical || "labour").toLowerCase(),
+      compositeScore: evaluationDossier.totalCompositeScore,
+      verdict: evaluationDossier.verdict,
     });
 
     return NextResponse.json({
@@ -150,7 +166,6 @@ export async function POST(req: NextRequest) {
         passedChecks: fraudAudit.passedChecks,
         flags: fraudAudit.flags,
       },
-
       evaluatedAt: new Date().toISOString(),
     });
   } catch (err: any) {

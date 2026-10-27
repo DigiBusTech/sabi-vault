@@ -1,6 +1,6 @@
 import { createHash } from "crypto";
 import { VaultCategory, VerificationTier } from "@/types/vault";
-import { verifyScopedApiKey, filterVaultByScope } from "@/core/crypto/scoped_key";
+import { verifyScopedApiKey, verifyScopedApiKeyAsync, filterVaultByScope } from "@/core/crypto/scoped_key";
 import { globalUserStore } from "@/core/vault/user_store";
 import { IntegrityAgent } from "@/agents/integrity_agent";
 import { convertCurrency } from "@/core/advisor/financial_forensics";
@@ -471,7 +471,7 @@ class EnterpriseCriteriaMasterStore {
     requestingOrg: string = "Enterprise Evaluator"
   ): Promise<CandidateEvaluationResult> {
     const rubric = this.rubrics.get(rubricId) || this.rubrics.get("rubric_immigration_tech_visa")!;
-    const verification = verifyScopedApiKey(scopedKey);
+    const verification = await verifyScopedApiKeyAsync(scopedKey);
 
     if (!verification.isValid || !verification.payload) {
       return {
