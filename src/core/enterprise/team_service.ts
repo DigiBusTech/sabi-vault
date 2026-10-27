@@ -153,8 +153,42 @@ class OrganizationTeamService {
 
   public listMembers(orgId: string): TeamMember[] {
     return Array.from(this.members.values()).filter(
-      (m) => m.orgId === orgId || orgId === "org_all" || m.orgId === "org_covenant_gate"
+      (m) => (orgId === "org_all" ? true : m.orgId === orgId)
     );
+  }
+
+  public async listMembersAsync(orgId: string): Promise<TeamMember[]> {
+    try {
+      const admin = createAdminSupabaseClient();
+      let query = admin.from("enterprise_team_members").select("*");
+      if (orgId !== "org_all") {
+        query = query.eq("org_id", orgId);
+      }
+      const { data, error } = await query;
+      if (!error && data && data.length > 0) {
+        for (const row of data) {
+          const role = (row.role as OrgRole) || "CASE_OFFICER_RECRUITER";
+          const member: TeamMember = {
+            id: row.id,
+            orgId: row.org_id,
+            email: row.email,
+            fullName: row.full_name,
+            role,
+            status: row.status as TeamMemberStatus,
+            invitedBy: row.invited_by,
+            invitedByName: row.invited_by_name,
+            invitedAt: row.invited_at,
+            joinedAt: row.joined_at,
+            activationToken: row.activation_token,
+            permissions: row.permissions || ROLE_PERMISSIONS[role],
+          };
+          this.members.set(member.id, member);
+        }
+      }
+    } catch (err: any) {
+      console.warn("[OrganizationTeamService] DB list notice:", err.message);
+    }
+    return this.listMembers(orgId);
   }
 
   public getMember(id: string): TeamMember | undefined {
@@ -216,6 +250,33 @@ class OrganizationTeamService {
     }
 
     const inviteLink = `/login/organization?inviteToken=${token}&email=${encodeURIComponent(member.email)}`;
+
+    // Event-driven email dispatch for team invitation
+    try {
+      const { globalEmailService } = await import("@/core/notifications/email_service");
+      await globalEmailService.sendEmail({
+        templateId: "tpl_interview_invite",
+        recipientEmail: member.email,
+        customSubject: `Workspace Invitation: Join ${orgId} on SabiProfile`,
+        overrideHtml: `
+          <div style="font-family: -apple-system, BlinkMacSystemFont, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 16px;">
+            <div style="background-color: #064e3b; color: white; padding: 20px; border-radius: 12px; margin-bottom: 24px;">
+              <h1 style="margin: 0; font-size: 20px; font-weight: 700;">SabiProfile Workspace Invitation</h1>
+              <p style="margin: 4px 0 0 0; font-size: 13px; opacity: 0.9;">${orgId} has invited you to collaborate</p>
+            </div>
+            <p style="font-size: 14px; color: #334155;">Hello <strong>${member.fullName}</strong>,</p>
+            <p style="font-size: 14px; color: #334155; line-height: 1.6;">
+              You have been granted <strong>${role}</strong> role access to the <strong>${orgId}</strong> sovereign workspace on SabiProfile.
+            </p>
+            <a href="https://sabiprofile.com${inviteLink}" style="display: inline-block; background-color: #059669; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 700; font-size: 14px; margin: 16px 0;">Accept Invitation & Activate Account</a>
+            <p style="font-size: 12px; color: #94a3b8;">If you did not anticipate this invitation, you may ignore this automated message.</p>
+          </div>
+        `,
+      });
+    } catch (emailErr: any) {
+      console.warn("[OrganizationTeamService] Invite email dispatch notice:", emailErr.message);
+    }
+
     return { member, inviteLink };
   }
 
@@ -273,11 +334,60 @@ class OrganizationTeamService {
     return deleted;
   }
 
-  public async acceptInvitation(token: string): Promise<TeamMember | null> {
-    const member = Array.from(this.members.values()).find((m) => m.activationToken === token);
+  public async acceptInvitation(token: string, newFullName?: string): Promise<TeamMember | null> {
+    let member = Array.from(this.members.values()).find((m) => m.activationToken === token);
+
+    if (!member) {
+      try {
+        const admin = createAdminSupabaseClient();
+        const { data } = await admin.from("enterprise_team_members").select("*").eq("activation_token", token).single();
+        if (data) {
+          const role = (data.role as OrgRole) || "CASE_OFFICER_RECRUITER";
+          member = {
+            id: data.id,
+            orgId: data.org_id,
+            email: data.email,
+            fullName: data.full_name,
+            role,
+            status: data.status as TeamMemberStatus,
+            invitedBy: data.invited_by,
+            invitedByName: data.invited_by_name,
+            invitedAt: data.invited_at,
+            joinedAt: data.joined_at,
+            activationToken: data.activation_token,
+            permissions: data.permissions || ROLE_PERMISSIONS[role],
+          };
+          this.members.set(member.id, member);
+        }
+      } catch (e: any) {
+        console.warn("[OrganizationTeamService] DB token lookup notice:", e.message);
+      }
+    }
+
     if (!member) return null;
 
-    return this.updateMemberStatus(member.id, "ACTIVE");
+    if (newFullName && newFullName.trim()) {
+      member.fullName = newFullName.trim();
+    }
+    member.status = "ACTIVE";
+    member.joinedAt = new Date().toISOString();
+    this.members.set(member.id, member);
+
+    try {
+      const admin = createAdminSupabaseClient();
+      await admin
+        .from("enterprise_team_members")
+        .update({
+          status: "ACTIVE",
+          full_name: member.fullName,
+          joined_at: member.joinedAt,
+        })
+        .eq("id", member.id);
+    } catch (err: any) {
+      console.warn("[OrganizationTeamService] DB accept notice:", err.message);
+    }
+
+    return member;
   }
 }
 

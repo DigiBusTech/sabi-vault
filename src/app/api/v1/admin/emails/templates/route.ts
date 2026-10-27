@@ -11,8 +11,9 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = new URL(req.url);
   const category = (searchParams.get("category") as EmailCategory) || undefined;
-  const templates = globalEmailTemplateStore.listTemplates(category);
-  const logs = globalEmailTemplateStore.listDispatchLogs().slice(0, 50);
+  const templates = await globalEmailTemplateStore.listTemplatesAsync(category);
+  const allLogs = await globalEmailTemplateStore.listDispatchLogsAsync();
+  const logs = allLogs.slice(0, 50);
 
   return NextResponse.json({
     success: true,

@@ -2,6 +2,7 @@ import { CandidateEvaluationResult, CriteriaProfile } from "@/core/enterprise/cr
 import { UserHumanProfile } from "@/types/profile";
 import { FullUserVault, VerificationTier } from "@/types/vault";
 import { HolisticMatchIndex, UniversalSector } from "@/core/enterprise/talent_pool_service";
+import { MultiLLMGateway } from "@/agents/gateway/llm_gateway";
 
 export interface DiscoveryAuditResult {
   hmi: HolisticMatchIndex;
@@ -114,7 +115,7 @@ export class RightApplicantDiscoveryEngine {
       practicalExecution < 55
     );
 
-    // Sector-Grounded Probes Generation (Targeting applicant risks)
+    // Sector-Grounded Individualized Probes Generation (Targeting applicant-specific claims & risks)
     const probes: string[] = [];
     const strengths: string[] = [];
     const vulnerabilities: string[] = [];
@@ -127,35 +128,45 @@ export class RightApplicantDiscoveryEngine {
 
     if (learningVelocity >= 80) strengths.push("High growth velocity and multi-domain/multilingual adaptability");
 
+    const topSkill = profile.skills?.[0]?.name || "core engineering disciplines";
+    const topExp = profile.workExperiences?.[0];
+    const topTitle = topExp?.title || "Lead Practitioner";
+    const topCompany = topExp?.company || "Primary Organization";
+
     if (sector === "IMMIGRATION") {
       probes.push(
-        "Under consular questioning, can you demonstrate that your liquid maintenance funds were held continuously for 28+ days without third-party loans or sudden cash dumping?"
+        `Under consular questioning for ${rubric.name}, can you demonstrate that your liquid maintenance funds were held continuously for 28+ days without third-party loans or sudden cash dumping?`
       );
       probes.push(
-        "How do your documented professional skills directly alleviate labor market shortages in your destination country?"
+        `How do your documented competencies in ${topSkill} directly alleviate statutory labor market shortages in your destination route?`
       );
       probes.push(
-        "Explain any career or location transitions between your home country experience and your planned relocation route."
+        `Explain your career trajectory transitioning from ${topTitle} at ${topCompany} to your planned relocation objectives.`
       );
     } else if (sector === "EDUCATION") {
+      const eduList = (profile as any).educationList || (profile as any).education || [];
+      const topDegree = eduList[0]?.degree || "advanced coursework";
+      const topField = eduList[0]?.fieldOfStudy || "academic specialization";
       probes.push(
-        "Walk the academic admissions panel through your proposed research methodology and how you will isolate confounding variables."
+        `Walk the academic admissions panel through your proposed research methodology in ${topField} and how you isolate confounding variables.`
       );
       probes.push(
-        "Explain how your practical problem-solving experiences substantiate your quantitative coursework and GPA."
+        `Explain how your practical problem-solving in ${topSkill} substantiates your academic performance in ${topDegree}.`
       );
       probes.push(
-        "What specific independent scholarship or open-source scientific contributions have you delivered outside formal classroom lectures?"
+        `What specific independent scholarship, research papers, or open-source scientific contributions have you delivered outside formal lectures?`
       );
     } else {
       probes.push(
-        "Describe a critical production outage or distributed systems failure you diagnosed and resolved under pressure."
+        `In your work with ${topSkill}, walk us through a critical production outage or distributed systems failure you diagnosed and resolved under pressure.`
       );
       probes.push(
-        "How do you balance delivery velocity against rigorous cryptographic and data security compliance?"
+        `How do you balance delivery velocity against rigorous cryptographic compliance and data residency constraints?`
       );
       probes.push(
-        "Walk us through a situation where you had to master an unfamiliar technology framework in days to ship a mission-critical feature."
+        topExp
+          ? `In your role as ${topTitle} at ${topCompany}, what architectural trade-offs did you make when scaling throughput or optimizing costs?`
+          : `Walk us through a situation where you had to master an unfamiliar technology framework in days to ship a mission-critical feature.`
       );
     }
 
@@ -192,6 +203,90 @@ export class RightApplicantDiscoveryEngine {
       vulnerabilitiesAndBlindspots: vulnerabilities,
       tailoredProbes: probes,
     };
+  }
+
+  /**
+   * Synthesizes individualized dynamic interview probes using MultiLLMGateway
+   * (Google Gemini 1.5/2.0 Flash or Groq LLaMA 3.3 70B failover router).
+   * Gracefully falls back to individualized deterministic probes if offline or rate-limited.
+   */
+  public async generateDynamicProbes(params: {
+    evalResult?: CandidateEvaluationResult;
+    profile?: Partial<UserHumanProfile> & { fullName?: string };
+    vault?: FullUserVault;
+    rubric?: Partial<CriteriaProfile>;
+    sector?: UniversalSector;
+    fallbackProbes?: string[];
+    // Flat convenience parameters
+    candidateName?: string;
+    roleOrTrack?: string;
+    topSkills?: string[];
+    claimedCompany?: string;
+    claimedTitle?: string;
+    deficits?: string[];
+  }): Promise<string[]> {
+    const candidateName = params.profile?.fullName || params.candidateName || "Candidate";
+    const sector = params.sector || "LABOUR";
+    const roleOrTrack = params.rubric?.name || params.roleOrTrack || "Target Position";
+    const skillsList = Array.isArray(params.topSkills)
+      ? params.topSkills.join(", ")
+      : (params.profile?.skills || []).map((s: any) => s.name).join(", ") || "General";
+    const workList = params.claimedCompany
+      ? `${params.claimedTitle || "Professional"} at ${params.claimedCompany}`
+      : (params.profile?.workExperiences || [])
+          .map((w: any) => `${w.title} at ${w.company}`)
+          .join("; ") || "Declared Work Experience";
+    const deficits = params.deficits
+      ? params.deficits.join("; ")
+      : (params.evalResult?.anomaliesDetected || []).join("; ") || "None";
+
+    const topSkill = Array.isArray(params.topSkills) && params.topSkills.length > 0
+      ? params.topSkills[0]
+      : (params.profile?.skills && params.profile.skills.length > 0 ? params.profile.skills[0].name : "core domain");
+
+    const defaultFallbacks = [
+      `In your work with ${topSkill}, walk us through a critical production challenge or system constraint you diagnosed and resolved under pressure.`,
+      `How did you architect and maintain the solutions at ${params.claimedCompany || "your previous role"}, and how did you measure its operational success?`,
+      `Regarding the criteria for ${roleOrTrack}: how do you ensure compliance and verification given ${deficits}?`,
+    ];
+
+    const fallbackProbes = params.fallbackProbes && params.fallbackProbes.length >= 3
+      ? params.fallbackProbes
+      : defaultFallbacks;
+
+    try {
+      const gateway = new MultiLLMGateway();
+      const prompt = `You are a strict sovereign evaluator and senior interview examiner for ${sector}.
+Target Route/Role: ${roleOrTrack}
+Candidate Profile:
+- Full Name: ${candidateName}
+- Claimed Technical/Professional Skills: ${skillsList}
+- Work Experience Claims: ${workList}
+- Anomalies / Deficits: ${deficits}
+
+Task: Formulate exactly 3 razor-sharp, individualized interview probes (questions) tailored specifically to this applicant's unique background, claimed skills, and identified evidence deficits or risk factors.
+Format: Return ONLY a valid JSON array of 3 strings, e.g. ["Question 1", "Question 2", "Question 3"]. Do not include markdown code fences or conversational text.`;
+
+      const response = await gateway.complete({
+        messages: [
+          { role: "system", content: "You are an expert technical and compliance interviewer. Output only a JSON array of 3 strings." },
+          { role: "user", content: prompt }
+        ],
+        temperature: 0.3,
+        jsonSchema: true,
+      });
+
+      if (response && response.content) {
+        const cleaned = response.content.trim().replace(/^```json/i, "").replace(/```$/i, "").trim();
+        const parsed = JSON.parse(cleaned);
+        if (Array.isArray(parsed) && parsed.length >= 3) {
+          return parsed.slice(0, 3).map((q) => String(q).trim());
+        }
+      }
+    } catch (err: any) {
+      console.warn("[DiscoveryEngine] Dynamic LLM probe generation notice:", err.message);
+    }
+    return fallbackProbes;
   }
 }
 

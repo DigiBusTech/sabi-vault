@@ -3119,3 +3119,69 @@
   - `node tests/test_storage_quota_and_skills.mjs`: 8/8 test suites passed (100%), including new pitch deck and PM skills cryptographic lock verifications.
   - `npx tsx tests/test_talent_crm_rbac_email_discovery.mjs`: 5/5 test suites passed (100%).
   - `npx tsc --noEmit`: 0 errors.
+
+---
+
+### Entry #089: Forensic Audit Remediation: Enterprise Talent Pool CRM, Strict RBAC Isolation, Event-Driven Emails & AI Discovery Engine
+- **Date & Timestamp:** 2026-10-27 22:45:00 (Local)
+- **User Prompt / Intent:**
+  > Forensic Audit remediation addressing all 4 pillars from the executive audit verdict:
+  > 1. Talent Pool CRM & Ingestion: Ephemeral in-memory Map -> persistent Supabase schema; remove `org_covenant_gate` hardcoded leak.
+  > 2. Multi-Sector RBAC & Team Management: Missing Supabase migration; fix tenant data leakage; wire invitation token activation flow in UI and send invitation emails.
+  > 3. Transactional Email Studio: Missing Supabase migration; wire real event-driven platform email triggers (talent query, tamper critical, funds deficit, apostille deficit, interview invite).
+  > 4. "Right Applicant" Discovery Engine: Replace static hardcoded string arrays with dynamic `MultiLLMGateway` synthesis and individualized deterministic fallback; replace `Math.random()` fake hashes with deterministic SHA-256 evaluation digests.
+- **Actions Taken:**
+  1. **Database Schema & Dual-Layer Hydration:**
+     - Created `supabase/migrations/20261027160000_enterprise_crm_team_email_schema.sql` defining:
+       - `public.enterprise_talent_pool`
+       - `public.enterprise_team_members`
+       - `public.email_templates`
+       - `public.email_dispatch_logs`
+       - Row Level Security (RLS) policies, indexes on `org_id`, `candidate_id`, `activation_token`, and auto-updating `updated_at` triggers.
+     - Added dual-layer persistence and hydration in:
+       - `src/core/enterprise/talent_pool_service.ts`: `listApplicantsAsync` hydrates from `enterprise_talent_pool`.
+       - `src/core/enterprise/team_service.ts`: `listMembersAsync` hydrates from `enterprise_team_members`.
+       - `src/core/notifications/email_template_store.ts`: `listTemplatesAsync` and `listDispatchLogsAsync` hydrate from `email_templates` and `email_dispatch_logs`.
+       - `src/app/api/v1/enterprise/talent-pool/route.ts`, `src/app/api/v1/enterprise/team/route.ts`, `src/app/api/v1/admin/emails/templates/route.ts`: Switched to async hydration methods.
+  2. **Strict Multi-Tenant Isolation:**
+     - Completely eliminated the `|| a.orgId === "org_covenant_gate"` and `|| m.orgId === "org_covenant_gate"` test bypass filters.
+     - Updated `TalentPoolCRMView.tsx` and `OrganizationTeamView.tsx` to default `initialOrgId = ""`.
+     - Updated `src/app/dashboard/enterprise/talent-pool/page.tsx` and `team/page.tsx` to scope dynamically to `organization?.id || (role === "super_admin" ? "org_all" : "org_default")`.
+  3. **Automatic Event-Driven Transactional Email Dispatches:**
+     - In `src/core/enterprise/criteria_store.ts`:
+       - Dispatches `tpl_talent_query_notice` on candidate evaluation for citizen transparency (NDPC/GDPR mandate).
+       - Dispatches `tpl_tamper_critical` immediately when cryptographic hash mismatch is detected.
+       - Dispatches `tpl_imm_funds_deficit` when 28-day holding or funds dumping deficit is flagged.
+       - Dispatches `tpl_acad_apostille_deficit` when academic credentials lack required Tier-2 Hague Apostille / Notarization.
+     - In `src/core/enterprise/talent_pool_service.ts`:
+       - Dispatches `tpl_interview_invite` when pipeline stage advances to `INTERVIEW_SCHEDULED`, `CONSULAR_INTERVIEW`, or `FACULTY_INTERVIEW`.
+     - In `src/core/enterprise/team_service.ts`:
+       - Dispatches workspace invitation email containing activation link via `globalEmailService.sendEmail`.
+     - In `src/core/notifications/email_service.ts`:
+       - Hardened `interpolate()` and `sendEmail()` to support optional variables, custom subjects, and HTML overrides without throwing.
+  4. **Dynamic AI Synthesis for The Discovery Engine:**
+     - In `src/agents/discovery_engine.ts`:
+       - Connected `generateDynamicProbes()` to `MultiLLMGateway` with strict JSON schema array outputs.
+       - Implemented individualized deterministic fallbacks embedding candidate's actual top skills (`profile.skills[0]`), claimed company, title, and deficits across `IMMIGRATION`, `EDUCATION`, and `LABOUR`.
+     - In `src/core/enterprise/criteria_store.ts`:
+       - Replaced `Math.random().toString(16)` with deterministic SHA-256 evaluation digest: `0x${createHash("sha256").update(vaultId + rubricId + score + timestamp + status).digest("hex")}`.
+  5. **Team Member Invitation & Activation Lifecycle:**
+     - Created `src/app/api/v1/enterprise/team/activate/route.ts`:
+       - `GET /api/v1/enterprise/team/activate?token=...`: Validates token against in-memory cache and Supabase DB.
+       - `POST /api/v1/enterprise/team/activate`: Accepts `{ token, fullName }`, transitions status to `ACTIVE`, records `joinedAt`.
+     - Updated `src/app/login/organization/page.tsx`:
+       - Wrapped in `<Suspense>` boundary.
+       - Intercepts `inviteToken` query parameter, fetches validation details, and renders the "Accept Workspace Invitation" interactive flow.
+  6. **Automated Verification:**
+     - Expanded `tests/test_talent_crm_rbac_email_discovery.mjs` from 5 to 9 comprehensive test suites (all 9 passed, 100%).
+     - Verified all regression test suites:
+       - `tests/test_storage_quota_and_skills.mjs` (8/8 passed)
+       - `tests/test_enterprise_agency_copilot.mjs` (6/6 passed)
+       - `tests/test_consular_advisor_forensics.mjs` (6/6 passed)
+       - `tests/test_profile_experience_and_cv_extraction.mjs` (5/5 passed)
+     - `npx tsc --noEmit`: 0 errors.
+     - `npm run build`: All 86 routes compiled and static pages generated cleanly.
+- **Validation:**
+  - `npx tsx tests/test_talent_crm_rbac_email_discovery.mjs`: 9/9 test suites passed (100%).
+  - `npx tsc --noEmit`: 0 errors.
+  - `npm run build`: 86/86 routes compiled successfully.

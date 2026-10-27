@@ -26,7 +26,7 @@ export default async function EnterpriseTeamPage() {
           </p>
         </div>
 
-        <OrganizationTeamView initialOrgId={organization?.id || "org_covenant_gate"} />
+        <OrganizationTeamView initialOrgId={organization?.id || (role === "super_admin" ? "org_all" : "org_default")} />
       </div>
     </DashboardShell>
   );

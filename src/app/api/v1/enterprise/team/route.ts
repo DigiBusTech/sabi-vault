@@ -9,8 +9,8 @@ export async function GET(req: NextRequest) {
   }
 
   const { searchParams } = new URL(req.url);
-  const orgId = searchParams.get("orgId") || auth.user.orgId || "org_covenant_gate";
-  const members = globalTeamService.listMembers(orgId);
+  const orgId = searchParams.get("orgId") || auth.user.orgId || (auth.user.role === "super_admin" ? "org_all" : "org_default");
+  const members = await globalTeamService.listMembersAsync(orgId);
 
   return NextResponse.json({
     success: true,

@@ -26,7 +26,7 @@ export default async function EnterpriseTalentPoolPage() {
           </p>
         </div>
 
-        <TalentPoolCRMView initialOrgId={organization?.id || "org_covenant_gate"} />
+        <TalentPoolCRMView initialOrgId={organization?.id || (role === "super_admin" ? "org_all" : "org_default")} />
       </div>
     </DashboardShell>
   );

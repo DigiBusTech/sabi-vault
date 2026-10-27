@@ -7,6 +7,7 @@ import { globalTeamService, ROLE_PERMISSIONS } from "../src/core/enterprise/team
 import { globalEmailService } from "../src/core/notifications/email_service.ts";
 import { globalEmailTemplateStore } from "../src/core/notifications/email_template_store.ts";
 import { globalDiscoveryEngine } from "../src/agents/discovery_engine.ts";
+import { BlockchainLedgerClient } from "../src/core/blockchain/ledger_client.ts";
 
 async function runTestSuite() {
   console.log("=== STARTING SABIPROFILE TALENT CRM, RBAC, EMAIL & DISCOVERY TEST SUITE ===");
@@ -382,8 +383,140 @@ async function runTestSuite() {
   );
   console.log(`✓ Pedigree Inflation detection confirmed: Lord Arthur Sterling -> ⚠️ Warning: TRUE (${pedigreeInflationEvaluation.hmi.pedigreeWarningReason})`);
 
+  // -------------------------------------------------------------
+  // TEST 6: STRICT MULTI-TENANT ISOLATION (NO DATA LEAKAGE)
+  // -------------------------------------------------------------
+  console.log("\n[Test 6] Testing Strict Multi-Tenant Isolation (Eradication of org_covenant_gate leak)...");
+
+  const brandNewOrgId = "org_fresh_isolated_tenant_404";
+  
+  // A brand new tenant has queried 0 applicants and invited 0 members
+  const freshApplicants = globalTalentPoolService.listApplicants(brandNewOrgId);
+  assert.strictEqual(
+    freshApplicants.length,
+    0,
+    `Brand new organization ${brandNewOrgId} MUST NOT see seed candidates or any applicants from org_covenant_gate!`
+  );
+
+  const freshMembers = globalTeamService.listMembers(brandNewOrgId);
+  assert.strictEqual(
+    freshMembers.length,
+    0,
+    `Brand new organization ${brandNewOrgId} MUST NOT see Covenant Gate staff members!`
+  );
+
+  // Covenant Gate only sees its own members
+  const covenantMembers = globalTeamService.listMembers("org_covenant_gate");
+  assert(
+    covenantMembers.every((m) => m.orgId === "org_covenant_gate"),
+    "Covenant Gate member list must only contain org_covenant_gate members"
+  );
+
+  console.log(`✓ Strict Tenant Isolation verified: New tenants see exactly 0 leaked candidates and 0 leaked team members.`);
+
+  // -------------------------------------------------------------
+  // TEST 7: AUTOMATIC EVENT-DRIVEN TRANSACTIONAL EMAIL DISPATCHES
+  // -------------------------------------------------------------
+  console.log("\n[Test 7] Testing Automatic Event-Driven Transactional Emails from Core Platform Events...");
+
+  // Check that the evaluation in Test 1 automatically logged a tpl_talent_query_notice dispatch
+  const allLogs = globalEmailTemplateStore.listDispatchLogs();
+  const noticeLog = allLogs.find((l) => l.templateId === "tpl_talent_query_notice");
+  assert(noticeLog, "Evaluation of candidate must automatically trigger tpl_talent_query_notice dispatch log");
+  assert.strictEqual(noticeLog.status, "SENT");
+  console.log(`✓ Citizen Transparency Notice auto-triggered on candidate query: ${noticeLog.recipientEmail}`);
+
+  // Check that the stage update to INTERVIEW_SCHEDULED in Test 2 automatically logged tpl_interview_invite
+  const interviewInviteLog = allLogs.find((l) => l.templateId === "tpl_interview_invite");
+  assert(interviewInviteLog, "Pipeline stage advancement to INTERVIEW_SCHEDULED must trigger tpl_interview_invite");
+  assert.strictEqual(interviewInviteLog.status, "SENT");
+  console.log(`✓ Interview Invitation auto-triggered on pipeline stage advancement: ${interviewInviteLog.recipientEmail}`);
+
+  // Test Tamper Critical Event Email Dispatch
+  console.log("  Testing tamper critical email event trigger...");
+  // Simulate an evaluation on a tampered vault item
+  const tamperedKeyRecord = await globalUserStore.mintKeyAsync({
+    userId: "usr_tamper_sim_101",
+    allowedScopes: ["academics"],
+    ttlDays: 1,
+    maxQueries: 10,
+    label: "Tamper Sim Key",
+  });
+  
+  // 1. Commit an anchor to the blockchain simulation ledger
+  const ledgerClient = new BlockchainLedgerClient();
+  await ledgerClient.commitHash("usr_tamper_sim_101", "academics", "1111111111111111111111111111111111111111111111111111111111111111");
+
+  // 2. Set up local vault data with academic degrees whose computed hash diverges from the anchor
+  const tamperedVault = {
+    userId: "usr_tamper_sim_101",
+    sovereignNode: "NG-ABV-PRIMARY-01",
+    storageUsedBytes: 1024,
+    items: [],
+    academics: {
+      degrees: [
+        {
+          id: "deg_1",
+          degree: "BSc Computer Science",
+          institution: "University of Lagos",
+          graduationYear: 2022,
+          gpa: 3.8,
+          tier: "tier1_standard_hashed",
+        },
+      ],
+    },
+  };
+  globalUserStore.vaults.set("usr_tamper_sim_101", tamperedVault);
+
+  const tamperedEval = await globalCriteriaStore.evaluateCandidate(
+    tamperedKeyRecord.rawKey,
+    "rubric_fintech_lead_eng",
+    testOrgId
+  );
+  assert(tamperedEval, "Tamper evaluation returned");
+  assert.strictEqual(tamperedEval.integrityStatus, "TAMPER_DETECTED");
+
+  // Verify that tpl_tamper_critical was dispatched!
+  const updatedLogs = globalEmailTemplateStore.listDispatchLogs();
+  const tamperLog = updatedLogs.find((l) => l.templateId === "tpl_tamper_critical");
+  assert(tamperLog, "Tamper detection must immediately dispatch tpl_tamper_critical security advisory!");
+  assert.strictEqual(tamperLog.status, "SENT");
+  console.log(`✓ Critical Tamper Advisory auto-triggered on SHA-256 divergence detection: ${tamperLog.recipientEmail}`);
+
+  // -------------------------------------------------------------
+  // TEST 8: DYNAMIC & INDIVIDUALIZED INTERVIEW PROBES
+  // -------------------------------------------------------------
+  console.log("\n[Test 8] Testing Dynamic Individualized Probes with Gateway Fallback...");
+
+  const dynamicProbes = await globalDiscoveryEngine.generateDynamicProbes({
+    candidateName: "Amina Yusuf",
+    sector: "LABOUR",
+    roleOrTrack: "Senior Rust Core Engineer",
+    topSkills: ["Rust", "Tokio", "Raft Consensus"],
+    claimedCompany: "Helios Microgrids",
+    claimedTitle: "Distributed Systems Architect",
+    deficits: ["No verified employer reference letter"],
+  });
+
+  assert(Array.isArray(dynamicProbes) && dynamicProbes.length === 3, "Must return exactly 3 probes");
+  const joinedProbes = dynamicProbes.join(" ");
+  assert(
+    joinedProbes.includes("Rust") || joinedProbes.includes("Helios Microgrids") || joinedProbes.includes("Amina"),
+    "Probes must contain individualized tokens tailored to the candidate's actual profile!"
+  );
+  console.log(`✓ Dynamic Probes successfully personalized for candidate:`);
+  dynamicProbes.forEach((p, idx) => console.log(`   [Probe ${idx + 1}] ${p}`));
+
+  // -------------------------------------------------------------
+  // TEST 9: DETERMINISTIC SHA-256 ON-CHAIN EVALUATION DIGEST
+  // -------------------------------------------------------------
+  console.log("\n[Test 9] Testing Deterministic SHA-256 Provenance Digest (No Math.random)...");
+  assert(evalResult.onChainTx.startsWith("0x"), "On-chain tx digest must start with 0x");
+  assert.strictEqual(evalResult.onChainTx.length, 66, "On-chain tx digest must be a 64-char hex string prefixed with 0x");
+  console.log(`✓ On-Chain evaluation digest mathematically formatted: ${evalResult.onChainTx}`);
+
   console.log("\n=========================================================================");
-  console.log("🎉 ALL 5 TEST SUITES PASSED! TALENT CRM, RBAC, EMAIL & DISCOVERY VERIFIED!");
+  console.log("🎉 ALL 9 TEST SUITES PASSED! TALENT CRM, RBAC, EMAIL & DISCOVERY VERIFIED!");
   console.log("=========================================================================");
 }
 

@@ -15,7 +15,8 @@ class TransactionalEmailService {
   /**
    * Safe variable interpolator replacing {{variable_name}} with passed dictionary.
    */
-  public interpolate(text: string, variables: Record<string, string | number | boolean | undefined>): string {
+  public interpolate(text: string, variables?: Record<string, string | number | boolean | undefined>): string {
+    if (!variables) return text;
     return text.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_, key) => {
       const val = variables[key];
       return val !== undefined && val !== null ? String(val) : "";
@@ -28,13 +29,16 @@ class TransactionalEmailService {
   public async sendEmail(params: {
     templateId: string;
     recipientEmail: string;
-    variables: Record<string, string | number | boolean | undefined>;
+    variables?: Record<string, string | number | boolean | undefined>;
+    customSubject?: string;
+    overrideHtml?: string;
+    overrideText?: string;
     provider?: "RESEND" | "SMTP" | "SOVEREIGN_MOCK";
   }): Promise<SendEmailResult> {
-    const { templateId, recipientEmail, variables } = params;
+    const { templateId, recipientEmail, variables = {}, customSubject, overrideHtml, overrideText } = params;
     const template = globalEmailTemplateStore.getTemplate(templateId);
 
-    if (!template) {
+    if (!template && !overrideHtml) {
       return {
         success: false,
         provider: "SOVEREIGN_MOCK",
@@ -45,7 +49,7 @@ class TransactionalEmailService {
       };
     }
 
-    if (!template.isActive) {
+    if (template && !template.isActive && !overrideHtml) {
       return {
         success: false,
         provider: "SOVEREIGN_MOCK",
@@ -56,9 +60,9 @@ class TransactionalEmailService {
       };
     }
 
-    const subject = this.interpolate(template.subject, variables);
-    const html = this.interpolate(template.bodyHtml, variables);
-    const text = this.interpolate(template.bodyText, variables);
+    const subject = customSubject || (template ? this.interpolate(template.subject, variables) : "Notification");
+    const html = overrideHtml || (template ? this.interpolate(template.bodyHtml, variables) : "");
+    const text = overrideText || (template ? this.interpolate(template.bodyText, variables) : "");
 
     // Check provider configuration
     const resendKey = process.env.RESEND_API_KEY || getConfigValueSync("notifications.resend_api_key");

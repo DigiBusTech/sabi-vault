@@ -167,6 +167,36 @@ class EmailTemplateMasterStore {
     return list;
   }
 
+  public async listTemplatesAsync(category?: EmailCategory): Promise<EmailTemplate[]> {
+    try {
+      const admin = createAdminSupabaseClient();
+      const { data, error } = await admin
+        .from("email_templates")
+        .select("*")
+        .order("updated_at", { ascending: false });
+
+      if (!error && Array.isArray(data) && data.length > 0) {
+        for (const row of data) {
+          this.templates.set(row.id, {
+            id: row.id,
+            name: row.name,
+            category: row.category as EmailCategory,
+            subject: row.subject,
+            bodyHtml: row.body_html,
+            bodyText: row.body_text,
+            availableVariables: row.available_variables || [],
+            description: row.description || "",
+            isActive: Boolean(row.is_active),
+            updatedAt: row.updated_at || new Date().toISOString(),
+          });
+        }
+      }
+    } catch {
+      // Fallback seamlessly to in-memory store
+    }
+    return this.listTemplates(category);
+  }
+
   public getTemplate(id: string): EmailTemplate | undefined {
     return this.templates.get(id);
   }
@@ -217,10 +247,65 @@ class EmailTemplateMasterStore {
       sentAt: new Date().toISOString(),
     };
     this.dispatchLogs.unshift(entry);
+
+    (async () => {
+      try {
+        const admin = createAdminSupabaseClient();
+        await admin.from("email_dispatch_logs").insert({
+          id: entry.id,
+          template_id: entry.templateId,
+          recipient_email: entry.recipientEmail,
+          subject: entry.subject,
+          status: entry.status,
+          provider: entry.provider,
+          sent_at: entry.sentAt,
+          error_message: entry.errorMessage || null,
+        });
+      } catch {
+        // Fallback silently if offline/test
+      }
+    })();
+
     return entry;
   }
 
   public listDispatchLogs(): EmailDispatchLog[] {
+    return this.dispatchLogs;
+  }
+
+  public async listDispatchLogsAsync(): Promise<EmailDispatchLog[]> {
+    try {
+      const admin = createAdminSupabaseClient();
+      const { data, error } = await admin
+        .from("email_dispatch_logs")
+        .select("*")
+        .order("sent_at", { ascending: false })
+        .limit(100);
+
+      if (!error && Array.isArray(data) && data.length > 0) {
+        const dbLogs: EmailDispatchLog[] = data.map((row) => ({
+          id: row.id,
+          templateId: row.template_id,
+          recipientEmail: row.recipient_email,
+          subject: row.subject,
+          status: row.status as "SENT" | "QUEUED" | "FAILED",
+          provider: row.provider as "RESEND" | "SMTP" | "SOVEREIGN_MOCK",
+          sentAt: row.sent_at,
+          errorMessage: row.error_message || undefined,
+        }));
+        
+        // Merge without duplicate IDs
+        const existingIds = new Set(this.dispatchLogs.map((l) => l.id));
+        for (const log of dbLogs) {
+          if (!existingIds.has(log.id)) {
+            this.dispatchLogs.push(log);
+          }
+        }
+        this.dispatchLogs.sort((a, b) => new Date(b.sentAt).getTime() - new Date(a.sentAt).getTime());
+      }
+    } catch {
+      // Fallback
+    }
     return this.dispatchLogs;
   }
 }

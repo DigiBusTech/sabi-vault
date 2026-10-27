@@ -44,7 +44,7 @@ interface TalentPoolCRMViewProps {
   initialOrgId?: string;
 }
 
-export function TalentPoolCRMView({ initialOrgId = "org_covenant_gate" }: TalentPoolCRMViewProps) {
+export function TalentPoolCRMView({ initialOrgId = "" }: TalentPoolCRMViewProps) {
   const [applicants, setApplicants] = useState<QueriedApplicantRecord[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -68,7 +68,7 @@ export function TalentPoolCRMView({ initialOrgId = "org_covenant_gate" }: Talent
     setError(null);
     try {
       const params = new URLSearchParams();
-      params.append("orgId", initialOrgId);
+      if (initialOrgId) params.append("orgId", initialOrgId);
       if (searchTerm) params.append("search", searchTerm);
       if (selectedSector !== "ALL") params.append("sector", selectedSector);
       if (selectedStage !== "ALL") params.append("stage", selectedStage);

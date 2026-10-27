@@ -81,7 +81,7 @@ const ROLE_DEFINITIONS: Record<OrgRole, {
   },
 };
 
-export function OrganizationTeamView({ initialOrgId = "org_covenant_gate" }: OrganizationTeamViewProps) {
+export function OrganizationTeamView({ initialOrgId = "" }: OrganizationTeamViewProps) {
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -99,7 +99,10 @@ export function OrganizationTeamView({ initialOrgId = "org_covenant_gate" }: Org
     setIsLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/v1/enterprise/team?orgId=${initialOrgId}`);
+      const url = initialOrgId
+        ? `/api/v1/enterprise/team?orgId=${encodeURIComponent(initialOrgId)}`
+        : `/api/v1/enterprise/team`;
+      const res = await fetch(url);
       const data = await res.json();
       if (res.ok) {
         setMembers(data.members || []);

@@ -9,14 +9,14 @@ export async function GET(req: NextRequest) {
   }
 
   const { searchParams } = new URL(req.url);
-  const orgId = searchParams.get("orgId") || auth.user.orgId || "org_covenant_gate";
+  const orgId = searchParams.get("orgId") || auth.user.orgId || (auth.user.role === "super_admin" ? "org_all" : "org_default");
   const search = searchParams.get("search") || undefined;
   const sector = (searchParams.get("sector") as UniversalSector) || undefined;
   const stage = (searchParams.get("stage") as UniversalPipelineStage) || undefined;
   const verdict = searchParams.get("verdict") || undefined;
   const minScore = searchParams.get("minScore") ? parseInt(searchParams.get("minScore")!) : undefined;
 
-  const applicants = globalTalentPoolService.listApplicants(orgId, {
+  const applicants = await globalTalentPoolService.listApplicantsAsync(orgId, {
     search,
     sector,
     stage,

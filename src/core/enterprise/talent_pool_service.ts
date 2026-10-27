@@ -410,9 +410,27 @@ class EnterpriseTalentPoolService {
       rubric,
     });
 
+    // Synthesize dynamic LLM probes if available
+    try {
+      const dynamicProbes = await globalDiscoveryEngine.generateDynamicProbes({
+        evalResult,
+        profile: candidateProfile,
+        vault,
+        rubric,
+        sector,
+        fallbackProbes: discoveryResult.tailoredProbes,
+      });
+      if (dynamicProbes && dynamicProbes.length > 0) {
+        discoveryResult.hmi.tailoredInterviewProbes = dynamicProbes;
+        discoveryResult.tailoredProbes = dynamicProbes;
+      }
+    } catch (probeErr: any) {
+      console.warn("[TalentPoolService] Dynamic probe generation notice:", probeErr.message);
+    }
+
     const applicantRecord: QueriedApplicantRecord = {
       id: `app_${candidateId}_${randomBytes(3).toString("hex")}`,
-      orgId: orgId || "org_covenant_gate",
+      orgId: orgId || "org_default",
       candidateId,
       keyIdUsed: keyId,
       fullName: candidateProfile.fullName || "Candidate",
@@ -522,7 +540,7 @@ class EnterpriseTalentPoolService {
     minScore?: number;
   }): QueriedApplicantRecord[] {
     let list: QueriedApplicantRecord[] = Array.from(this.pool.values()).filter(
-      (a) => a.orgId === orgId || orgId === "org_all" || a.orgId === "org_covenant_gate"
+      (a) => (orgId === "org_all" ? true : a.orgId === orgId)
     );
 
     if (filter) {
@@ -556,6 +574,72 @@ class EnterpriseTalentPoolService {
     return list;
   }
 
+  public async listApplicantsAsync(
+    orgId: string,
+    filter?: {
+      search?: string;
+      sector?: UniversalSector;
+      stage?: UniversalPipelineStage;
+      verdict?: string;
+      minScore?: number;
+    }
+  ): Promise<QueriedApplicantRecord[]> {
+    try {
+      const admin = createAdminSupabaseClient();
+      let query = admin.from("enterprise_talent_pool").select("*");
+      if (orgId !== "org_all") {
+        query = query.eq("org_id", orgId);
+      }
+      const { data, error } = await query;
+      if (!error && data && data.length > 0) {
+        for (const row of data) {
+          const record: QueriedApplicantRecord = {
+            id: row.id,
+            orgId: row.org_id,
+            candidateId: row.candidate_id,
+            keyIdUsed: row.key_id_used,
+            fullName: row.full_name,
+            headline: row.headline || "",
+            avatarUrl: row.avatar_url,
+            residenceCity: row.residence_city || "",
+            residenceCountry: row.residence_country || "",
+            nationality: row.nationality || "",
+            sector: row.sector as UniversalSector,
+            targetRoleOrRoute: row.target_role_or_route || "",
+            targetCountries: row.target_countries || [],
+            rubricId: row.rubric_id || "",
+            rubricName: row.rubric_name || "",
+            compositeScore: row.composite_score || 0,
+            verdict: row.verdict,
+            integrityStatus: row.integrity_status,
+            onChainTx: row.on_chain_tx || "",
+            scoresBreakdown: row.scores_breakdown || {},
+            benchmarkResults: row.benchmark_results || [],
+            citations: row.citations || [],
+            anomaliesDetected: row.anomalies_detected || [],
+            workHistorySummary: row.work_history_summary || [],
+            skills: row.skills || [],
+            languages: row.languages || [],
+            vaultDocuments: row.vault_documents || [],
+            tier2Deficits: row.tier2_deficits || [],
+            holisticMatchIndex: row.holistic_match_index,
+            pipelineStage: row.pipeline_stage,
+            tags: row.tags || [],
+            evaluatorNotes: row.evaluator_notes || [],
+            assignedTo: row.assigned_to,
+            assignedToName: row.assigned_to_name,
+            firstQueriedAt: row.first_queried_at || new Date().toISOString(),
+            updatedAt: row.updated_at || new Date().toISOString(),
+          };
+          this.pool.set(record.id, record);
+        }
+      }
+    } catch (err: any) {
+      console.warn("[TalentPoolService] DB list notice:", err.message);
+    }
+    return this.listApplicants(orgId, filter);
+  }
+
   public getApplicant(id: string): QueriedApplicantRecord | undefined {
     return this.pool.get(id);
   }
@@ -576,6 +660,37 @@ class EnterpriseTalentPoolService {
     } catch (err: any) {
       console.warn("[TalentPoolService] updateStage DB notice:", err.message);
     }
+
+    // Event-driven transactional email dispatch for interview scheduling
+    if (stage === "INTERVIEW_SCHEDULED" || stage === "CONSULAR_INTERVIEW" || stage === "FACULTY_INTERVIEW") {
+      try {
+        const { globalEmailService } = await import("@/core/notifications/email_service");
+        const recipient = applicant.candidateId.includes("@")
+          ? applicant.candidateId
+          : `${applicant.candidateId}@citizens.sabiprofile.com`;
+
+        await globalEmailService.sendEmail({
+          templateId: "tpl_interview_invite",
+          recipientEmail: recipient,
+          variables: {
+            recipient_name: applicant.fullName,
+            organization_name: applicant.orgId,
+            target_role: applicant.targetRoleOrRoute,
+            interview_type:
+              stage === "CONSULAR_INTERVIEW"
+                ? "Consular Admissibility Assessment"
+                : stage === "FACULTY_INTERVIEW"
+                ? "Academic Board Assessment"
+                : "Technical & Systems Architecture Interview",
+            interview_link: `https://sabiprofile.com/interview/${applicant.id}`,
+            scheduled_time: "Within 48 Business Hours (Link Active)",
+          },
+        });
+      } catch (emailErr: any) {
+        console.warn("[TalentPoolService] Interview notification notice:", emailErr.message);
+      }
+    }
+
     return true;
   }
 
