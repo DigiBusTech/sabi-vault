@@ -3250,3 +3250,42 @@
   - `node tests/test_profile_experience_and_cv_extraction.mjs`: 5/5 test suites passed (100%).
   - `npx tsc --noEmit`: 0 errors.
   - `npm run build`: 86/86 routes compiled and static pages generated cleanly.
+
+
+---
+
+### Entry #091: Interactive Investor Pitch Deck Portal, 90:10 GovTech Revenue Model, Leadership Team Integration & Vector PDF Export
+- **Date & Timestamp:** 2026-10-28 03:46:00 (Local)
+- **User Prompt / Intent:**
+  > "ok procced with the pitch deck skills and design skills to deliver it note govt split is 90:10 based on what i dynamicaly set in admin dashbaord, also team now is founder and CEO [Uyouko Nathaniel Ekpo | LinkedIn](https://www.linkedin.com/in/uyouko-nathaniel-ekpo-111b69396/), then [Bernis DOUSSOH | LinkedIn](https://www.linkedin.com/in/bernis-doussoh-516b5498/) Travel/Tourism expert, HR Specialist,"
+- **Actions Taken:**
+  1. **Pitch Deck Master Data (`src/data/pitch_deck_slides.ts`):**
+     - Authored 12 comprehensive slides following Sequoia/YC standalone async reading standards:
+       - Slide 1: Protocol Genesis & Title Hero
+       - Slide 2: The Tri-Sector Economic Drag ($600B+ Document Fraud)
+       - Slide 3: The SabiProfile Solution (Sovereign Vaults + Scoped Keys + Base L2)
+       - Slide 4: Cryptographic Invariants (Zero Raw Centralization, Ledger Tamper Detection)
+       - Slide 5: Market Opportunity (TAM $54.2B, SAM $14.8B, SOM $1.2B)
+       - Slide 6: Product Engine & The "Right Applicant" Discovery Engine (HMI & Hidden Gem Radar)
+       - Slide 7: Business Model & Dynamic 90:10 GovTech Revenue Split ($0.90 Platform / $0.10 Node Host)
+       - Slide 8: Traction & Architecture Milestones (88 Routes, Base L2 Deployment, 10/10 Tests)
+       - Slide 9: Competitive Matrix & Structural Moats
+       - Slide 10: Go-To-Market Tri-Sector Flywheel
+       - Slide 11: Leadership Team: Founder & CEO Uyouko Nathaniel Ekpo & Co-Founder / Global Mobility & HR Lead Bernis DOUSSOH with direct LinkedIn profile links
+       - Slide 12: The Ask ($1.5M Seed Financing, 18-Month Runway, $1.2M ARR Target)
+  2. **Interactive Deck Presentation Engine (`src/components/deck/PitchDeckViewer.tsx`):**
+     - Built with `design-taste-frontend` anti-slop principles: Obsidian/slate glassmorphism, emerald accents, crisp typography, and responsive 16:9 aspect ratio.
+     - Implemented dual modes: Slide Mode (carousel with arrow keys, thumbnail jumper, progress indicator) and Dossier Mode (all slides continuous scroll).
+     - Fullscreen toggle and collapsible Founder Speaker Notes.
+  3. **High-Resolution Vector PDF Download Engine:**
+     - Styled `@media print` with `@page { size: landscape; margin: 8mm; }`, `page-break-after: always;`, and exact background color rendering.
+     - Includes user guidance modal with one-click print-to-PDF trigger.
+  4. **Routing & Marketing Navigation Integration:**
+     - Created `/deck` (`src/app/(marketing)/deck/page.tsx`) and redirect `/pitch-deck`.
+     - Integrated into `MarketingNav.tsx` and `MarketingFooter.tsx`.
+- **Validation:**
+  - `npx tsc --noEmit`: 0 errors.
+  - `npm run build`: 88/88 routes compiled and generated statically (including `/deck` and `/pitch-deck`).
+  - `npx tsx tests/test_talent_crm_rbac_email_discovery.mjs`: 10/10 passed (100%).
+  - `node tests/test_storage_quota_and_skills.mjs`: 8/8 passed (100%).
+  - `node tests/test_enterprise_agency_copilot.mjs`: 6/6 passed (100%).

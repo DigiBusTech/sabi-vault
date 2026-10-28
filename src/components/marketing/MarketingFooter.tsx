@@ -1,12 +1,11 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-﻿import Link from "next/link";
+import Link from "next/link";
 import { ShieldCheckAnimated } from "@/components/ui/animated-icons";
 import { AppDownloadButtons } from "@/components/marketing/AppDownloadButtons";
 
 const columns = [
-
   {
     title: "Platform",
     links: [
@@ -21,6 +20,7 @@ const columns = [
     title: "Company",
     links: [
       { href: "/about", label: "About" },
+      { href: "/deck", label: "Investor Pitch Deck" },
       { href: "/contact", label: "Contact" },
     ],
   },
@@ -62,7 +62,6 @@ export function MarketingFooter() {
               <AppDownloadButtons size="sm" />
             </div>
           </div>
-
 
           {columns.map((column) => (
             <div key={column.title}>
