@@ -15,7 +15,7 @@ export const metadata: Metadata = {
 
 export default function PitchDeckPage() {
   return (
-    <div className="w-full bg-slate-950 min-h-screen">
+    <div className="w-full bg-[#f8fafc] min-h-screen">
       <PitchDeckViewer />
     </div>
   );

@@ -5,8 +5,8 @@ export interface PitchDeckSlide {
   tagline: string;
   headline: string;
   subtitle?: string;
-  keyMetrics?: Array<{ label: string; value: string; detail?: string }>;
-  points?: Array<{ title: string; description: string; tag?: string }>;
+  keyMetrics?: Array<{ label: string; value: string; detail?: string; icon?: string }>;
+  points?: Array<{ title: string; description: string; tag?: string; icon?: string }>;
   visualType:
     | "title-hero"
     | "tri-sector-problem"
@@ -31,18 +31,18 @@ export const PITCH_DECK_SLIDES: PitchDeckSlide[] = [
     number: 1,
     category: "Sovereign Identity Protocol",
     tagline: "Eradicating Credential Fraud & Black-Box Screening",
-    headline: "SabiProfile: The Sovereign Identity & Cryptographic Verification Protocol",
+    headline: "The Sovereign Identity Protocol for the Global Economy",
     subtitle:
-      "A decentralized data infrastructure replacing static PDF resumes and forged credentials with programmable, scoped cryptographic API keys verified on Base L2.",
+      "Replacing unverified resumes and forged paperwork with programmable, scoped cryptographic keys verified on Base L2.",
     keyMetrics: [
-      { label: "Centralized Files", value: "0 Bytes", detail: "Zero raw document retention" },
-      { label: "Verification Latency", value: "< 800ms", detail: "Deterministic on-chain hash checks" },
-      { label: "GovTech Split", value: "90 : 10", detail: "Configurable treasury / host split" },
-      { label: "Active Network", value: "Base L2", detail: "Ethereum Layer-2 Security" },
+      { label: "Centralized Files", value: "0 Bytes", detail: "Zero raw document retention", icon: "Database" },
+      { label: "Verification Latency", value: "< 800ms", detail: "Real-time on-chain hash check", icon: "Zap" },
+      { label: "GovTech Split", value: "90 : 10", detail: "Configurable treasury / host split", icon: "Coins" },
+      { label: "Active Network", value: "Base L2", detail: "Ethereum Layer-2 Security", icon: "ShieldCheck" },
     ],
     visualType: "title-hero",
     speakerNotes:
-      "Welcome. SabiProfile is the sovereign data infrastructure and decentralized identity platform built to replace the world's most vulnerable asset—unverified paper resumes and centralized PDF storage—with programmable, tamper-proof scoped keys and zero-hallucination multi-agent screening.",
+      "Welcome. SabiProfile replaces the world's most vulnerable asset—unverified paper resumes and centralized PDF storage—with programmable, tamper-proof scoped keys and zero-hallucination multi-agent screening.",
   },
 
   // SLIDE 2: THE TRI-SECTOR PROBLEM
@@ -51,32 +51,32 @@ export const PITCH_DECK_SLIDES: PitchDeckSlide[] = [
     number: 2,
     category: "The Market Problem",
     tagline: "$600B+ Annual Economic Drag",
-    headline: "Global Screening Relies on Fake Paperwork, Centralized Honey-Pots, and Broken ATS",
+    headline: "Screening Relies on Forged Paperwork, Vulnerable Databases, and Blind ATS",
     subtitle:
-      "Document fraud, slow manual verifications, and regulatory non-compliance cripple three foundational economic sectors simultaneously.",
+      "Document fraud, manual verification delays, and severe data breach penalties cripple three foundational global sectors.",
     points: [
       {
-        title: "Immigration & Consular Bottlenecks",
-        description:
-          "Consulates spend 40% of processing time manually verifying forged bank statements and diplomas, causing 3-to-6 month visa delays and strict rejection rates.",
+        title: "Immigration & Consulates",
+        description: "40% of processing time wasted verifying forged bank statements and diplomas, causing 3-6 month visa backlogs.",
         tag: "Border Security",
+        icon: "Plane",
       },
       {
-        title: "Enterprise Hiring & Blind ATS Keyword Matching",
-        description:
-          "Over 78% of resumes contain exaggerated or forged claims. Traditional ATS software filters out high-performing practical talent while hiring inflated paper pedigrees.",
+        title: "Enterprise Hiring & ATS",
+        description: "78% of resumes contain false claims. Legacy ATS filters reject practical problem-solvers while hiring inflated pedigrees.",
         tag: "Labour & Talent",
+        icon: "Briefcase",
       },
       {
-        title: "Sovereign Data Non-Compliance & Breach Liability",
-        description:
-          "Centralizing raw citizen identity documents violates NDPC (Nigeria/ECOWAS) and GDPR (EU), exposing enterprise verification platforms to catastrophic fines and data leaks.",
-        tag: "Data Sovereignty",
+        title: "Data Sovereignty Penalties",
+        description: "Centralizing raw citizen identity files violates NDPC (Nigeria) and GDPR (EU), creating multi-million dollar liabilities.",
+        tag: "Data Compliance",
+        icon: "ShieldAlert",
       },
     ],
     visualType: "tri-sector-problem",
     speakerNotes:
-      "Whether evaluating a skilled software engineer in Lagos, verifying an international student's academic credentials in London, or reviewing a digital nomad visa in Albania, existing systems are either dangerously centralized or rely on forged PDFs.",
+      "Whether verifying an international visa applicant, hiring a software engineer, or attesting a degree, current processes rely on fakeable PDFs or centralized databases that violate regional data sovereignty laws.",
   },
 
   // SLIDE 3: THE SOLUTION
@@ -85,27 +85,27 @@ export const PITCH_DECK_SLIDES: PitchDeckSlide[] = [
     number: 3,
     category: "The SabiProfile Solution",
     tagline: "Cryptographic Keys Instead of Vulnerable Files",
-    headline: "Sovereign Citizen Vaults + Scoped API Keys + Immutable Blockchain Proofs",
+    headline: "Sovereign Citizen Vaults + Scoped API Keys + Blockchain Verification",
     subtitle:
-      "Users own their credentials inside their private cloud storage. Organizations query only consented structured data with instant on-chain mathematical verification.",
+      "Citizens own their credentials in their private cloud. Organizations query only consented structured data with instant on-chain verification.",
     points: [
       {
-        title: "1. Zero Raw Document Centralization",
-        description:
-          "Physical documents (PDFs, bank statements, transcripts) live strictly in the user's private Google Drive or Dropbox via OAuth. Servers never store raw user files.",
-        tag: "Privacy By Design",
+        title: "01. Private Cloud Sync",
+        description: "User connects Google Drive or Dropbox via OAuth. Files never touch our central servers.",
+        tag: "Zero Storage",
+        icon: "Cloud",
       },
       {
-        title: "2. Programmable Scoped API Keys",
-        description:
-          "Citizens mint bearer keys (e.g. sbk_live_v1_...) with granular category scopes, query quotas, and expiration TTLs, maintaining complete control over their sovereign data.",
-        tag: "Granular Consent",
+        title: "02. Mint Scoped Key",
+        description: "Citizen mints a time-limited, category-scoped API key (sbk_live_v1_...) with query quotas.",
+        tag: "Consented Access",
+        icon: "Key",
       },
       {
-        title: "3. Base L2 Cryptographic Anchors",
-        description:
-          "Every credential receives an immutable SHA-256 hash committed to EVM smart contracts. Any database tampering causes instantaneous query rejection.",
+        title: "03. Instant Base L2 Verify",
+        description: "Enterprise verifies SHA-256 hash against the Base L2 blockchain ledger in under 800 milliseconds.",
         tag: "Mathematical Trust",
+        icon: "CheckCircle2",
       },
     ],
     visualType: "solution-flow",
@@ -119,33 +119,33 @@ export const PITCH_DECK_SLIDES: PitchDeckSlide[] = [
     number: 4,
     category: "Cryptographic Defensibility",
     tagline: "Mathematical Proofs, Never Promises",
-    headline: "Four Non-Negotiable Invariants That Prevent Manipulation and Breaches",
+    headline: "Four Non-Negotiable Architectural Invariants",
     subtitle:
-      "Engineered from the ground up to prevent internal database corruption, data theft, and AI hallucinations.",
+      "Engineered from the ground up to prevent internal database tampering, unauthorized data retention, and AI hallucinations.",
     points: [
       {
         title: "Zero Raw Document Centralization",
-        description:
-          "Ephemeral Vision AI parses files into standardized JSON, computes cryptographic hashes, and instantly zeroes memory with buffer.fill(0).",
-        tag: "Zero Storage Vector",
+        description: "Vision AI extracts structured JSON, computes SHA-256, and immediately zeroes server memory (buffer.fill(0)).",
+        tag: "Zero Breach Vector",
+        icon: "Lock",
       },
       {
         title: "Real-Time Ledger Tamper Detection",
-        description:
-          "During an enterprise query, the active record is re-hashed. If a rogue database admin or attacker altered a single character, the query fails with TAMPER_DETECTED.",
+        description: "Every query re-hashes active records against Base L2. A single-character database edit causes instant rejection.",
         tag: "On-Chain Tamper Proof",
+        icon: "ShieldCheck",
       },
       {
         title: "Sovereign Regional Node Isolation",
-        description:
-          "PostgreSQL regional partitions strictly enforce regional data residency (NDPC West Africa, GDPR European Union), guaranteeing zero extraterritorial leakage.",
-        tag: "Regulatory Residency",
+        description: "PostgreSQL partitions guarantee local data residency in compliance with NDPC (West Africa) and GDPR (EU).",
+        tag: "Data Residency",
+        icon: "Server",
       },
       {
         title: "Strict RAG Zero-Hallucination Evaluator",
-        description:
-          "Our multi-agent screening engine evaluates candidates strictly against verified JSON records and uploaded criteria. The LLM cannot hallucinate qualifications.",
+        description: "Autonomous agents evaluate candidates strictly against verified JSON records and uploaded criteria rubrics.",
         tag: "Zero Hallucination",
+        icon: "BrainCircuit",
       },
     ],
     visualType: "architecture-invariants",
@@ -159,27 +159,30 @@ export const PITCH_DECK_SLIDES: PitchDeckSlide[] = [
     number: 5,
     category: "Market Size & Growth",
     tagline: "$54.2 Billion Convergence Space",
-    headline: "Capitalizing on the Convergence of Identity Verification, HR Tech, and GovTech",
+    headline: "Convergence of Identity Verification, Background Checks, and HR Tech",
     subtitle:
-      "A massive addressable market driven by cross-border labor migration, digital nomadism, and stringent data protection legislation.",
+      "Driven by cross-border labor migration, digital nomadism, and strictly enforced statutory immigration and data laws.",
     keyMetrics: [
-      { label: "Total Addressable Market", value: "$54.2B", detail: "Global ID, background checks & enterprise ATS" },
-      { label: "Serviceable Addressable Market", value: "$14.8B", detail: "Cross-border mobility & emerging market talent" },
-      { label: "Serviceable Obtainable Market", value: "$1.2B", detail: "Initial focus: West Africa to UK/EU/US corridors" },
-      { label: "Market Growth Rate", value: "18.4% YoY", detail: "Accelerated by statutory immigration reforms" },
+      { label: "Total Addressable Market", value: "$54.2B", detail: "Global ID, background checks & enterprise ATS", icon: "Globe" },
+      { label: "Serviceable Addressable Market", value: "$14.8B", detail: "Cross-border mobility & emerging market talent", icon: "Layers" },
+      { label: "Serviceable Obtainable Market", value: "$1.2B", detail: "Initial focus: West Africa to UK/EU/US corridors", icon: "Target" },
+      { label: "Market Growth Rate", value: "18.4% YoY", detail: "Accelerated by statutory immigration reforms", icon: "TrendingUp" },
     ],
     points: [
       {
         title: "Immigration & Border Compliance ($12.0B)",
         description: "Statutory visa proof-of-funds (UKVI 28-day holding, Germany Opportunity Card points rubric).",
+        icon: "Plane",
       },
       {
         title: "Enterprise Background Checks & ATS ($23.6B)",
         description: "Cross-border hiring, technical qualification attestation, and developer credential verification.",
+        icon: "Briefcase",
       },
       {
         title: "Higher Education & Academic Attestation ($18.6B)",
         description: "Hague Apostille digital notarization and university transcript authentication.",
+        icon: "GraduationCap",
       },
     ],
     visualType: "market-sizing",
@@ -193,7 +196,7 @@ export const PITCH_DECK_SLIDES: PitchDeckSlide[] = [
     number: 6,
     category: "Product & AI Innovation",
     tagline: "The 'Right Applicant' Discovery Engine",
-    headline: "Beyond Flat Credentials: Multi-Agent Screening & Holistic Match Index (HMI)",
+    headline: "Beyond Flat Credentials: Multi-Agent Screening & Holistic Match Index",
     subtitle:
       "Uncovering true practical problem-solvers while eliminating pedigree inflation through autonomous multi-agent pipelines.",
     points: [
@@ -201,22 +204,25 @@ export const PITCH_DECK_SLIDES: PitchDeckSlide[] = [
         title: "Agent 1: Ledger Integrity Agent",
         description: "Recomputes SHA-256 hashes against Base L2 and validates Tier-1 vs Tier-2 notary attestation.",
         tag: "Integrity",
+        icon: "ShieldCheck",
       },
       {
         title: "Agent 2: Criteria Ingestion Agent",
         description: "Translates unstructured job descriptions and visa guidelines into executable benchmark rubrics.",
         tag: "Grounding",
+        icon: "FileText",
       },
       {
         title: "Agent 3: Strict RAG Evaluator",
         description: "Evaluates candidates with zero hallucination against verified structured credentials.",
         tag: "Precision",
+        icon: "CheckCircle2",
       },
       {
         title: "Agent 4: Discovery & Radar Agent",
-        description:
-          "Calculates Holistic Match Index (HMI 0-100), flags Hidden Gems (high practical aptitude overlooked by ATS), and generates tailored interview probes.",
+        description: "Calculates Holistic Match Index (HMI 0-100), flags Hidden Gems, and generates tailored interview probes.",
         tag: "Intelligence",
+        icon: "Sparkles",
       },
     ],
     visualType: "multi-agent-discovery",
@@ -234,27 +240,30 @@ export const PITCH_DECK_SLIDES: PitchDeckSlide[] = [
     subtitle:
       "Predictable recurring SaaS revenue coupled with automated on-chain micro-transaction settlement via SabiRevenueSplitter.sol.",
     keyMetrics: [
-      { label: "Platform Treasury Split", value: "90%", detail: "$0.90 per verified query fee" },
-      { label: "Sovereign Host Split", value: "10%", detail: "$0.10 paid to regional node host" },
-      { label: "Gross Margin", value: "84%+", detail: "Zero central physical storage overhead" },
-      { label: "Enterprise Subscription", value: "$199 - $799", detail: "Monthly recurring SaaS tiers" },
+      { label: "Platform Treasury Split", value: "90%", detail: "$0.90 per verified query fee", icon: "TrendingUp" },
+      { label: "Sovereign Host Split", value: "10%", detail: "$0.10 paid to regional node host", icon: "Landmark" },
+      { label: "Gross Margin", value: "84%+", detail: "Zero central physical storage overhead", icon: "PieChart" },
+      { label: "Enterprise Subscription", value: "$199 - $799", detail: "Monthly recurring SaaS tiers", icon: "DollarSign" },
     ],
     points: [
       {
         title: "B2B Enterprise Subscriptions",
         description: "Monthly recurring licenses for recruiters, agencies, and consulates for Talent Pool CRM and team RBAC.",
         tag: "Recurring SaaS",
+        icon: "Building",
       },
       {
         title: "90:10 Configurable GovTech Split",
         description:
           "$1.00 fee per verified query: 90% ($0.90) to SabiProfile Treasury, 10% ($0.10) to regional node hosts, dynamically configurable via Admin Dashboard.",
         tag: "On-Chain Micro-Fee",
+        icon: "Coins",
       },
       {
         title: "Citizen Premium Vaults",
         description: "Free tier (25MB) with upsells to Pro ($9.99/yr) and Sovereign ($29.99/yr) for advanced visa simulations and notary seals.",
         tag: "Citizen Pro",
+        icon: "Lock",
       },
     ],
     visualType: "business-model",
@@ -269,25 +278,28 @@ export const PITCH_DECK_SLIDES: PitchDeckSlide[] = [
     category: "Proven Execution",
     tagline: "Live Production Infrastructure",
     headline: "Production Platform Built, Smart Contracts Deployed, and Zero Tech Debt",
-    subtitle: "A fully functional, battle-tested system with 86 compiled Next.js routes and 100% automated test coverage.",
+    subtitle: "A fully functional, battle-tested system with 88 compiled Next.js routes and 100% automated test coverage.",
     keyMetrics: [
-      { label: "Production Routes", value: "86 Routes", detail: "Zero TypeScript or build errors" },
-      { label: "Automated Test Suites", value: "10 / 10", detail: "100% passing across CRM, RBAC & Forensics" },
-      { label: "Blockchain Deployment", value: "Base Sepolia", detail: "Registry & Splitter smart contracts" },
-      { label: "Live URL", value: "sabiprofile.com", detail: "End-to-end production web app" },
+      { label: "Production Routes", value: "88 Routes", detail: "Zero TypeScript or build errors", icon: "Layers" },
+      { label: "Automated Test Suites", value: "10 / 10", detail: "100% passing across CRM, RBAC & Forensics", icon: "CheckCircle2" },
+      { label: "Blockchain Deployment", value: "Base Sepolia", detail: "Registry & Splitter smart contracts", icon: "ShieldCheck" },
+      { label: "Live URL", value: "sabiprofile.com", detail: "End-to-end production web app", icon: "Globe" },
     ],
     points: [
       {
         title: "Talent Pool CRM & Granular RBAC",
         description: "Enterprise hiring teams manage candidate pipelines with multi-role access (Admin, Recruiter, Interviewer).",
+        icon: "Users",
       },
       {
         title: "Consular Forensics Radar",
         description: "Automated detection of 28-day funds holding periods, funds dumping anomalies, and Hague Apostille checks.",
+        icon: "ShieldAlert",
       },
       {
         title: "Dynamic Transactional Email Studio",
         description: "Event-triggered citizen transparency notices, interview invites, and critical tamper alerts.",
+        icon: "Mail",
       },
     ],
     visualType: "traction-milestones",
@@ -358,21 +370,21 @@ export const PITCH_DECK_SLIDES: PitchDeckSlide[] = [
     points: [
       {
         title: "Phase 1: Consular & Study Abroad Corridors (Q1 - Q2 2027)",
-        description:
-          "Partner with 50+ study abroad agencies, visa consultants, and immigration lawyers in Nigeria, Ghana, and Kenya processing UK, EU, and Canadian visas.",
+        description: "Partner with 50+ study abroad agencies, visa consultants, and immigration lawyers in Nigeria, Ghana, and Kenya.",
         tag: "Infiltration",
+        icon: "Plane",
       },
       {
         title: "Phase 2: Global Tech Talent & Remote Hiring (Q3 - Q4 2027)",
-        description:
-          "Deploy Developer API Keys to multinational outsourcing hubs, fintechs, and tech startups seeking fraud-proof engineering qualification attestation.",
+        description: "Deploy Developer API Keys to multinational outsourcing hubs, fintechs, and tech startups seeking fraud-proof credentials.",
         tag: "Expansion",
+        icon: "Briefcase",
       },
       {
         title: "Phase 3: Sovereign Attestation Consortia (2028+)",
-        description:
-          "Onboard university registrar consortia and national identity management commissions directly onto our sovereign regional node network.",
+        description: "Onboard university registrar consortia and national identity commissions directly onto our sovereign regional node network.",
         tag: "Institutional Scale",
+        icon: "Landmark",
       },
     ],
     visualType: "growth-flywheel",
@@ -393,14 +405,16 @@ export const PITCH_DECK_SLIDES: PitchDeckSlide[] = [
       {
         title: "Uyouko Nathaniel Ekpo",
         description:
-          "Founder & CEO. Distributed systems engineer, sovereign data architect, and cryptographic protocol designer. Architected SabiProfile's zero-knowledge storage invariants, Base L2 smart contracts, and multi-agent AI pipeline.",
+          "Founder & CEO. Distributed systems engineer, sovereign data architect, and cryptographic protocol designer. Architected SabiProfile's zero-knowledge storage invariants, Base L2 smart contracts, and autonomous multi-agent AI evaluation pipeline.",
         tag: "Founder & CEO",
+        icon: "Cpu",
       },
       {
         title: "Bernis DOUSSOH",
         description:
           "Co-Founder & Head of Global Mobility & HR. Renowned travel/tourism expert, HR specialist, and international relocation compliance veteran with extensive operational experience across international consular regulations and statutory mobility.",
         tag: "Co-Founder & Global Mobility / HR",
+        icon: "Globe",
       },
     ],
     visualType: "team-leadership",
@@ -418,27 +432,31 @@ export const PITCH_DECK_SLIDES: PitchDeckSlide[] = [
     subtitle:
       "18 months of fully-funded operational runway to expand node infrastructure, onboard 150+ institutional partners, and achieve $1.2M ARR.",
     keyMetrics: [
-      { label: "Round Target", value: "$1.5M", detail: "Seed Round (SAFE / Equity)" },
-      { label: "Target Runway", value: "18 Months", detail: "Cashflow self-sustaining by Month 16" },
-      { label: "Target ARR", value: "$1.2M", detail: "18-month projected ARR run-rate" },
-      { label: "Active Vaults Goal", value: "50,000+", detail: "Verified citizen identity vaults" },
+      { label: "Round Target", value: "$1.5M", detail: "Seed Round (SAFE / Equity)", icon: "DollarSign" },
+      { label: "Target Runway", value: "18 Months", detail: "Cashflow self-sustaining by Month 16", icon: "Clock" },
+      { label: "Target ARR", value: "$1.2M", detail: "18-month projected ARR run-rate", icon: "TrendingUp" },
+      { label: "Active Vaults Goal", value: "50,000+", detail: "Verified citizen identity vaults", icon: "Users" },
     ],
     points: [
       {
         title: "45% Engineering & Sovereign Nodes ($675k)",
         description: "Deploy regional PostgreSQL nodes across West Africa and Europe; audit smart contracts on Base/Polygon mainnet.",
+        icon: "Server",
       },
       {
         title: "30% Enterprise & Consular GTM ($450k)",
         description: "Onboard 150+ immigration agencies, 40+ universities, and 200+ enterprise employers across the Nigeria-UK/EU corridor.",
+        icon: "Globe",
       },
       {
         title: "15% Regulatory & Compliance ($225k)",
         description: "NDPC data processor certifications, GDPR compliance audits, and legal partner network expansion.",
+        icon: "ShieldCheck",
       },
       {
         title: "10% Security Audits & Operations ($150k)",
         description: "Formal third-party smart contract audits and 24/7 sovereign node security telemetry monitoring.",
+        icon: "Lock",
       },
     ],
     visualType: "investment-ask",
