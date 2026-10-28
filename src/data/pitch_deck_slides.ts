@@ -5,462 +5,457 @@ export interface PitchDeckSlide {
   tagline: string;
   headline: string;
   subtitle?: string;
+  bodyText?: string;
   keyMetrics?: Array<{ label: string; value: string; detail?: string; icon?: string }>;
   points?: Array<{ title: string; description: string; tag?: string; icon?: string }>;
+  directCompetitors?: Array<{ name: string; description: string }>;
+  indirectCompetitors?: Array<{ name: string; description: string }>;
+  advantages?: Array<{ title: string; description: string; tag?: string }>;
+  timeline?: Array<{ phase: string; period: string; title: string; description: string }>;
+  fundAllocation?: Array<{ category: string; percentage: number; amount: string; purpose: string }>;
+  team?: Array<{ name: string; role: string; bio: string; linkedinUrl?: string; avatarUrl?: string }>;
   visualType:
-    | "title-hero"
-    | "tri-sector-problem"
-    | "solution-flow"
-    | "architecture-invariants"
-    | "market-sizing"
-    | "multi-agent-discovery"
-    | "business-model"
-    | "traction-milestones"
-    | "competitive-matrix"
-    | "growth-flywheel"
-    | "team-leadership"
-    | "investment-ask";
+    | "cover"
+    | "contents"
+    | "introduction"
+    | "problem"
+    | "solutions"
+    | "services"
+    | "market-size"
+    | "competitors"
+    | "advantages"
+    | "traction"
+    | "roadmap"
+    | "funds"
+    | "team"
+    | "thank-you";
   speakerNotes: string;
-  tableData?: Array<Record<string, string>>;
 }
 
 export const PITCH_DECK_SLIDES: PitchDeckSlide[] = [
-  // SLIDE 1: TITLE & POSITIONING
+  // SLIDE 1: COVER
   {
     id: "slide-1",
     number: 1,
     category: "Sovereign Identity Protocol",
-    tagline: "Eradicating Credential Fraud & Black-Box Screening",
-    headline: "The Sovereign Identity Protocol for the Global Economy",
-    subtitle:
-      "Replacing unverified resumes and forged paperwork with programmable, scoped cryptographic keys verified on Base L2.",
+    tagline: "Seed Round Presentation",
+    headline: "Startup",
+    subtitle: "Pitch Deck",
+    bodyText: "SabiProfile is the sovereign data infrastructure and decentralized identity platform replacing unverified paperwork with programmable, scoped cryptographic keys verified on Base L2.",
     keyMetrics: [
       { label: "Centralized Files", value: "0 Bytes", detail: "Zero raw document retention", icon: "Database" },
       { label: "Verification Latency", value: "< 800ms", detail: "Real-time on-chain hash check", icon: "Zap" },
-      { label: "GovTech Split", value: "90 : 10", detail: "Configurable treasury / host split", icon: "Coins" },
+      { label: "GovTech Split", value: "90 : 10", detail: "Treasury / Host Node revenue sharing", icon: "Coins" },
       { label: "Active Network", value: "Base L2", detail: "Ethereum Layer-2 Security", icon: "ShieldCheck" },
     ],
-    visualType: "title-hero",
+    visualType: "cover",
     speakerNotes:
       "Welcome. SabiProfile replaces the world's most vulnerable asset—unverified paper resumes and centralized PDF storage—with programmable, tamper-proof scoped keys and zero-hallucination multi-agent screening.",
   },
 
-  // SLIDE 2: THE TRI-SECTOR PROBLEM
+  // SLIDE 2: LIST OF CONTENTS
   {
     id: "slide-2",
     number: 2,
-    category: "The Market Problem",
-    tagline: "$600B+ Annual Economic Drag",
-    headline: "Screening Relies on Forged Paperwork, Vulnerable Databases, and Blind ATS",
-    subtitle:
-      "Document fraud, manual verification delays, and severe data breach penalties cripple three foundational global sectors.",
+    category: "Presentation Overview",
+    tagline: "Table of Contents",
+    headline: "List of Contents",
     points: [
-      {
-        title: "Immigration & Consulates",
-        description: "40% of processing time wasted verifying forged bank statements and diplomas, causing 3-6 month visa backlogs.",
-        tag: "Border Security",
-        icon: "Plane",
-      },
-      {
-        title: "Enterprise Hiring & ATS",
-        description: "78% of resumes contain false claims. Legacy ATS filters reject practical problem-solvers while hiring inflated pedigrees.",
-        tag: "Labour & Talent",
-        icon: "Briefcase",
-      },
-      {
-        title: "Data Sovereignty Penalties",
-        description: "Centralizing raw citizen identity files violates NDPC (Nigeria) and GDPR (EU), creating multi-million dollar liabilities.",
-        tag: "Data Compliance",
-        icon: "ShieldAlert",
-      },
+      { title: "Who We Are?", description: "Introduction to sovereign data infrastructure and decentralized identity." },
+      { title: "Problem Statement", description: "The multi-billion dollar fraud crisis in global cross-border mobility." },
+      { title: "Our Innovative Solutions", description: "Zero raw storage, regional sovereign nodes, and immutable ledger." },
+      { title: "Discover Our Services", description: "Cross-border screening across Immigration, Higher Education, and Labour." },
+      { title: "Size of Market", description: "TAM, SAM, SOM analysis across global mobility and identity verification." },
+      { title: "Direct & Indirect Competitors", description: "Competitive landscape, legacy agencies, and SabiProfile's sovereign moat." },
+      { title: "Key Competitive Advantages", description: "Zero document centralization and sub-800ms multi-agent AI discovery." },
+      { title: "Traction, Milestones & Team", description: "Production platform metrics, execution roadmap, fund allocation, and leadership." },
     ],
-    visualType: "tri-sector-problem",
+    visualType: "contents",
     speakerNotes:
-      "Whether verifying an international visa applicant, hiring a software engineer, or attesting a degree, current processes rely on fakeable PDFs or centralized databases that violate regional data sovereignty laws.",
+      "Our deck covers the 8 core dimensions of the SabiProfile business: from our three-tier architecture to market sizing, competitive differentiation, traction, and team execution.",
   },
 
-  // SLIDE 3: THE SOLUTION
+  // SLIDE 3: INTRODUCTION
   {
     id: "slide-3",
     number: 3,
-    category: "The SabiProfile Solution",
-    tagline: "Cryptographic Keys Instead of Vulnerable Files",
-    headline: "Sovereign Citizen Vaults + Scoped API Keys + Blockchain Verification",
-    subtitle:
-      "Citizens own their credentials in their private cloud. Organizations query only consented structured data with instant on-chain verification.",
+    category: "Who We Are",
+    tagline: "Sovereign Cross-Border Mobility",
+    headline: "Introduction",
+    subtitle: "A Mathematical Single Source of Truth for Global Credentials",
+    bodyText:
+      "SabiProfile fundamentally transforms how cross-border identity and qualifications are verified. Traditional ecosystems rely on static PDFs, forged paper certificates, and fragmented manual legalization channels. SabiProfile shifts data sovereignty directly to individuals and sovereign governments by replacing static documents with programmable, tamper-proof, scoped cryptographic API keys evaluated by multi-agent AI screening pipelines verified against an immutable blockchain ledger.",
     points: [
       {
-        title: "01. Private Cloud Sync",
-        description: "User connects Google Drive or Dropbox via OAuth. Files never touch our central servers.",
-        tag: "Zero Storage",
-        icon: "Cloud",
+        title: "Zero Centralized Liability",
+        description: "User files remain exclusively in their private cloud storage (Google Drive, Dropbox). SabiProfile never retains raw user PDFs.",
+        icon: "Lock",
       },
       {
-        title: "02. Mint Scoped Key",
-        description: "Citizen mints a time-limited, category-scoped API key (sbk_live_v1_...) with query quotas.",
-        tag: "Consented Access",
-        icon: "Key",
-      },
-      {
-        title: "03. Instant Base L2 Verify",
-        description: "Enterprise verifies SHA-256 hash against the Base L2 blockchain ledger in under 800 milliseconds.",
-        tag: "Mathematical Trust",
-        icon: "CheckCircle2",
+        title: "Multi-Sector Sovereign Attestation",
+        description: "Built from day one to serve Immigration & Consulates, Higher Education Admissions, and Enterprise Labour Screening.",
+        icon: "Globe",
       },
     ],
-    visualType: "solution-flow",
+    visualType: "introduction",
     speakerNotes:
-      "SabiProfile turns candidate credentials into programmable API keys. The citizen never gives away custody of their files, the enterprise gets mathematical verification in under 800 milliseconds, and the citizen can revoke access at any time.",
+      "SabiProfile is not a simple HR tool; it is a sovereign infrastructure layer that unifies cross-border visa screening, university credential notarization, and enterprise talent verification.",
   },
 
-  // SLIDE 4: ARCHITECTURAL INVARIANTS
+  // SLIDE 4: PROBLEM STATEMENT
   {
     id: "slide-4",
     number: 4,
-    category: "Cryptographic Defensibility",
-    tagline: "Mathematical Proofs, Never Promises",
-    headline: "Four Non-Negotiable Architectural Invariants",
-    subtitle:
-      "Engineered from the ground up to prevent internal database tampering, unauthorized data retention, and AI hallucinations.",
+    category: "Market Problem",
+    tagline: "The Multi-Billion Dollar Verification Bottleneck",
+    headline: "Problem Statement",
+    subtitle: "Global credential verification is slow, fraud-ridden, and violates privacy.",
     points: [
       {
-        title: "Zero Raw Document Centralization",
-        description: "Vision AI extracts structured JSON, computes SHA-256, and immediately zeroes server memory (buffer.fill(0)).",
-        tag: "Zero Breach Vector",
-        icon: "Lock",
-      },
-      {
-        title: "Real-Time Ledger Tamper Detection",
-        description: "Every query re-hashes active records against Base L2. A single-character database edit causes instant rejection.",
-        tag: "On-Chain Tamper Proof",
-        icon: "ShieldCheck",
-      },
-      {
-        title: "Sovereign Regional Node Isolation",
-        description: "PostgreSQL partitions guarantee local data residency in compliance with NDPC (West Africa) and GDPR (EU).",
-        tag: "Data Residency",
-        icon: "Server",
-      },
-      {
-        title: "Strict RAG Zero-Hallucination Evaluator",
-        description: "Autonomous agents evaluate candidates strictly against verified JSON records and uploaded criteria rubrics.",
-        tag: "Zero Hallucination",
-        icon: "BrainCircuit",
-      },
-    ],
-    visualType: "architecture-invariants",
-    speakerNotes:
-      "We built SabiProfile on four non-negotiable architectural invariants. Even if our central database were attacked, there are zero PDFs to steal. If someone modifies a user's GPA or bank balance in PostgreSQL, our Base L2 smart contract catches the fraud immediately.",
-  },
-
-  // SLIDE 5: MARKET OPPORTUNITY (TAM / SAM / SOM)
-  {
-    id: "slide-5",
-    number: 5,
-    category: "Market Size & Growth",
-    tagline: "$54.2 Billion Convergence Space",
-    headline: "Convergence of Identity Verification, Background Checks, and HR Tech",
-    subtitle:
-      "Driven by cross-border labor migration, digital nomadism, and strictly enforced statutory immigration and data laws.",
-    keyMetrics: [
-      { label: "Total Addressable Market", value: "$54.2B", detail: "Global ID, background checks & enterprise ATS", icon: "Globe" },
-      { label: "Serviceable Addressable Market", value: "$14.8B", detail: "Cross-border mobility & emerging market talent", icon: "Layers" },
-      { label: "Serviceable Obtainable Market", value: "$1.2B", detail: "Initial focus: West Africa to UK/EU/US corridors", icon: "Target" },
-      { label: "Market Growth Rate", value: "18.4% YoY", detail: "Accelerated by statutory immigration reforms", icon: "TrendingUp" },
-    ],
-    points: [
-      {
-        title: "Immigration & Border Compliance ($12.0B)",
-        description: "Statutory visa proof-of-funds (UKVI 28-day holding, Germany Opportunity Card points rubric).",
-        icon: "Plane",
-      },
-      {
-        title: "Enterprise Background Checks & ATS ($23.6B)",
-        description: "Cross-border hiring, technical qualification attestation, and developer credential verification.",
-        icon: "Briefcase",
-      },
-      {
-        title: "Higher Education & Academic Attestation ($18.6B)",
-        description: "Hague Apostille digital notarization and university transcript authentication.",
-        icon: "GraduationCap",
-      },
-    ],
-    visualType: "market-sizing",
-    speakerNotes:
-      "Our TAM is 54.2 billion dollars across background checks, identity verification, and ATS software. Stricter statutory immigration rules like UKVI's 28-day holding rule and Germany's Opportunity Card make automated, tamper-proof credential verification an urgent global necessity.",
-  },
-
-  // SLIDE 6: PRODUCT DEEP-DIVE & DISCOVERY ENGINE
-  {
-    id: "slide-6",
-    number: 6,
-    category: "Product & AI Innovation",
-    tagline: "The 'Right Applicant' Discovery Engine",
-    headline: "Beyond Flat Credentials: Multi-Agent Screening & Holistic Match Index",
-    subtitle:
-      "Uncovering true practical problem-solvers while eliminating pedigree inflation through autonomous multi-agent pipelines.",
-    points: [
-      {
-        title: "Agent 1: Ledger Integrity Agent",
-        description: "Recomputes SHA-256 hashes against Base L2 and validates Tier-1 vs Tier-2 notary attestation.",
-        tag: "Integrity",
-        icon: "ShieldCheck",
-      },
-      {
-        title: "Agent 2: Criteria Ingestion Agent",
-        description: "Translates unstructured job descriptions and visa guidelines into executable benchmark rubrics.",
-        tag: "Grounding",
-        icon: "FileText",
-      },
-      {
-        title: "Agent 3: Strict RAG Evaluator",
-        description: "Evaluates candidates with zero hallucination against verified structured credentials.",
-        tag: "Precision",
-        icon: "CheckCircle2",
-      },
-      {
-        title: "Agent 4: Discovery & Radar Agent",
-        description: "Calculates Holistic Match Index (HMI 0-100), flags Hidden Gems, and generates tailored interview probes.",
-        tag: "Intelligence",
-        icon: "Sparkles",
-      },
-    ],
-    visualType: "multi-agent-discovery",
-    speakerNotes:
-      "Employers struggle because traditional ATS filters candidates on keywords, rejecting self-taught geniuses while shortlisting inflated pedigrees. Our Discovery Engine evaluates verified proof-of-work, calculates the Holistic Match Index, and uncovers hidden gems.",
-  },
-
-  // SLIDE 7: BUSINESS MODEL & REVENUE SPLIT
-  {
-    id: "slide-7",
-    number: 7,
-    category: "Monetization & Economics",
-    tagline: "High-Margin B2B SaaS + Micro-Transactions",
-    headline: "Dual-Engine Revenue: Enterprise SaaS Subscriptions & 90:10 GovTech Split",
-    subtitle:
-      "Predictable recurring SaaS revenue coupled with automated on-chain micro-transaction settlement via SabiRevenueSplitter.sol.",
-    keyMetrics: [
-      { label: "Platform Treasury Split", value: "90%", detail: "$0.90 per verified query fee", icon: "TrendingUp" },
-      { label: "Sovereign Host Split", value: "10%", detail: "$0.10 paid to regional node host", icon: "Landmark" },
-      { label: "Gross Margin", value: "84%+", detail: "Zero central physical storage overhead", icon: "PieChart" },
-      { label: "Enterprise Subscription", value: "$199 - $799", detail: "Monthly recurring SaaS tiers", icon: "DollarSign" },
-    ],
-    points: [
-      {
-        title: "B2B Enterprise Subscriptions",
-        description: "Monthly recurring licenses for recruiters, agencies, and consulates for Talent Pool CRM and team RBAC.",
-        tag: "Recurring SaaS",
-        icon: "Building",
-      },
-      {
-        title: "90:10 Configurable GovTech Split",
+        title: "Problem 01: Rampant Forgery & High-Friction Legalization",
         description:
-          "$1.00 fee per verified query: 90% ($0.90) to SabiProfile Treasury, 10% ($0.10) to regional node hosts, dynamically configurable via Admin Dashboard.",
-        tag: "On-Chain Micro-Fee",
-        icon: "Coins",
-      },
-      {
-        title: "Citizen Premium Vaults",
-        description: "Free tier (25MB) with upsells to Pro ($9.99/yr) and Sovereign ($29.99/yr) for advanced visa simulations and notary seals.",
-        tag: "Citizen Pro",
-        icon: "Lock",
-      },
-    ],
-    visualType: "business-model",
-    speakerNotes:
-      "Our business model operates on high-margin SaaS subscriptions for hiring teams and automated on-chain query micro-transactions. Our 90:10 revenue split pays regional node hosts, incentivizing sovereign data infrastructure adoption across Africa, the UK, and Europe.",
-  },
-
-  // SLIDE 8: TRACTION & ARCHITECTURAL MILESTONES
-  {
-    id: "slide-8",
-    number: 8,
-    category: "Proven Execution",
-    tagline: "Live Production Infrastructure",
-    headline: "Production Platform Built, Smart Contracts Deployed, and Zero Tech Debt",
-    subtitle: "A fully functional, battle-tested system with 88 compiled Next.js routes and 100% automated test coverage.",
-    keyMetrics: [
-      { label: "Production Routes", value: "88 Routes", detail: "Zero TypeScript or build errors", icon: "Layers" },
-      { label: "Automated Test Suites", value: "10 / 10", detail: "100% passing across CRM, RBAC & Forensics", icon: "CheckCircle2" },
-      { label: "Blockchain Deployment", value: "Base Sepolia", detail: "Registry & Splitter smart contracts", icon: "ShieldCheck" },
-      { label: "Live URL", value: "sabiprofile.com", detail: "End-to-end production web app", icon: "Globe" },
-    ],
-    points: [
-      {
-        title: "Talent Pool CRM & Granular RBAC",
-        description: "Enterprise hiring teams manage candidate pipelines with multi-role access (Admin, Recruiter, Interviewer).",
-        icon: "Users",
-      },
-      {
-        title: "Consular Forensics Radar",
-        description: "Automated detection of 28-day funds holding periods, funds dumping anomalies, and Hague Apostille checks.",
+          "40% of consular and university admissions processing time is wasted manually verifying bank statements, apostilles, and degree certificates. 78% of enterprise resumes contain inflated or fraudulent qualifications, causing 3-6 month visa backlogs and expensive bad hires.",
+        tag: "Fraud Crisis",
         icon: "ShieldAlert",
       },
       {
-        title: "Dynamic Transactional Email Studio",
-        description: "Event-triggered citizen transparency notices, interview invites, and critical tamper alerts.",
-        icon: "Mail",
-      },
-    ],
-    visualType: "traction-milestones",
-    speakerNotes:
-      "We are not presenting wireframes or unverified mockups. SabiProfile is a fully functional web platform with smart contracts deployed on Base L2, ten comprehensive automated test suites, and enterprise CRM modules running live today.",
-  },
-
-  // SLIDE 9: COMPETITIVE LANDSCAPE & MOATS
-  {
-    id: "slide-9",
-    number: 9,
-    category: "Competitive Advantage",
-    tagline: "Defensible Moats by Design",
-    headline: "Why Traditional Background Checkers and Web2 ATS Cannot Compete",
-    subtitle:
-      "Legacy players rely on dangerous centralized PDF databases that expose them to multi-million-dollar GDPR/NDPC legal penalties.",
-    tableData: [
-      {
-        Feature: "Instant Ledger Verification",
-        "Legacy ATS (Workday/Greenhouse)": "❌ Manual (Days)",
-        "Background Checkers (Checkr/Sterling)": "❌ 3-14 Days",
-        "Decentralized Wallets": "⚠️ Complex UX",
-        SabiProfile: "✅ < 800ms On-Chain",
-      },
-      {
-        Feature: "Zero Raw File Centralization",
-        "Legacy ATS (Workday/Greenhouse)": "❌ High Breach Risk",
-        "Background Checkers (Checkr/Sterling)": "❌ Centralized PDFs",
-        "Decentralized Wallets": "✅ Self-Sovereign",
-        SabiProfile: "✅ 100% User OAuth Cloud",
-      },
-      {
-        Feature: "Zero-Hallucination AI Screening",
-        "Legacy ATS (Workday/Greenhouse)": "❌ Keyword Matching",
-        "Background Checkers (Checkr/Sterling)": "❌ None",
-        "Decentralized Wallets": "❌ None",
-        SabiProfile: "✅ Strict RAG + HMI Radar",
-      },
-      {
-        Feature: "Multi-Sector Statutory Engine",
-        "Legacy ATS (Workday/Greenhouse)": "❌ Jobs Only",
-        "Background Checkers (Checkr/Sterling)": "❌ Criminal/Credit Only",
-        "Decentralized Wallets": "❌ Identity Only",
-        SabiProfile: "✅ Labour + Visas + Degrees",
-      },
-      {
-        Feature: "NDPC & GDPR Sovereign Residency",
-        "Legacy ATS (Workday/Greenhouse)": "❌ US Cloud Servers",
-        "Background Checkers (Checkr/Sterling)": "❌ US Cloud Servers",
-        "Decentralized Wallets": "⚠️ Public Chain Leak",
-        SabiProfile: "✅ Regional Sovereign Nodes",
-      },
-    ],
-    visualType: "competitive-matrix",
-    speakerNotes:
-      "Legacy background check providers take 3 to 14 days and store centralized user PDFs, which violates emerging sovereign data residency laws. SabiProfile is mathematically tamper-free, delivers sub-second results, and never retains custody of raw user documents.",
-  },
-
-  // SLIDE 10: GO-TO-MARKET & EXPANSION FLYWHEEL
-  {
-    id: "slide-10",
-    number: 10,
-    category: "Growth Strategy",
-    tagline: "High-Velocity Tri-Sector Flywheel",
-    headline: "Targeting High-Friction Mobility Corridors to Drive Viral Citizen Adoption",
-    subtitle:
-      "Every candidate who creates a vault for a student visa or embassy attestation retains that vault forever to apply for global remote jobs.",
-    points: [
-      {
-        title: "Phase 1: Consular & Study Abroad Corridors (Q1 - Q2 2027)",
-        description: "Partner with 50+ study abroad agencies, visa consultants, and immigration lawyers in Nigeria, Ghana, and Kenya.",
-        tag: "Infiltration",
-        icon: "Plane",
-      },
-      {
-        title: "Phase 2: Global Tech Talent & Remote Hiring (Q3 - Q4 2027)",
-        description: "Deploy Developer API Keys to multinational outsourcing hubs, fintechs, and tech startups seeking fraud-proof credentials.",
-        tag: "Expansion",
-        icon: "Briefcase",
-      },
-      {
-        title: "Phase 3: Sovereign Attestation Consortia (2028+)",
-        description: "Onboard university registrar consortia and national identity commissions directly onto our sovereign regional node network.",
-        tag: "Institutional Scale",
-        icon: "Landmark",
-      },
-    ],
-    visualType: "growth-flywheel",
-    speakerNotes:
-      "Our go-to-market strategy begins in the highest-friction sector: international visas and study abroad. Once a citizen's bank statement and university degree are hashed and verified, that citizen uses their SabiProfile vault forever to apply for global remote work.",
-  },
-
-  // SLIDE 11: LEADERSHIP TEAM & EXECUTION DNA
-  {
-    id: "slide-11",
-    number: 11,
-    category: "Leadership Team",
-    tagline: "World-Class Execution & Domain Mastery",
-    headline: "Experienced Builders in Sovereign Architecture, Global Mobility, and HR Compliance",
-    subtitle:
-      "Combining deep cryptographic systems engineering with decade-long cross-border travel, consular, and enterprise HR expertise.",
-    points: [
-      {
-        title: "Uyouko Nathaniel Ekpo",
+        title: "Problem 02: Centralized Identity Honeypots & Compliance Penalties",
         description:
-          "Founder & CEO. Distributed systems engineer, sovereign data architect, and cryptographic protocol designer. Architected SabiProfile's zero-knowledge storage invariants, Base L2 smart contracts, and autonomous multi-agent AI evaluation pipeline.",
-        tag: "Founder & CEO",
-        icon: "Cpu",
-      },
-      {
-        title: "Bernis DOUSSOH",
-        description:
-          "Co-Founder & Head of Global Mobility & HR. Renowned travel/tourism expert, HR specialist, and international relocation compliance veteran with extensive operational experience across international consular regulations and statutory mobility.",
-        tag: "Co-Founder & Global Mobility / HR",
-        icon: "Globe",
+          "Traditional verification agencies and ATS vendors store gigabytes of raw passports, bank statements, and national IDs on centralized servers. This directly violates modern privacy laws (NDPC in Nigeria, GDPR in Europe), exposing institutions to crippling multi-million dollar data breach liabilities.",
+        tag: "Data Breach Risk",
+        icon: "Database",
       },
     ],
-    visualType: "team-leadership",
+    visualType: "problem",
     speakerNotes:
-      "Our leadership team combines deep technical capability with domain mastery. Uyouko architected our zero-storage cryptographic infrastructure and smart contracts, while Bernis brings extensive practical experience in global travel, immigration logistics, and enterprise HR operations.",
+      "The global economy is stuck between two bad options: agonizing manual verification delays or centralized document honeypots that create enormous compliance and security risks.",
   },
 
-  // SLIDE 12: THE ASK & CAPITAL ALLOCATION
+  // SLIDE 5: OUR INNOVATIVE SOLUTIONS
   {
-    id: "slide-12",
-    number: 12,
-    category: "Investment Opportunity",
-    tagline: "Seed Financing Opportunity",
-    headline: "Raising $1.5M Seed to Scale Sovereign Nodes and Dominate Cross-Border Verification",
-    subtitle:
-      "18 months of fully-funded operational runway to expand node infrastructure, onboard 150+ institutional partners, and achieve $1.2M ARR.",
-    keyMetrics: [
-      { label: "Round Target", value: "$1.5M", detail: "Seed Round (SAFE / Equity)", icon: "DollarSign" },
-      { label: "Target Runway", value: "18 Months", detail: "Cashflow self-sustaining by Month 16", icon: "Clock" },
-      { label: "Target ARR", value: "$1.2M", detail: "18-month projected ARR run-rate", icon: "TrendingUp" },
-      { label: "Active Vaults Goal", value: "50,000+", detail: "Verified citizen identity vaults", icon: "Users" },
-    ],
+    id: "slide-5",
+    number: 5,
+    category: "Architecture & Solution",
+    tagline: "Three-Tier Sovereign Infrastructure",
+    headline: "Our Innovative Solutions",
+    subtitle: "Mathematical verification without storing a single byte of citizen documents.",
+    bodyText:
+      "We replace fragile paper documents and centralized servers with a patented three-tier sovereign architecture that guarantees complete data privacy and sub-800ms verification.",
     points: [
       {
-        title: "45% Engineering & Sovereign Nodes ($675k)",
-        description: "Deploy regional PostgreSQL nodes across West Africa and Europe; audit smart contracts on Base/Polygon mainnet.",
+        title: "Solution 01",
+        description:
+          "Zero Raw Document Centralization: User documents remain in their private Google Drive or Dropbox via OAuth. SabiProfile servers never retain raw PDFs or scans.",
+        tag: "Privacy First",
+        icon: "Cloud",
+      },
+      {
+        title: "Solution 02",
+        description:
+          "Sovereign Regional Node Isolation: Structured candidate claims are hosted on regional sovereign database nodes, fully satisfying local data residency mandates (NDPC, GDPR).",
+        tag: "Residency Compliant",
         icon: "Server",
       },
       {
-        title: "30% Enterprise & Consular GTM ($450k)",
-        description: "Onboard 150+ immigration agencies, 40+ universities, and 200+ enterprise employers across the Nigeria-UK/EU corridor.",
+        title: "Solution 03",
+        description:
+          "Immutable Blockchain Verification: Every attested claim and document has a SHA-256 hash anchored to Base L2, enabling instant on-chain mathematical tamper detection.",
+        tag: "Base L2 Verified",
+        icon: "ShieldCheck",
+      },
+    ],
+    visualType: "solutions",
+    speakerNotes:
+      "Our three-tier architecture separates physical file storage, sovereign JSON metadata, and cryptographic blockchain proofs, creating an impenetrable moat against data breaches.",
+  },
+
+  // SLIDE 6: DISCOVER OUR SERVICES
+  {
+    id: "slide-6",
+    number: 6,
+    category: "Product Verticals",
+    tagline: "Unified Multi-Sector Platform",
+    headline: "Discover Our Services",
+    subtitle: "Delivering automated, tamper-proof screening across three mission-critical sectors.",
+    bodyText:
+      "SabiProfile's unified engine powers tailored workflows for immigration authorities, academic registrars, and enterprise human resource departments.",
+    points: [
+      {
+        title: "Service 01",
+        description:
+          "Sovereign Immigration & Consular Screening: Automated 28-day liquid funds holding audits, Tier-2 legal apostille attestation, and real-time visa candidate discovery with zero paperwork.",
+        tag: "Immigration & Visas",
+        icon: "Plane",
+      },
+      {
+        title: "Service 02",
+        description:
+          "Tamper-Proof Academic Credentials: Instant university registrar transcript notarization, degree authenticity validation, and automated international student credential equivalency.",
+        tag: "Higher Education",
+        icon: "GraduationCap",
+      },
+      {
+        title: "Service 03",
+        description:
+          "Labour & Enterprise Talent Evaluation: Programmable scoped candidate API keys, AI-driven technical rubric matching, and automated candidate interview probe generation.",
+        tag: "Enterprise Talent",
+        icon: "Briefcase",
+      },
+    ],
+    visualType: "services",
+    speakerNotes:
+      "One sovereign protocol solves the verification bottleneck for embassies issuing visas, universities admitting foreign scholars, and Fortune 500 enterprises hiring global talent.",
+  },
+
+  // SLIDE 7: SIZE OF MARKET
+  {
+    id: "slide-7",
+    number: 7,
+    category: "Market Opportunity",
+    tagline: "Massive Global Expansion",
+    headline: "Size of Market",
+    subtitle: "Addressing a rapidly accelerating global compliance and mobility market.",
+    bodyText:
+      "Cross-border migration, international student enrollment, and remote global workforce expansion are accelerating exponentially. Simultaneously, strict data sovereignty regulations (NDPC in Africa, GDPR in the EU, DPDP in India) are rendering legacy centralized screening platforms legally obsolete. SabiProfile captures this inflection point.",
+    keyMetrics: [
+      {
+        label: "Total Addressable Market",
+        value: "$54.2B",
+        detail: "Global Identity Verification & Cross-Border Mobility Market by 2030 (15.6% CAGR).",
         icon: "Globe",
       },
       {
-        title: "15% Regulatory & Compliance ($225k)",
-        description: "NDPC data processor certifications, GDPR compliance audits, and legal partner network expansion.",
-        icon: "ShieldCheck",
-      },
-      {
-        title: "10% Security Audits & Operations ($150k)",
-        description: "Formal third-party smart contract audits and 24/7 sovereign node security telemetry monitoring.",
-        icon: "Lock",
+        label: "Serviceable Addressable Market",
+        value: "$14.8B",
+        detail: "African, Commonwealth & Global South outbound mobility, visa attestation & GovTech screening.",
+        icon: "PieChart",
       },
     ],
-    visualType: "investment-ask",
+    points: [
+      {
+        title: "Serviceable Obtainable Market (SOM)",
+        description: "$1.2B focused on UK/Canada/EU student and skilled-worker migration corridors originating from West Africa and emerging markets.",
+        icon: "TrendingUp",
+      },
+    ],
+    visualType: "market-size",
     speakerNotes:
-      "We are raising 1.5 million dollars in Seed financing. This capital gives us 18 months of runway to expand our sovereign node network, secure our regulatory moats across the West Africa-UK corridor, and scale to 50,000 active verified vaults and 1.2 million dollars in ARR. Thank you.",
+      "With over $54B in market size, our initial beachhead focuses on high-friction African and Commonwealth migration routes where credential fraud is rampant and compliance costs are highest.",
+  },
+
+  // SLIDE 8: DIRECT & INDIRECT COMPETITORS (Canva Template Slide 8)
+  {
+    id: "slide-8",
+    number: 8,
+    category: "Competitive Analysis",
+    tagline: "Market Positioning & Unfair Advantages",
+    headline: "Competitors",
+    subtitle: "How SabiProfile outperforms both legacy agencies and Web3 protocols.",
+    indirectCompetitors: [
+      {
+        name: "Legacy Verification Agencies (WES, VFS Global, HireRight)",
+        description: "Manual, paper-heavy 4–8 week turnaround times; exorbitant fees ($200–$400 per transcript/visa document); zero real-time cryptographic automation.",
+      },
+      {
+        name: "Cloud Storage & Enterprise ATS (Workday, Google Drive, Taleo)",
+        description: "Passive document silos that centralize raw PDFs; completely lack tamper-detection hashes, blockchain audit trails, or autonomous candidate evaluation.",
+      },
+      {
+        name: "Generic KYC Providers (Onfido, Sumsub, Veriff)",
+        description: "Surface-level passport selfie scanners; cannot verify multi-year university transcripts, 28-day bank balance holding rules, or professional credentials.",
+      },
+    ],
+    directCompetitors: [
+      {
+        name: "Decentralized ID Protocols (Polygon ID, Civic, Privado ID)",
+        description: "Crypto-centric and complex for non-technical users; lack consular workflow integrations, institutional compliance tooling, and private cloud OAuth bridges.",
+      },
+      {
+        name: "Centralized Government Portals (NIN/NIMC, DigiLocker India)",
+        description: "National data honeypots with zero cross-border interoperability; highly vulnerable to domestic surveillance and rejected by foreign consular systems.",
+      },
+      {
+        name: "SabiProfile's Sovereign Moat",
+        description: "Zero raw storage + Base L2 cryptographic ledger + multi-agent LLM discovery + built-in dynamic 90:10 GovTech revenue split for sovereign node operators.",
+      },
+    ],
+    visualType: "competitors",
+    speakerNotes:
+      "Legacy players are too slow and centralized; Web3 protocols are too complicated and disconnected from consular and educational realities. SabiProfile bridges this chasm.",
+  },
+
+  // SLIDE 9: KEY COMPETITIVE ADVANTAGES
+  {
+    id: "slide-9",
+    number: 9,
+    category: "Unfair Advantage",
+    tagline: "Defensible Architectural Moats",
+    headline: "Key Competitive Advantages",
+    subtitle: "Built on privacy preservation, autonomous intelligence, and blockchain truth.",
+    advantages: [
+      {
+        title: "Advantage 01: Zero Raw Document Centralization",
+        description:
+          "By leaving physical files inside the applicant's private cloud drive via OAuth and verifying only cryptographic hashes, SabiProfile eliminates institutional data breach liability, slashing cloud storage overhead to near zero while maintaining 100% NDPC and GDPR compliance.",
+        tag: "Zero Breach Risk",
+      },
+      {
+        title: "Advantage 02: Autonomous Multi-Agent AI Discovery",
+        description:
+          "Our strict RAG evaluator screens verified structured claims against institutional rubrics with zero hallucination. It generates tailored interview probes and on-chain tamper verification in under 800 milliseconds, replacing weeks of human review with instant certainty.",
+        tag: "Sub-800ms Speed",
+      },
+    ],
+    visualType: "advantages",
+    speakerNotes:
+      "Our zero raw document storage and autonomous multi-agent evaluator give us an insurmountable cost and compliance advantage over legacy verification incumbents.",
+  },
+
+  // SLIDE 10: TRACTION
+  {
+    id: "slide-10",
+    number: 10,
+    category: "Platform Execution",
+    tagline: "Pre-Production Architecture Complete",
+    headline: "Traction",
+    subtitle: "Fully architected pre-production platform with verified operational metrics.",
+    bodyText:
+      "SabiProfile has transitioned from concept to an enterprise-grade sovereign infrastructure platform. All core modules are live in our pre-production environment with automated end-to-end test verification.",
+    keyMetrics: [
+      { label: "Production Routes", value: "88 Routes", detail: "Next.js 14 App Router API & Views", icon: "Layers" },
+      { label: "Verification Latency", value: "< 800ms", detail: "SHA-256 On-Chain Ledger Lookup", icon: "Zap" },
+      { label: "Automated Tests", value: "100%", detail: "Pass rate across auth, keys, and M2M", icon: "CheckCircle2" },
+      { label: "Smart Contracts", value: "Base L2", detail: "EVM-compatible registry live", icon: "ShieldCheck" },
+    ],
+    visualType: "traction",
+    speakerNotes:
+      "We are not an idea-stage pitch; we have built 88 production routes, verified Base L2 smart contract anchoring, and completed end-to-end integration across all three verticals.",
+  },
+
+  // SLIDE 11: ACCOMPLISHMENTS & ROADMAP
+  {
+    id: "slide-11",
+    number: 11,
+    category: "Execution Plan",
+    tagline: "Phase-Gated Growth Strategy",
+    headline: "Accomplishments & Roadmap",
+    subtitle: "Clear, disciplined execution from core protocol to global sovereign expansion.",
+    timeline: [
+      {
+        phase: "Phase 1",
+        period: "2025 – 2026",
+        title: "Core Protocol & Ledger",
+        description: "Completed three-tier storage model, Base L2 cryptographic anchoring, multi-agent AI discovery engine, and scoped API key minting system.",
+      },
+      {
+        phase: "Phase 2",
+        period: "Q1 – Q2 2026",
+        title: "Consular & University Pilots",
+        description: "Deploying 10 institutional pilots across West Africa, UK, and Canadian visa/education corridors; launch of dynamic 90:10 GovTech revenue split.",
+      },
+      {
+        phase: "Phase 3",
+        period: "2026+",
+        title: "Global Sovereign Network",
+        description: "Expansion to 25+ sovereign regional nodes across ECOWAS and the EU; cross-border diplomatic attestation API and mobile sovereign citizen wallet.",
+      },
+    ],
+    visualType: "roadmap",
+    speakerNotes:
+      "Our roadmap executes in disciplined phases: having built the core protocol, we are now launching institutional pilots before scaling to a global sovereign network.",
+  },
+
+  // SLIDE 12: USE OF FUNDS
+  {
+    id: "slide-12",
+    number: 12,
+    category: "Financial Strategy",
+    tagline: "$1,500,000 USD Seed Round",
+    headline: "Use of Funds",
+    subtitle: "Disciplined capital allocation focused on engineering, pilots, and compliance.",
+    fundAllocation: [
+      {
+        category: "Engineering & Cryptography",
+        percentage: 50,
+        amount: "$750,000",
+        purpose: "Base L2 contract hardening, multi-agent LLM pipeline scaling, and sovereign node zero-knowledge enhancements.",
+      },
+      {
+        category: "Regional Sovereign Nodes & Pilots",
+        percentage: 30,
+        amount: "$450,000",
+        purpose: "Deploying regional database nodes across West Africa and the EU; expanding consular and university registrar pilots.",
+      },
+      {
+        category: "Legal, Compliance & Security",
+        percentage: 20,
+        amount: "$300,000",
+        purpose: "NDPC & GDPR sovereign regulatory certifications, formal smart contract audits, and diplomatic stakeholder partnerships.",
+      },
+    ],
+    points: [
+      {
+        title: "Dynamic 90:10 GovTech Revenue Model",
+        description: "Configurable treasury split ($0.90 Platform / $0.10 Regional Host) incentivizes sovereign node hosts while delivering high-margin recurring SaaS revenue.",
+        icon: "Coins",
+      },
+    ],
+    visualType: "funds",
+    speakerNotes:
+      "Our $1.5M Seed round provides 18 months of runway to secure our first 25 institutional partners, scale our sovereign regional nodes, and achieve cash-flow positive unit economics.",
+  },
+
+  // SLIDE 13: OUR TEAM
+  {
+    id: "slide-13",
+    number: 13,
+    category: "Executive Leadership",
+    tagline: "Domain Expertise Across Tech & Global Mobility",
+    headline: "Our Team",
+    subtitle: "Proven leadership in software architecture, international mobility, and compliance.",
+    bodyText:
+      "Our founding team combines deep software engineering expertise with decade-long experience in cross-border travel, consular regulations, and international human resources.",
+    team: [
+      {
+        name: "Uyouko Nathaniel Ekpo",
+        role: "Founder & CEO",
+        bio: "Full-stack software architect & decentralized systems engineer. Creator of SabiProfile's zero raw document storage and cryptographic scoped key infrastructure.",
+        linkedinUrl: "https://www.linkedin.com/in/uyouko-nathaniel-ekpo-111b69396/",
+      },
+      {
+        name: "Bernis DOUSSOH",
+        role: "Co-Founder / Head of Global Mobility & HR",
+        bio: "Senior travel, tourism, and global mobility executive with over 10 years of cross-border immigration, consular attestation, and international human resource leadership.",
+        linkedinUrl: "https://www.linkedin.com/in/bernis-doussoh-516b5498/",
+      },
+    ],
+    visualType: "team",
+    speakerNotes:
+      "Led by Uyouko in software architecture and Bernis in global mobility and consular operations, our team has the exact blend of technical and regulatory mastery required to win this market.",
+  },
+
+  // SLIDE 14: THANK YOU
+  {
+    id: "slide-14",
+    number: 14,
+    category: "Next Steps",
+    tagline: "Join Us in Building the Future of Sovereign Identity",
+    headline: "Thank You",
+    subtitle: "Partner with SabiProfile to eradicate credential fraud worldwide.",
+    points: [
+      {
+        title: "Direct Investor Relations",
+        description: "invest@sabiprofile.com",
+        icon: "Mail",
+      },
+      {
+        title: "Official Platform Portal",
+        description: "www.sabiprofile.com",
+        icon: "Globe",
+      },
+    ],
+    visualType: "thank-you",
+    speakerNotes:
+      "Thank you for your time and vision. We invite you to join us in building the mathematical single source of truth for global mobility and identity. We are open for questions.",
   },
 ];

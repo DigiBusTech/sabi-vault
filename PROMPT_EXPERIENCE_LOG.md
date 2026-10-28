@@ -3325,3 +3325,51 @@
 - **Validation:**
   - `npx tsc --noEmit`: 0 errors.
   - `npm run build`: 88/88 routes compiled cleanly and generated statically.
+
+---
+
+### Entry #093: 1:1 Canva Deck Template Fidelity, 14-Slide Architecture, Direct & Indirect Competitor Analysis, and Programmatic PDF Calibration
+- **Date & Timestamp:** 2026-10-28 04:47:00 (Local)
+- **User Prompt / Intent:**
+  > "you did not follow the design and fonts etc of this deck template, 'https://www.canva.com/templates/EAG2aMIdur8-green-and-white-modern-simple-startup-pitch-deck-business-presentation/' also adding direct and indirect competitors, also the visuals were looking like website UI instead of presentation design. @[SabiProfile pitch.pdf] make refrenece or edit this pdf to have the details of SabiProfile."
+- **Analysis & Template Forensics:**
+  1. Extracted and rendered all 14 pages from `SabiProfile pitch.pdf` to reverse-engineer the Canva design system:
+     - Exact Canva canvas background: Warm subtle sage ivory `#EFF0EA` (`rgb(0.9373, 0.9412, 0.9176)`).
+     - Headings & Primary Text: Deep Forest Teal `#285C56` / `#377272`.
+     - Display Font: **Bricolage Grotesque** (massive, bold, geometric typography).
+     - Body Font: Clean modern sans-serif (**Plus Jakarta Sans** / **Aileron**).
+     - Distinctive vector ornaments: Organic flowing bezier ribbon waves (`CanvaWave`), subtle halftone dot matrix corner grids (`HalftoneDots`), radiating sunburst icons, and clean outlined capsules.
+     - Pure presentation layout: Replaced all dashboard/website UI widgets (fake progress bars, pill buttons, tech metrics) with genuine 16:9 widescreen presentation slides.
+  2. The Canva template has a dedicated **Slide 8** specifically formatted as **"Indirect Competitor"** (top half) and **"Direct Competitor"** (bottom half) separated by a center horizontal divider.
+- **Actions Taken:**
+  1. **Google Fonts & Typography System (`src/app/globals.css`):**
+     - Imported `Bricolage Grotesque` and `Plus Jakarta Sans`.
+     - Added `.font-bricolage` utility for authentic Canva presentation titles.
+  2. **14-Slide Presentation Data Model (`src/data/pitch_deck_slides.ts`):**
+     - Expanded from 12 to 14 standalone slides directly mirroring `SabiProfile pitch.pdf`:
+       - Slide 1: Startup Pitch Deck (Cover Hero)
+       - Slide 2: List of Contents (8 numbered badges 1-8)
+       - Slide 3: Introduction (Mathematical Single Source of Truth)
+       - Slide 4: Problem Statement (Problem 01: Rampant Forgery & Problem 02: Centralized Identity Honeypots)
+       - Slide 5: Our Innovative Solutions (Solution 01: Zero Raw Storage, Solution 02: Sovereign Nodes, Solution 03: Base L2)
+       - Slide 6: Discover Our Services (Immigration & Visas, Academic Transcripts, Labour Screening)
+       - Slide 7: Size of Market ($54.2B TAM, $14.8B SAM, $1.2B SOM)
+       - Slide 8: **Direct & Indirect Competitors** (Legacy agencies, Cloud ATS, Generic KYC vs Decentralized ID, Centralized Gov Portals, and SabiProfile's Sovereign Moat)
+       - Slide 9: Key Competitive Advantages (Zero Raw Document Centralization, Autonomous Multi-Agent AI Discovery)
+       - Slide 10: Traction (88 Routes, <800ms Latency, 100% Tests, Base L2 Live)
+       - Slide 11: Accomplishments & Roadmap (Phase 1 Core, Phase 2 Pilots, Phase 3 Global Sovereign Network)
+       - Slide 12: Use of Funds (50% Engineering, 30% Sovereign Nodes, 20% Legal & Security + 90:10 GovTech model)
+       - Slide 13: Our Team (Uyouko Nathaniel Ekpo & Bernis DOUSSOH)
+       - Slide 14: Thank You (Contact details & URL)
+  3. **Presentation Component Overhaul (`src/components/deck/PitchDeckViewer.tsx`):**
+     - Implemented `CanvaWave`, `HalftoneDots`, `SunburstIcon`, `SlideHeader`, and `SlideFooter`.
+     - Completely redesigned all 14 slides into 16:9 widescreen presentation canvas (`#EFF0EA` background, `#285C56` headings, authentic slide margins and layouts).
+     - Full presentation mode: Carousel mode, All Slides view, Fullscreen mode, and Founder Speaker Notes.
+  4. **Programmatic PDF Generation & Calibration (`scripts/generate_pitch_deck_pdf.mjs`):**
+     - Built Node.js script using `pdf-lib` to calibrate and replace the placeholder text on `SabiProfile pitch.pdf` with SabiProfile's exact content.
+     - Preserves all original Canva vector ribbons, halftone dots, borders, and charts while updating titles, bullet points, competitors, team names, and contact cards.
+     - Outputs calibrated vector PDF to `public/SabiProfile_Pitch_Deck.pdf` for direct one-click download at `/deck` and updates `SabiProfile pitch.pdf` directly on disk.
+- **Validation:**
+  - `npx tsc --noEmit`: 0 errors.
+  - `npm run build`: 88/88 routes compiled cleanly and generated statically.
+  - Direct PDF test: `node scripts/generate_pitch_deck_pdf.mjs` executed cleanly, producing valid 30.9MB vector PDF.
