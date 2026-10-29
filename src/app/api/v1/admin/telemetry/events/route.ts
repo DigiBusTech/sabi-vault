@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 /**
  * GET /api/v1/admin/telemetry/events
- * Returns live streaming events and aggregated metrics for the Super Admin Mission Control.
+ * Returns persistent live streaming events and aggregated metrics for the Super Admin Mission Control.
  */
 export async function GET(req: NextRequest) {
   const auth = await authenticateUser(req);
@@ -32,8 +32,8 @@ export async function GET(req: NextRequest) {
     limit: searchParams.get("limit") ? Math.min(Number(searchParams.get("limit")), 500) : 100,
   };
 
-  const events = liveTelemetry.query(filter);
-  const stats = liveTelemetry.getStats();
+  const events = await liveTelemetry.queryAsync(filter);
+  const stats = await liveTelemetry.getStatsAsync();
 
   return NextResponse.json({
     status: "OK",
@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
 
 /**
  * DELETE /api/v1/admin/telemetry/events
- * Clears the in-memory circular ring buffer.
+ * Clears the persistent telemetry table and in-memory circular ring buffer.
  */
 export async function DELETE(req: NextRequest) {
   const auth = await authenticateUser(req);
@@ -56,11 +56,11 @@ export async function DELETE(req: NextRequest) {
     );
   }
 
-  liveTelemetry.clear();
+  await liveTelemetry.clearAsync();
   return NextResponse.json({
     status: "CLEARED",
-    message: "Live telemetry buffer successfully cleared.",
-    stats: liveTelemetry.getStats(),
+    message: "Live telemetry buffer and persistent logs successfully cleared.",
+    stats: await liveTelemetry.getStatsAsync(),
   });
 }
 
@@ -93,4 +93,3 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid telemetry payload", details: err.message }, { status: 400 });
   }
 }
-

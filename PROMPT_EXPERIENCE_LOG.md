@@ -3373,3 +3373,52 @@
   - `npx tsc --noEmit`: 0 errors.
   - `npm run build`: 88/88 routes compiled cleanly and generated statically.
   - Direct PDF test: `node scripts/generate_pitch_deck_pdf.mjs` executed cleanly, producing valid 30.9MB vector PDF.
+
+---
+
+### Entry #094: Defensive Candidate Date Parsing Resilience & 48-Hour Persistent Live System Telemetry Engine
+- **Date & Timestamp:** 2026-10-29 08:31:00 (Local)
+- **User Prompt / Intent:**
+  > "i am facing this isuue, and it did not capture the error in the admin telementary logs, why is it that logs are not captured even when very few do they disappear automatically. it is supposed to capture and save then delete after every 2 days. audit and let me know the cause of these problems."
+  > [Screenshot 1: `/dashboard/enterprise/screening` throwing red alert: `Cannot read properties of undefined (reading 'split')`]
+  > [Screenshot 2: `/dashboard/admin/telemetry` showing only `TOTAL STREAMED: 1` (`TELEMETRY_ENGINE_INITIALIZED`), missing the error and disappearing on page reload]
+- **Forensic Root Cause Analysis:**
+  1. **Candidate Screening Crash (`split` of undefined):**
+     - In `src/core/enterprise/criteria_store.ts:627` and `criteria_store.ts:705`, candidate work experience dates synced from OAuth providers or resumes lacked defensive guards:
+       `const startYear = parseInt(exp.startDate.split("-")[0]);`
+     - If an experience entry had missing, null, empty, or numerical `startDate` fields, JavaScript threw an uncaught `TypeError: Cannot read properties of undefined (reading 'split')`.
+  2. **Missing & Disappearing Telemetry Logs:**
+     - **Lack of Database Persistence:** Telemetry events were stored exclusively in an in-memory array (`this.buffer: TelemetryEvent[]`) inside Node server process memory. On Vercel / serverless deployments (`sabiprofile.com`), different HTTP requests hit different ephemeral serverless worker containers. When opening `/dashboard/admin/telemetry`, the container initialized fresh with only 1 event (`TELEMETRY_ENGINE_INITIALIZED`), and any logs in other workers vanished upon worker termination.
+     - **Missing Supabase Migration:** There was no PostgreSQL table for telemetry, nor an automated 48-hour pruning trigger.
+     - **Zero Screening Instrumentation:** Neither `/api/v1/enterprise/screen-batch` nor `/api/v1/screen` called `liveTelemetry.record()`. Errors were simply converted to HTTP 500 JSON payloads without alerting telemetry mission control.
+- **Actions Taken:**
+  1. **Defensive Date & Tenure Parsing (`src/core/enterprise/criteria_store.ts`):**
+     - Replaced fragile `.split("-")` calls with resilient regex year matchers:
+       `const startMatch = String(exp?.startDate || "").match(/\d{4}/);`
+       `const startYear = parseInt(startMatch ? startMatch[0] : "2026", 10);`
+     - Applied safe fallbacks across `profileWorkExp` date loops and experience title/company labels to guarantee crash-proof candidate evaluation regardless of user-provided date formats.
+  2. **Supabase Telemetry Migration (`supabase/migrations/20261029080000_system_telemetry_persistence.sql`):**
+     - Created `system_telemetry_events` table with columns: `id`, `timestamp`, `iso_time`, `subsystem`, `level`, `action`, `duration_ms`, `status_code`, `error_code`, `message`, `metadata`, `user_id`, `created_at`.
+     - Added performance indexes on `created_at DESC`, `subsystem`, `level`, and `action`.
+     - Defined automated database cleanup function `purge_expired_telemetry_events()` that prunes records older than 2 days (`created_at < NOW() - INTERVAL '2 days'`).
+     - Configured RLS policies for service role full access and authenticated super_admin / auditor read access.
+  3. **Dual-Layer Architecture Upgraded (`src/lib/telemetry/live_logger.ts`):**
+     - High-speed in-memory ring buffer (500 capacity) preserved for instant local caching and sub-millisecond real-time polling.
+     - Asynchronous, non-blocking PostgreSQL persistence via `createAdminSupabaseClient()`.
+     - Background 48-hour retention pruning: `pruneExpiredEventsAsync()` automatically enforces the 2-day deletion policy.
+     - Implemented `queryAsync(filter)` and `getStatsAsync()` to aggregate events across serverless worker instances with graceful fallback to the local buffer.
+  4. **Super Admin Telemetry Route Updated (`src/app/api/v1/admin/telemetry/events/route.ts`):**
+     - Updated `GET` handler to invoke `liveTelemetry.queryAsync(filter)` and `liveTelemetry.getStatsAsync()` for distributed persistence.
+     - Updated `DELETE` handler to clear both the in-memory cache and the Supabase table via `liveTelemetry.clearAsync()`.
+  5. **Screening Pipeline Telemetry Instrumentation:**
+     - `src/app/api/v1/enterprise/screen-batch/route.ts`: Records `SCREEN_BATCH_EVALUATED` on success and `SCREEN_BATCH_FAILED` (`level: "ERROR"`) on error.
+     - `src/app/api/v1/screen/route.ts`: Records `TAMPER_DETECTED` on ledger mismatches, `SCREENING_COMPLETE` on success, and `SCREENING_PIPELINE_ERROR` (`level: "ERROR"`) on exceptions.
+     - `src/components/EnterpriseScreeningView.tsx`: Client-side error beaconing to `POST /api/v1/telemetry/report` on both single and bulk candidate screening rejections or network errors.
+  6. **Automated Verification Test (`tests/test_telemetry_and_screening_resilience.mjs`):**
+     - Validated date parsing on undefined, null, empty strings, numbers, and malformed dates.
+     - Validated 48-hour cutoff pruning logic and FIFO ring-buffer rotation.
+- **Validation:**
+  - `node tests/test_telemetry_and_screening_resilience.mjs`: All 3 test suites passed (100%).
+  - `npx tsc --noEmit`: 0 errors.
+  - `npm run build`: 88/88 routes compiled and statically generated with 0 errors.
+

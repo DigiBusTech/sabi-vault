@@ -561,10 +561,37 @@ export function EnterpriseScreeningView({ viewMode = "all" }: EnterpriseScreenin
       if (res.ok && data.candidates?.length > 0) {
         setSingleResult(data.candidates[0]);
       } else {
-        setSingleError(data.error || "Screening failed. Verify the candidate key and quota.");
+        const errorMsg = data.error || "Screening failed. Verify the candidate key and quota.";
+        setSingleError(errorMsg);
+        fetch("/api/v1/telemetry/report", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            subsystem: "AI_AGENTS",
+            level: "ERROR",
+            action: "CLIENT_SINGLE_SCREEN_FAILURE",
+            statusCode: res.status || 500,
+            errorCode: "SCREENING_API_REJECTED",
+            message: errorMsg,
+            metadata: { rubricId: activeRubric?.id, keyPrefix: singleKey.substring(0, 16) },
+          }),
+        }).catch(() => {});
       }
-    } catch {
+    } catch (err: any) {
       setSingleError("Network error while screening the candidate.");
+      fetch("/api/v1/telemetry/report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          subsystem: "AI_AGENTS",
+          level: "ERROR",
+          action: "CLIENT_SINGLE_SCREEN_NETWORK_ERROR",
+          statusCode: 0,
+          errorCode: "NETWORK_EXCEPTION",
+          message: err?.message || "Network exception during single screening fetch",
+          metadata: { rubricId: activeRubric?.id },
+        }),
+      }).catch(() => {});
     } finally {
       setIsSingleLoading(false);
     }
@@ -596,10 +623,37 @@ export function EnterpriseScreeningView({ viewMode = "all" }: EnterpriseScreenin
       if (res.ok) {
         setBulkResult(data);
       } else {
-        setBulkError(data.error || "Batch screening failed.");
+        const errorMsg = data.error || "Batch screening failed.";
+        setBulkError(errorMsg);
+        fetch("/api/v1/telemetry/report", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            subsystem: "AI_AGENTS",
+            level: "ERROR",
+            action: "CLIENT_BULK_SCREEN_FAILURE",
+            statusCode: res.status || 500,
+            errorCode: "SCREENING_BATCH_API_REJECTED",
+            message: errorMsg,
+            metadata: { rubricId: activeRubric?.id, keysCount: rawKeys.length },
+          }),
+        }).catch(() => {});
       }
-    } catch {
+    } catch (err: any) {
       setBulkError("Network error while screening the pool.");
+      fetch("/api/v1/telemetry/report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          subsystem: "AI_AGENTS",
+          level: "ERROR",
+          action: "CLIENT_BULK_SCREEN_NETWORK_ERROR",
+          statusCode: 0,
+          errorCode: "NETWORK_EXCEPTION",
+          message: err?.message || "Network exception during bulk screening fetch",
+          metadata: { rubricId: activeRubric?.id, keysCount: rawKeys.length },
+        }),
+      }).catch(() => {});
     } finally {
       setIsBulkLoading(false);
     }

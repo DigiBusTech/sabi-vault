@@ -8,6 +8,7 @@ import { verifyScopedApiKeyAsync, filterVaultByScope, recordKeyExecution } from 
 import { SovereignNodeRouter } from "@/core/sovereign/node_router";
 import { globalUserStore } from "@/core/vault/user_store";
 import { authenticateM2M } from "@/lib/auth/auth_guard";
+import { liveTelemetry } from "@/lib/telemetry/live_logger";
 
 /**
  * POST /api/v1/screen
@@ -21,9 +22,18 @@ import { authenticateM2M } from "@/lib/auth/auth_guard";
  * 6. GovTech 60/40 fee split receipt
  */
 export async function POST(req: NextRequest) {
+  const startTime = Date.now();
   try {
     const orgAuth = await authenticateM2M(req);
     if (!orgAuth.isValid || !orgAuth.org) {
+      liveTelemetry.record({
+        subsystem: "SECURITY_AUTH",
+        level: "WARN",
+        action: "M2M_AUTH_REJECTED",
+        durationMs: Date.now() - startTime,
+        statusCode: 401,
+        message: orgAuth.error || "Unauthorized organization",
+      });
       return NextResponse.json({ error: orgAuth.error || "Unauthorized organization" }, { status: 401 });
     }
 
@@ -31,12 +41,29 @@ export async function POST(req: NextRequest) {
     const { apiKey, criteriaText, vertical, requestingOrg } = body;
 
     if (!apiKey) {
+      liveTelemetry.record({
+        subsystem: "API_ROUTER",
+        level: "WARN",
+        action: "SCREENING_MISSING_APIKEY",
+        durationMs: Date.now() - startTime,
+        statusCode: 400,
+        message: "Missing candidate 'apiKey'",
+      });
       return NextResponse.json({ error: "Missing candidate 'apiKey'" }, { status: 400 });
     }
 
     // Step 1: Validate Scoped Key & Redact Non-Permitted Scopes
     const keyVerification = await verifyScopedApiKeyAsync(apiKey, undefined, orgAuth.org.id);
     if (!keyVerification.isValid || !keyVerification.payload) {
+      liveTelemetry.record({
+        subsystem: "SECURITY_AUTH",
+        level: "WARN",
+        action: "INVALID_SCOPED_KEY",
+        durationMs: Date.now() - startTime,
+        statusCode: 401,
+        errorCode: "INVALID_KEY_SIGNATURE",
+        message: keyVerification.error || "Invalid or expired candidate API key",
+      });
       return NextResponse.json(
         { error: "Invalid or expired candidate API key", details: keyVerification.error },
         { status: 401 }
@@ -46,11 +73,27 @@ export async function POST(req: NextRequest) {
     const { vaultId, allowedScopes } = keyVerification.payload;
     const candidateVault = (await globalUserStore.findVaultAsync(vaultId)) || globalUserStore.findVault(vaultId);
     if (!candidateVault) {
+      liveTelemetry.record({
+        subsystem: "API_ROUTER",
+        level: "WARN",
+        action: "CANDIDATE_VAULT_NOT_FOUND",
+        durationMs: Date.now() - startTime,
+        statusCode: 404,
+        message: `Candidate vault ${vaultId} was not found.`,
+      });
       return NextResponse.json({ error: "Candidate vault was not found." }, { status: 404 });
     }
     const scopedCandidateData = filterVaultByScope(candidateVault, allowedScopes);
     const scopesToVerify = allowedScopes.filter((scope) => Boolean((scopedCandidateData as any)[scope]));
     if (scopesToVerify.length === 0 || scopesToVerify.length !== allowedScopes.length) {
+      liveTelemetry.record({
+        subsystem: "SECURITY_AUTH",
+        level: "WARN",
+        action: "CANDIDATE_MISSING_CONSENTED_SCOPES",
+        durationMs: Date.now() - startTime,
+        statusCode: 409,
+        message: "Candidate vault is missing one or more consented categories; integrity cannot be verified.",
+      });
       return NextResponse.json(
         { error: "Candidate vault is missing one or more consented categories; integrity cannot be verified." },
         { status: 409 }
@@ -75,6 +118,17 @@ export async function POST(req: NextRequest) {
     }
 
     if (!allTamperFree) {
+      liveTelemetry.record({
+        subsystem: "BLOCKCHAIN_LEDGER",
+        level: "ERROR",
+        action: "TAMPER_DETECTED",
+        durationMs: Date.now() - startTime,
+        statusCode: 409,
+        errorCode: "ON_CHAIN_HASH_MISMATCH",
+        message: `Tamper detected on candidate ${vaultId}: database hash does not match Base Sepolia ledger.`,
+        metadata: { vaultId, checkedCategories: Object.keys(integrityResults) },
+      });
+
       await globalUserStore.recordAuditEntryAsync({
         keyId: keyVerification.payload.keyId,
         requestingOrg: requestingOrg || "Enterprise Screener Portal",
@@ -141,6 +195,22 @@ export async function POST(req: NextRequest) {
       verdict: evaluationDossier.verdict,
     });
 
+    const durationMs = Date.now() - startTime;
+    liveTelemetry.record({
+      subsystem: "AI_AGENTS",
+      level: "SUCCESS",
+      action: "SCREENING_COMPLETE",
+      durationMs,
+      statusCode: 200,
+      message: `Candidate ${vaultId} screened for ${selectedVertical}: score ${evaluationDossier.totalCompositeScore}/100 (${evaluationDossier.verdict}).`,
+      metadata: {
+        candidateId: vaultId,
+        vertical: selectedVertical,
+        compositeScore: evaluationDossier.totalCompositeScore,
+        verdict: evaluationDossier.verdict,
+      },
+    });
+
     return NextResponse.json({
       status: "SCREENING_COMPLETE",
       candidateId: vaultId,
@@ -166,6 +236,18 @@ export async function POST(req: NextRequest) {
       screenedAt: new Date().toISOString(),
     });
   } catch (err: any) {
+    const durationMs = Date.now() - startTime;
+    liveTelemetry.record({
+      subsystem: "AI_AGENTS",
+      level: "ERROR",
+      action: "SCREENING_PIPELINE_ERROR",
+      durationMs,
+      statusCode: 500,
+      errorCode: "PIPELINE_UNHANDLED_EXCEPTION",
+      message: err.message || "Screening pipeline execution error",
+      metadata: { errorStack: err.stack?.substring(0, 500) },
+    });
+
     return NextResponse.json(
       { error: "Screening pipeline execution error", details: err.message },
       { status: 500 }

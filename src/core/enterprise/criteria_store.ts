@@ -601,8 +601,10 @@ class EnterpriseCriteriaMasterStore {
     const profileWorkExp = candidateProfile.workExperiences || [];
     let profileTotalTenureYears = 0;
     for (const wx of profileWorkExp) {
-      const s = parseInt(wx.startDate?.split("-")[0] || wx.startDate || "2026");
-      const e = wx.isCurrent ? 2026 : parseInt(wx.endDate?.split("-")[0] || wx.endDate || "2026");
+      const startMatch = String(wx.startDate || "").match(/\d{4}/);
+      const endMatch = String(wx.endDate || "").match(/\d{4}/);
+      const s = parseInt(startMatch ? startMatch[0] : "2026");
+      const e = wx.isCurrent ? 2026 : parseInt(endMatch ? endMatch[0] : "2026");
       if (!isNaN(s) && !isNaN(e) && e >= s) {
         profileTotalTenureYears += (e - s || 1);
       }
@@ -624,7 +626,8 @@ class EnterpriseCriteriaMasterStore {
         }
       } else {
         const exp = redactedVault.experience!.experiences[0];
-        const startYear = parseInt(exp.startDate.split("-")[0]);
+        const startMatch = String(exp?.startDate || "").match(/\d{4}/);
+        const startYear = parseInt(startMatch ? startMatch[0] : "2026");
         const currentYear = 2026;
         const years = isNaN(startYear) ? 1 : Math.max(0, currentYear - startYear);
         const meetsTenure = !rubric.minExperienceYears || years >= rubric.minExperienceYears;
@@ -634,7 +637,7 @@ class EnterpriseCriteriaMasterStore {
         totalScore += (expScore * (rubric.weights.experience || 30)) / 100;
 
         citations.push(
-          `✓ Attested Work Experience: ${exp.jobTitle} at ${exp.company} (${years} verified years, current: ${exp.isCurrent})`
+          `✓ Attested Work Experience: ${exp.jobTitle || 'Verified Position'} at ${exp.company || 'Enterprise'} (${years} verified years, current: ${Boolean(exp.isCurrent)})`
         );
       }
     }
@@ -702,7 +705,8 @@ class EnterpriseCriteriaMasterStore {
             : `Statement duration (${days} days) is less than required ${targetDays} consecutive days`;
         } else if (bm.metricType === "min_tenure_years") {
           const exp = redactedVault.experience?.experiences?.[0];
-          const startYear = parseInt(exp?.startDate?.split("-")[0] || "2026");
+          const startMatch = String(exp?.startDate || "").match(/\d{4}/);
+          const startYear = parseInt(startMatch ? startMatch[0] : "2026");
           const years = Math.max(0, 2026 - startYear);
           const targetYears = Number(bm.targetValue);
           bmPassed = years >= targetYears;
