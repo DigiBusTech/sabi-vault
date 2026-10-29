@@ -3422,3 +3422,23 @@
   - `npx tsc --noEmit`: 0 errors.
   - `npm run build`: 88/88 routes compiled and statically generated with 0 errors.
 
+---
+
+### Entry #095: Fix Missing `auth_memberships` Relation in Supabase Telemetry Migration
+- **Date & Timestamp:** 2026-10-29 15:00:00 (Local)
+- **User Prompt / Intent:**
+  > "when running migration encountered this 'Error: Failed to run sql query: ERROR: 42P01: relation "auth_memberships" does not exist'"
+- **Forensic Root Cause Analysis:**
+  - In `supabase/migrations/20261029080000_system_telemetry_persistence.sql`, lines 48–53 contained an RLS policy `"Admins can view system_telemetry_events"` that referenced `auth_memberships`.
+  - In the SabiProfile Supabase schema, the actual relation name is `public.organization_members`, not `auth_memberships`.
+  - Because `auth_memberships` does not exist in Postgres, executing the migration failed with PostgreSQL error `42P01: relation "auth_memberships" does not exist`.
+  - Furthermore, in SabiProfile's serverless architecture, all telemetry is logged, queried, and pruned server-side via `createAdminSupabaseClient()` with `service_role`. Clients never read raw system telemetry directly; all views are mediated by `/api/v1/admin/telemetry/*` gated by server-side role authentication.
+- **Actions Taken:**
+  - Updated `supabase/migrations/20261029080000_system_telemetry_persistence.sql`:
+    1. Ensured unrestricted `service_role` full access policy for server-side ingestion, query, and pruning.
+    2. Wrapped the optional authenticated admin read policy inside a dynamic conditional `DO $$ BEGIN IF EXISTS (...) THEN ... END IF; END $$;` block checking `information_schema.tables` for `public.organization_members` with correct column names (`auth_user_id` and `role IN ('ADMIN', 'AUDITOR')`).
+- **Validation:**
+  - Migration SQL verified clean and free of nonexistent table dependencies.
+  - Ready for immediate execution in Supabase SQL editor or CLI.
+
+

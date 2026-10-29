@@ -30,6 +30,7 @@ CREATE INDEX IF NOT EXISTS idx_telemetry_action ON system_telemetry_events (acti
 ALTER TABLE system_telemetry_events ENABLE ROW LEVEL SECURITY;
 
 -- 1. Service role has full permissions for ingestion, query, and pruning
+-- (All telemetry is ingested and queried server-side via createAdminSupabaseClient)
 DROP POLICY IF EXISTS "Service role full access on system_telemetry_events" ON system_telemetry_events;
 CREATE POLICY "Service role full access on system_telemetry_events"
   ON system_telemetry_events
@@ -38,19 +39,27 @@ CREATE POLICY "Service role full access on system_telemetry_events"
   USING (true)
   WITH CHECK (true);
 
--- 2. Super Administrators and Government Auditors can query telemetry
-DROP POLICY IF EXISTS "Admins can view system_telemetry_events" ON system_telemetry_events;
-CREATE POLICY "Admins can view system_telemetry_events"
-  ON system_telemetry_events
-  FOR SELECT
-  TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM auth_memberships
-      WHERE auth_memberships.user_id = auth.uid()
-      AND auth_memberships.role IN ('super_admin', 'govt_auditor')
-    )
-  );
+-- 2. Optional: If organization_members exists in this database instance, grant authenticated admin read
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables 
+    WHERE table_schema = 'public' AND table_name = 'organization_members'
+  ) THEN
+    DROP POLICY IF EXISTS "Admins can view system_telemetry_events" ON system_telemetry_events;
+    CREATE POLICY "Admins can view system_telemetry_events"
+      ON system_telemetry_events
+      FOR SELECT
+      TO authenticated
+      USING (
+        EXISTS (
+          SELECT 1 FROM public.organization_members
+          WHERE public.organization_members.auth_user_id = auth.uid()
+          AND public.organization_members.role IN ('ADMIN', 'AUDITOR')
+        )
+      );
+  END IF;
+END $$;
 
 -- Database function to prune events older than 2 days (48 hours)
 CREATE OR REPLACE FUNCTION purge_expired_telemetry_events()
@@ -64,4 +73,3 @@ BEGIN
   RETURN deleted_count;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
-
